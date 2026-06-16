@@ -1907,13 +1907,6 @@ export default function App() {
               <ZoomIn className="w-3 h-3" />
               Reset View
             </button>
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-3 py-1.5 bg-[var(--accent)] text-[11px] rounded font-bold hover:opacity-90 transition-opacity flex items-center gap-2 text-white"
-            >
-              <RefreshCw className="w-3 h-3" />
-              Reload
-            </button>
           </div>
         </header>
 

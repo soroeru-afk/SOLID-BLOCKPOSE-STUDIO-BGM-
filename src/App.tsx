@@ -1827,13 +1827,6 @@ export default function App() {
         {/* Header Bar */}
         <header className="h-14 border-b border-[#323238] flex items-center justify-between px-6 bg-[#1a1a1e]/80 backdrop-blur-md z-10 flex-shrink-0">
           <div className="flex items-center gap-6">
-            <button
-              onClick={() => setSidebarPosition(prev => prev === 'left' ? 'right' : 'left')}
-              className="p-1.5 -ml-2 rounded-md hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
-              title="Toggle Sidebar Position"
-            >
-              {sidebarPosition === 'right' ? <PanelLeftOpen className="w-5 h-5 scale-x-[-1]" /> : <PanelLeftOpen className="w-5 h-5" />}
-            </button>
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Scale</span>
               <input 
@@ -1906,6 +1899,13 @@ export default function App() {
             >
               <ZoomIn className="w-3 h-3" />
               Reset View
+            </button>
+            <button
+              onClick={() => setSidebarPosition(prev => prev === 'left' ? 'right' : 'left')}
+              className="p-1.5 rounded-md hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
+              title="Toggle Sidebar Position"
+            >
+              {sidebarPosition === 'right' ? <PanelLeftOpen className="w-5 h-5 scale-x-[-1]" /> : <PanelLeftOpen className="w-5 h-5" />}
             </button>
           </div>
         </header>

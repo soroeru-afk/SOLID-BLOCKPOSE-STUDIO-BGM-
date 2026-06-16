@@ -260,10 +260,23 @@ export default function App() {
   };
 
   // Export Logic
-  const exportSettings = () => {
+  const exportSettings = async () => {
+    // Generate Base64 for all BGM tracks
+    const serializedTracks = await Promise.all(allTracks.map(async (t) => {
+      return new Promise<{id: string, name: string, data: string}>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({ id: t.id, name: t.name, data: reader.result as string });
+        reader.onerror = reject;
+        reader.readAsDataURL(t.file);
+      });
+    }));
+
     const data = {
       poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, cycleSpeed, customBgColor,
-      soundType, sfxVolume, bgmVolume, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor
+      soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor,
+      characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition,
+      playlists, activePlaylistId, isPlaylistExpanded,
+      tracks: serializedTracks
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -280,7 +293,7 @@ export default function App() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const data = JSON.parse(event.target?.result as string);
         if (data.poses) setPoses(data.poses);
@@ -297,15 +310,40 @@ export default function App() {
         if (data.soundType) setSoundType(data.soundType);
         if (data.sfxVolume !== undefined) setSfxVolume(data.sfxVolume);
         if (data.bgmVolume !== undefined) setBgmVolume(data.bgmVolume);
+        if (data.isSfxMuted !== undefined) setIsSfxMuted(data.isSfxMuted);
         if (data.isAutoCamera !== undefined) setIsAutoCamera(data.isAutoCamera);
         if (data.isAutoFormation !== undefined) setIsAutoFormation(data.isAutoFormation);
         if (data.isRandomFormation !== undefined) setIsRandomFormation(data.isRandomFormation);
         if (data.autoCameraSpeed !== undefined) setAutoCameraSpeed(data.autoCameraSpeed);
         if (data.accentColor) setAccentColor(data.accentColor);
+        if (data.characterColor) setCharacterColor(data.characterColor);
+        if (data.savedCustomCharacterColor) setSavedCustomCharacterColor(data.savedCustomCharacterColor);
+        if (data.savedCustomBgColor) setSavedCustomBgColor(data.savedCustomBgColor);
+        if (data.isColorSettingsOpen !== undefined) setIsColorSettingsOpen(data.isColorSettingsOpen);
+        if (data.isSidebarOpen !== undefined) setIsSidebarOpen(data.isSidebarOpen);
+        if (data.sidebarPosition) setSidebarPosition(data.sidebarPosition);
+        if (data.playlists) setPlaylists(data.playlists);
+        if (data.activePlaylistId) setActivePlaylistId(data.activePlaylistId);
+        if (data.isPlaylistExpanded !== undefined) setIsPlaylistExpanded(data.isPlaylistExpanded);
+        
+        if (data.tracks && Array.isArray(data.tracks)) {
+          const importedTracks = await Promise.all(data.tracks.map(async (t: any) => {
+            const res = await fetch(t.data);
+            const blob = await res.blob();
+            return { id: t.id, name: t.name, file: blob };
+          }));
+          
+          await AudioDB.clearAllTracks();
+          for (const track of importedTracks) {
+            await AudioDB.saveTrack({ id: track.id, name: track.name, data: track.file });
+          }
+          setAllTracks(importedTracks);
+        }
         
         SoundManager.playPoseChange(data.soundType || soundType);
       } catch (err) {
-        alert('Invalid settings file');
+        console.error(err);
+        alert('Invalid settings file or data too large to parse.');
       }
     };
     reader.readAsText(file);

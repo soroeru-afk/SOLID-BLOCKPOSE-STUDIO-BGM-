@@ -19,7 +19,7 @@ export interface PosePreset {
   angles: PoseAngles;
 }
 
-export type ThemeId = 'studio' | 'dark' | 'neon' | 'monolith' | 'red' | 'brown';
+export type ThemeId = 'studio' | 'dark' | 'neon' | 'monolith' | 'red' | 'brown' | 'light-gray';
 
 export interface ThemeConfig {
   id: ThemeId;

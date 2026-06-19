@@ -33,7 +33,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_POSES;
   });
   const [poseId, setPoseId] = useState(() => localStorage.getItem(`${STORAGE_KEY}_poseId`) || INITIAL_POSES[0].id);
-  const [themeId, setThemeId] = useState<ThemeId>(() => (localStorage.getItem(`${STORAGE_KEY}_themeId`) as ThemeId) || 'monolith');
+  const [themeId, setThemeId] = useState<ThemeId>(() => (localStorage.getItem(`${STORAGE_KEY}_themeId`) as ThemeId) || 'light-gray');
   const [formationLevel, setFormationLevel] = useState(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_formationLevel`);
     if (saved) return parseInt(saved);
@@ -194,6 +194,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'visual' | 'sound'>('visual');
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSidebarOpen`) !== 'false');
   const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>(() => (localStorage.getItem(`${STORAGE_KEY}_sidebarPosition`) as 'left' | 'right') || 'left');
+  const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'colors');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', appTheme);
+  }, [appTheme]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSymmetric, setIsSymmetric] = useState(false);
@@ -234,7 +239,8 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_isColorSettingsOpen`, isColorSettingsOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isSidebarOpen`, isSidebarOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_sidebarPosition`, sidebarPosition);
-  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition]);
+    localStorage.setItem(`${STORAGE_KEY}_appTheme`, appTheme);
+  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme]);
 
   // Sync sound manager state
   useEffect(() => {
@@ -709,7 +715,12 @@ export default function App() {
 
   const CinematicCamera = () => {
     useFrame((state) => {
-      if (!isAutoCamera || isEditing) return;
+      if (!isAutoCamera || isEditing) {
+        if (orbitRef.current && orbitRef.current.autoRotate) {
+          orbitRef.current.autoRotate = false;
+        }
+        return;
+      }
       
       const time = state.clock.getElapsedTime() * autoCameraSpeed * 0.5;
       
@@ -860,6 +871,14 @@ export default function App() {
     return items;
   }, [formationLevel, formationType, formationSpacing]);
 
+  const highlightClasses = {
+    text: appTheme === 'light' ? 'text-[#0481B0]' : 'text-[#05DFFC]',
+    bg: appTheme === 'light' ? 'bg-[#0481B0]' : 'bg-[#05DFFC]',
+    bgMuted: appTheme === 'light' ? 'bg-[#0481B0]/10' : 'bg-[#05DFFC]/10',
+    border: appTheme === 'light' ? 'border-[#0481B0]' : 'border-[#05DFFC]',
+    accent: appTheme === 'light' ? 'accent-[#0481B0]' : 'accent-[#05DFFC]',
+  };
+
   return (
     <div 
       className={`flex h-screen w-full overflow-hidden bg-[#121214] text-[#E1E1E6] font-sans ${sidebarPosition === 'right' ? 'flex-row-reverse' : 'flex-row'}`}
@@ -878,8 +897,26 @@ export default function App() {
             <div className="w-[300px] flex flex-col h-full">
               <div className="p-5 border-b border-[#323238]">
                 <h1 className="text-sm font-bold tracking-tight flex items-start gap-2 leading-tight">
-                  <div className="w-4 h-4 bg-[var(--accent)] rounded-sm flex-shrink-0 mt-0.5" />
-                  <span>SOLID BLOCKPOSE <br/><span className="text-[var(--accent)]">STUDIO BGM+</span></span>
+                  <svg viewBox="0 0 24 24" className="w-6 h-6 flex-shrink-0 text-[var(--accent)]" fill="currentColor">
+                    {/* Head */}
+                    <rect x="9" y="2" width="6" height="6" />
+                    {/* Eye */}
+                    <rect x="10" y="4" width="4" height="1.5" fill="white" />
+                    {/* Body */}
+                    <rect x="7" y="9" width="10" height="7" />
+                    {/* Left Arm */}
+                    <polygon points="6.5,9 3.5,16 5.5,16.5 8,10" />
+                    {/* Right Arm */}
+                    <polygon points="17.5,9 20.5,16 18.5,16.5 16,10" />
+                    {/* Left Leg */}
+                    <rect x="8.5" y="16.5" width="3" height="6" />
+                    {/* Right Leg */}
+                    <rect x="12.5" y="16.5" width="3" height="6" />
+                  </svg>
+                  <span className="flex flex-col">
+                    <span className="text-base font-black leading-none">SOLID BLOCKPOSE</span>
+                    <span className="text-[var(--accent)] text-xs mt-0.5">STUDIO BGM+</span>
+                  </span>
                 </h1>
                 <p className="text-[9px] text-gray-500 mt-1.5 uppercase tracking-widest font-bold">Studio Edition</p>
               </div>
@@ -921,7 +958,7 @@ export default function App() {
               <div className="flex-shrink-0 p-4 border-b border-[#323238] bg-[var(--accent)]/5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {isAutoCycle ? <Play className="w-4 h-4 text-emerald-400 opacity-80" /> : <Pause className="w-4 h-4 text-gray-500" />}
+                    {isAutoCycle ? <Play className={`w-4 h-4 ${highlightClasses.text} opacity-80`} /> : <Pause className="w-4 h-4 text-gray-500" />}
                     <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Cycle</span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -950,10 +987,18 @@ export default function App() {
                         } else if (!nextState && isBgmPlaying) {
                           toggleBgm();
                         }
+                        
+                        if (!nextState) {
+                          setIsAutoCamera(false);
+                          setIsAutoFormation(false);
+                          if (orbitRef.current) {
+                            orbitRef.current.autoRotate = false;
+                          }
+                        }
                       }}
-                      className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoCycle ? 'bg-transparent border-emerald-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
+                      className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : 'border-[#323238] bg-[#1a1a1e]'}`}
                     >
-                      <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoCycle ? 'bg-emerald-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
+                      <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
                     </button>
                   </div>
                 </div>
@@ -962,7 +1007,7 @@ export default function App() {
                   <div className="pt-2">
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-[9px] font-bold text-gray-500 uppercase">Cycle Interval</label>
-                      <span className="text-[9px] font-mono font-bold text-emerald-400 px-1.5 py-0.5 bg-emerald-500/10 rounded">{(cycleSpeed / 1000).toFixed(2)}s</span>
+                      <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} rounded`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
                     </div>
                     <input 
                       type="range" 
@@ -981,19 +1026,19 @@ export default function App() {
                         if (!isSfxMuted) minSpeed = 1000;
                         setCycleSpeed(Math.max(minSpeed, Math.min(10000, finalSpeed)));
                       }}
-                      className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                      className={`w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer ${highlightClasses.accent}`}
                     />
 
                     <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#323238]/50">
                       <div className="flex items-center gap-2">
-                        <RefreshCw className={`w-4 h-4 ${isRandomCycle ? 'text-emerald-400' : 'text-gray-500'}`} />
+                        <RefreshCw className={`w-4 h-4 ${isRandomCycle ? highlightClasses.text : 'text-gray-500'}`} />
                         <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Random Pose</span>
                       </div>
                       <button 
                         onClick={() => setIsRandomCycle(!isRandomCycle)}
-                        className={`w-10 h-5 rounded-full transition-colors relative border ${isRandomCycle ? 'bg-transparent border-emerald-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
+                        className={`w-10 h-5 rounded-full transition-colors relative border ${isRandomCycle ? `bg-transparent ${highlightClasses.border}` : 'border-[#323238] bg-[#1a1a1e]'}`}
                       >
-                        <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isRandomCycle ? 'bg-emerald-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
+                        <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isRandomCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
                       </button>
                     </div>
 
@@ -1233,7 +1278,7 @@ export default function App() {
                   onClick={() => setIsColorSettingsOpen(!isColorSettingsOpen)}
                 >
                   <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center gap-2 cursor-pointer">
-                    <Palette className="w-3.5 h-3.5" /> Colors & Themes
+                    <Palette className="w-3.5 h-3.5" /> Colors
                   </label>
                   {isColorSettingsOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </div>
@@ -1247,25 +1292,7 @@ export default function App() {
                       className="overflow-hidden bg-[#121214] border-t border-[#323238]"
                     >
                       <div className="p-4 space-y-4">
-                        <div>
-                          <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold block mb-3">UI Accent Color</label>
-                          <div className="flex items-center gap-3">
-                            <input 
-                              type="color" 
-                              value={accentColor}
-                              onChange={(e) => setAccentColor(e.target.value)}
-                              className="w-full h-8 rounded-lg cursor-pointer bg-transparent border-none p-0 overflow-hidden"
-                            />
-                            <button 
-                              onClick={() => setAccentColor('#80858C')}
-                              className="text-[8px] text-gray-500 hover:text-white underline uppercase font-bold"
-                            >
-                              DEFAULT
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-[#323238]">
+                        <div className="pt-2">
                           <div className="flex items-center justify-between mb-3">
                             <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Character Color</label>
                             <button 
@@ -1319,15 +1346,6 @@ export default function App() {
                         <div className="pt-2 border-t border-[#323238]">
                           <div className="flex items-center justify-between mb-3">
                             <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Visual Themes</label>
-                            <button 
-                              onClick={() => {
-                                setThemeId('monolith');
-                                setCustomBgColor(null);
-                              }}
-                              className="text-[8px] text-gray-500 hover:text-white underline uppercase font-bold transition-colors"
-                            >
-                              RESET
-                            </button>
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {THEMES.map((theme) => (
@@ -1346,30 +1364,6 @@ export default function App() {
                                 {themeId === theme.id && !customBgColor && <div className="w-1 h-1 bg-white shadow-sm" />}
                               </button>
                             ))}
-                            
-                            <div className="w-[1px] h-6 bg-[#323238] mx-0.5" />
-                            
-                            <div className={`relative w-6 h-6 rounded border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
-                              customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
-                            }`}>
-                              <input 
-                                type="color" 
-                                value={savedCustomBgColor}
-                                onChange={(e) => {
-                                  setSavedCustomBgColor(e.target.value);
-                                  setCustomBgColor(e.target.value);
-                                }}
-                                onClick={() => {
-                                  setCustomBgColor(savedCustomBgColor);
-                                }}
-                                className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none"
-                                title="Custom Color"
-                              />
-                              <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
-                                <Plus className="w-3 h-3 text-white opacity-75" />
-                              </div>
-                              {customBgColor && <div className="w-1.5 h-1.5 bg-white shadow-sm pointer-events-none absolute mix-blend-difference rounded" />}
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -1893,6 +1887,22 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 mr-4">
+              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest font-bold">Theme:</span>
+              <div className="flex rounded border border-[#323238] overflow-hidden bg-[#1E1E22]">
+                {(['colors', 'black', 'light'] as const).map(th => (
+                  <button
+                    key={th}
+                    onClick={() => setAppTheme(th)}
+                    className={`px-3 py-1.5 text-[10px] uppercase font-bold transition-colors ${
+                      appTheme === th ? 'bg-[var(--accent)] text-white' : 'text-gray-400 hover:text-white hover:bg-[#323238]'
+                    }`}
+                  >
+                    {th === 'colors' ? 'DARK' : th}
+                  </button>
+                ))}
+              </div>
+            </div>
             <button 
               onClick={resetCamera}
               className="px-3 py-1.5 bg-[#2A2A30] text-[11px] rounded border border-[#3A3A42] hover:bg-[#323238] transition-colors flex items-center gap-2"

@@ -90,6 +90,15 @@ export const POSES: PosePreset[] = [
 
 export const THEMES: ThemeConfig[] = [
   {
+    id: 'light-gray',
+    name: 'Light Gray',
+    bgColor: '#E5E7EB',
+    groundColor: '#D1D5DB',
+    gridColor: '#9CA3AF',
+    bodyColor: '#6B7280',
+    accentColor: '#ffffff',
+  },
+  {
     id: 'studio',
     name: 'Pro Studio',
     bgColor: '#3A4B5C',

@@ -36,9 +36,9 @@ export default function App() {
   const [themeId, setThemeId] = useState<ThemeId>(() => (localStorage.getItem(`${STORAGE_KEY}_themeId`) as ThemeId) || 'light-gray');
   const [formationLevel, setFormationLevel] = useState(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_formationLevel`);
-    if (saved) return parseInt(saved);
+    if (saved) return Math.min(8, parseInt(saved));
     const oldCount = parseInt(localStorage.getItem(`${STORAGE_KEY}_count`) || '25');
-    return Math.max(1, Math.min(10, Math.round(Math.sqrt(oldCount))));
+    return Math.max(1, Math.min(8, Math.round(Math.sqrt(oldCount))));
   });
   const [formationType, setFormationType] = useState<'square' | 'circle' | 'triangle' | 'cross' | 'ring' | 'spiral'>(() => {
     return (localStorage.getItem(`${STORAGE_KEY}_formationType`) as any) || 'ring';
@@ -117,6 +117,8 @@ export default function App() {
   const [isBgmLoading, setIsBgmLoading] = useState(false);
   const [bgmRepeatMode, setBgmRepeatMode] = useState<0 | 1 | 2>(0); // 0: Off, 1: Playlist, 2: Track
   const [isRandomCycle, setIsRandomCycle] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isRandomCycle`) === 'true');
+  const [isSlowRotate, setIsSlowRotate] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSlowRotate`) === 'true');
+  const [rotateSpeed, setRotateSpeed] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_rotateSpeed`) || '0.5'));
   const [savedCycleSpeed, setSavedCycleSpeed] = useState<number | null>(null);
   const [bgmProgress, setBgmProgress] = useState(0);
   const [bgmTimeStr, setBgmTimeStr] = useState("0:00 / 0:00");
@@ -220,6 +222,8 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_personScale`, personScale.toString());
     localStorage.setItem(`${STORAGE_KEY}_isAutoCycle`, isAutoCycle.toString());
     localStorage.setItem(`${STORAGE_KEY}_isRandomCycle`, isRandomCycle.toString());
+    localStorage.setItem(`${STORAGE_KEY}_isSlowRotate`, isSlowRotate.toString());
+    localStorage.setItem(`${STORAGE_KEY}_rotateSpeed`, rotateSpeed.toString());
     localStorage.setItem(`${STORAGE_KEY}_cycleSpeed`, cycleSpeed.toString());
     if (customBgColor) localStorage.setItem(`${STORAGE_KEY}_customBgColor`, customBgColor);
     else localStorage.removeItem(`${STORAGE_KEY}_customBgColor`);
@@ -240,7 +244,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_isSidebarOpen`, isSidebarOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_sidebarPosition`, sidebarPosition);
     localStorage.setItem(`${STORAGE_KEY}_appTheme`, appTheme);
-  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme]);
+  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme]);
 
   // Sync sound manager state
   useEffect(() => {
@@ -278,7 +282,7 @@ export default function App() {
     }));
 
     const data = {
-      poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, cycleSpeed, customBgColor,
+      poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
       soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor,
       characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition,
       playlists, activePlaylistId, isPlaylistExpanded,
@@ -311,6 +315,8 @@ export default function App() {
         if (data.personScale) setPersonScale(data.personScale);
         if (data.isAutoCycle !== undefined) setIsAutoCycle(data.isAutoCycle);
         if (data.isRandomCycle !== undefined) setIsRandomCycle(data.isRandomCycle);
+        if (data.isSlowRotate !== undefined) setIsSlowRotate(data.isSlowRotate);
+        if (data.rotateSpeed !== undefined) setRotateSpeed(data.rotateSpeed);
         if (data.cycleSpeed) setCycleSpeed(data.cycleSpeed);
         if (data.customBgColor !== undefined) setCustomBgColor(data.customBgColor);
         if (data.soundType) setSoundType(data.soundType);
@@ -715,7 +721,23 @@ export default function App() {
 
   const CinematicCamera = () => {
     useFrame((state) => {
-      if (!isAutoCamera || isEditing) {
+      // Re-center target and FOV incrementally if autoCamera is off
+      if (!isAutoCamera && orbitRef.current) {
+        if (Math.abs(orbitRef.current.target.x) > 0.01 || Math.abs(orbitRef.current.target.z) > 0.01) {
+          orbitRef.current.target.x = THREE.MathUtils.lerp(orbitRef.current.target.x, 0, 0.05);
+          orbitRef.current.target.z = THREE.MathUtils.lerp(orbitRef.current.target.z, 0, 0.05);
+          orbitRef.current.update();
+        }
+      }
+      if (!isAutoCamera && state.camera instanceof THREE.PerspectiveCamera) {
+        if (Math.abs(state.camera.fov - 45) > 0.1) {
+          state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, 45, 0.05);
+          state.camera.updateProjectionMatrix();
+        }
+      }
+
+      // Return early if neither is active, or if currently editing
+      if ((!isAutoCamera && !isSlowRotate) || isEditing) {
         if (orbitRef.current && orbitRef.current.autoRotate) {
           orbitRef.current.autoRotate = false;
         }
@@ -723,31 +745,40 @@ export default function App() {
       }
       
       const time = state.clock.getElapsedTime() * autoCameraSpeed * 0.5;
-      
-      // Auto Rotation
-      if (orbitRef.current) {
-        orbitRef.current.autoRotate = true;
-        orbitRef.current.autoRotateSpeed = autoCameraSpeed * 2.5;
-        
-        // Smooth Target Breathing
-        const targetX = Math.sin(time * 0.5) * 0.8;
-        const targetZ = Math.cos(time * 0.3) * 0.8;
-        orbitRef.current.target.x = THREE.MathUtils.lerp(orbitRef.current.target.x, targetX, 0.03);
-        orbitRef.current.target.z = THREE.MathUtils.lerp(orbitRef.current.target.z, targetZ, 0.03);
-        
-        orbitRef.current.update();
-      }
+            
+      if (isAutoCamera) {
+        // Auto Rotation
+        if (orbitRef.current) {
+          orbitRef.current.autoRotate = true;
+          orbitRef.current.autoRotateSpeed = autoCameraSpeed * 2.5;
+          
+          // Smooth Target Breathing
+          const targetX = Math.sin(time * 0.5) * 0.8;
+          const targetZ = Math.cos(time * 0.3) * 0.8;
+          orbitRef.current.target.x = THREE.MathUtils.lerp(orbitRef.current.target.x, targetX, 0.03);
+          orbitRef.current.target.z = THREE.MathUtils.lerp(orbitRef.current.target.z, targetZ, 0.03);
+          
+          orbitRef.current.update();
+        }
 
-      // Vertical oscillation & subtle zoom - Smooth Transition
-      const camera = state.camera;
-      const targetY = 8 + Math.sin(time) * 4;
-      camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.05);
-      
-      // Subtle focal depth variation
-      if (camera instanceof THREE.PerspectiveCamera) {
-        const targetFov = 45 + Math.cos(time * 0.4) * 5;
-        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.02);
-        camera.updateProjectionMatrix();
+        // Vertical oscillation & subtle zoom - Smooth Transition
+        const camera = state.camera;
+        const targetY = 8 + Math.sin(time) * 4;
+        camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.05);
+        
+        // Subtle focal depth variation
+        if (camera instanceof THREE.PerspectiveCamera) {
+          const targetFov = 45 + Math.cos(time * 0.4) * 5;
+          camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.02);
+          camera.updateProjectionMatrix();
+        }
+      } else if (isSlowRotate) {
+        // Slow Rotation only
+        if (orbitRef.current) {
+          orbitRef.current.autoRotate = true;
+          orbitRef.current.autoRotateSpeed = rotateSpeed; // configurable rotation
+          orbitRef.current.update();
+        }
       }
     });
     return null;
@@ -784,7 +815,8 @@ export default function App() {
       } else {
         items.push({ id: 0, position: [0, 1, 0] });
         let currentId = 1;
-        for (let ring = 1; ring < level; ring++) {
+        const numRings = Math.max(1, level - 2);
+        for (let ring = 1; ring <= numRings; ring++) {
           const ringCount = ring * 6;
           const radius = ring * spacing * 0.9;
           for (let i = 0; i < ringCount; i++) {
@@ -825,7 +857,7 @@ export default function App() {
         items.push({ id: 0, position: [0, 1, 0] });
         let currentId = 1;
         const arms = 4;
-        const distLimit = Math.floor((level * level - 1) / 4) + 1;
+        const distLimit = Math.floor(level * 1.5);
         for (let dist = 1; dist < distLimit; dist++) {
           for (let dir = 0; dir < arms; dir++) {
             const theta = dir * (Math.PI / 2);
@@ -856,7 +888,7 @@ export default function App() {
       }
     } else if (formationType === 'spiral') {
       items.push({ id: 0, position: [0, 1, 0] });
-      const targetCount = level * level * 2 + 1;
+      const targetCount = level * level + 1;
       let currentTheta = 0;
       for (let i = 1; i < targetCount; i++) {
         const r = Math.sqrt(i) * spacing * 0.55;
@@ -940,16 +972,6 @@ export default function App() {
             >
               <Music className="w-3.5 h-3.5" /> Sound
             </button>
-            <button 
-              onClick={toggleBgm}
-              className={`px-4 py-3 border-l border-[#323238] transition-colors ${
-                isBgmPlaying ? 'text-[var(--accent)] bg-[var(--accent)]/10' : 'text-gray-500 hover:text-[var(--accent)]'
-              }`}
-              title={isBgmPlaying ? "Pause BGM" : "Play BGM"}
-              disabled={bgmPlaylist.length === 0}
-            >
-              {isBgmPlaying ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            </button>
           </div>
 
           {activeTab === 'visual' ? (
@@ -961,50 +983,70 @@ export default function App() {
                     {isAutoCycle ? <Play className={`w-4 h-4 ${highlightClasses.text} opacity-80`} /> : <Pause className="w-4 h-4 text-gray-500" />}
                     <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Cycle</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {/* SFX Mute Button - Moved here for easy access during auto-cycle */}
-                    <button 
-                      onClick={() => {
-                        const next = !isSfxMuted;
-                        if (!next && isBgmPlaying) {
-                          SoundManager.pauseBGM();
-                          setIsBgmPlaying(false);
+                  
+                  <button 
+                    onClick={() => {
+                      const nextState = !isAutoCycle;
+                      setIsAutoCycle(nextState);
+                      if (nextState && !isBgmPlaying && bgmPlaylist.length > 0) {
+                        toggleBgm();
+                      } else if (!nextState && isBgmPlaying) {
+                        toggleBgm();
+                      }
+                      
+                      if (!nextState) {
+                        setIsAutoCamera(false);
+                        setIsAutoFormation(false);
+                        setIsSlowRotate(false);
+                        if (orbitRef.current) {
+                          orbitRef.current.autoRotate = false;
                         }
-                        setSfxMutedWithSpeed(next);
-                      }}
-                      className={`p-1.5 rounded transition-colors border w-7 h-7 flex items-center justify-center ${isSfxMuted ? 'text-white border-white bg-transparent opacity-80' : 'text-gray-500 border-[#323238] bg-transparent'}`}
-                      title={isSfxMuted ? "Unmute SFX" : "Mute SFX"}
-                    >
-                      {isSfxMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                    </button>
-                    
-                    <button 
-                      onClick={() => {
-                        const nextState = !isAutoCycle;
-                        setIsAutoCycle(nextState);
-                        if (nextState && !isBgmPlaying && bgmPlaylist.length > 0) {
-                          toggleBgm();
-                        } else if (!nextState && isBgmPlaying) {
-                          toggleBgm();
-                        }
-                        
-                        if (!nextState) {
-                          setIsAutoCamera(false);
-                          setIsAutoFormation(false);
-                          if (orbitRef.current) {
-                            orbitRef.current.autoRotate = false;
-                          }
-                        }
-                      }}
-                      className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : 'border-[#323238] bg-[#1a1a1e]'}`}
-                    >
-                      <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
-                    </button>
-                  </div>
+                      }
+                    }}
+                    className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : 'border-[#323238] bg-[#1a1a1e]'}`}
+                  >
+                    <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
+                  </button>
                 </div>
                 
                 {isAutoCycle && (
-                  <div className="pt-2">
+                  <div className="pt-3">
+                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#323238]/50">
+                      <div className="flex gap-4">
+                        <div className="flex flex-col gap-1.5">
+                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">BGM</span>
+                           <button 
+                             onClick={toggleBgm}
+                             className={`flex items-center justify-center gap-1.5 px-2 py-1 rounded border transition-colors ${
+                               isBgmPlaying ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : 'border-[#323238] bg-[#1a1a1e] text-gray-500'
+                             }`}
+                           >
+                             {isBgmPlaying ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                             <span className="text-[9px] uppercase font-bold">{isBgmPlaying ? 'PLAYING' : 'MUTED'}</span>
+                           </button>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">CYCLE SFX</span>
+                           <button 
+                             onClick={() => {
+                               const next = !isSfxMuted;
+                               if (!next && isBgmPlaying) {
+                                 SoundManager.pauseBGM();
+                                 setIsBgmPlaying(false);
+                               }
+                               setSfxMutedWithSpeed(next);
+                             }}
+                             className={`flex items-center justify-center gap-1.5 px-2 py-1 rounded border transition-colors ${
+                               !isSfxMuted ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : 'border-[#323238] bg-[#1a1a1e] text-gray-500'
+                             }`}
+                           >
+                             {!isSfxMuted ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                             <span className="text-[9px] uppercase font-bold">{!isSfxMuted ? 'ON' : 'MUTED'}</span>
+                           </button>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-[9px] font-bold text-gray-500 uppercase">Cycle Interval</label>
                       <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} rounded`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
@@ -1040,6 +1082,35 @@ export default function App() {
                       >
                         <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isRandomCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
                       </button>
+                    </div>
+
+                    <div className="pt-4 mt-2 border-t border-[#323238]/50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Camera className={`w-4 h-4 ${isSlowRotate ? highlightClasses.text : 'text-gray-500'}`} />
+                          <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Rotate</span>
+                        </div>
+                        <button 
+                          onClick={() => setIsSlowRotate(!isSlowRotate)}
+                          className={`w-10 h-5 rounded-full transition-colors relative border ${isSlowRotate ? `bg-transparent ${highlightClasses.border}` : 'border-[#323238] bg-[#1a1a1e]'}`}
+                        >
+                          <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isSlowRotate ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
+                        </button>
+                      </div>
+                      
+                      {isSlowRotate && (
+                        <div className="pt-3 pb-1">
+                          <div className="flex justify-between items-center mb-2">
+                            <label className="text-[9px] font-bold text-gray-500 uppercase">Rotation Speed</label>
+                            <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} rounded`}>{rotateSpeed.toFixed(1)}x</span>
+                          </div>
+                          <input 
+                            type="range" min="0.1" max="3" step="0.1" value={rotateSpeed} 
+                            onChange={(e) => setRotateSpeed(parseFloat(e.target.value))}
+                            className={`w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer ${highlightClasses.accent}`}
+                          />
+                        </div>
+                      )}
                     </div>
 
                   </div>
@@ -1835,7 +1906,7 @@ export default function App() {
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Level</span>
               <input 
-                type="range" min="1" max="10" value={formationLevel} 
+                type="range" min="1" max="8" value={formationLevel} 
                 onChange={(e) => setFormationLevel(parseInt(e.target.value))}
                 className="w-20 h-1 bg-[#2A2A30] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
               />

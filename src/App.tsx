@@ -194,7 +194,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'visual' | 'sound'>('visual');
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSidebarOpen`) !== 'false');
   const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>(() => (localStorage.getItem(`${STORAGE_KEY}_sidebarPosition`) as 'left' | 'right') || 'left');
-  const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'colors');
+  const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'black');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
@@ -914,8 +914,8 @@ export default function App() {
                     <rect x="12.5" y="16.5" width="3" height="6" />
                   </svg>
                   <span className="flex flex-col">
-                    <span className="text-base font-black leading-none">SOLID BLOCKPOSE</span>
-                    <span className="text-[var(--accent)] text-xs mt-0.5">STUDIO BGM+</span>
+                    <span className="text-base font-black leading-none tracking-wider">SOLID BLOCKPOSE</span>
+                    <span className="text-[var(--accent)] text-xs mt-0.5 tracking-widest">STUDIO BGM+</span>
                   </span>
                 </h1>
                 <p className="text-[9px] text-gray-500 mt-1.5 uppercase tracking-widest font-bold">Studio Edition</p>
@@ -1933,7 +1933,7 @@ export default function App() {
               gl.shadowMap.enabled = true;
             }}
           >
-            <PerspectiveCamera makeDefault position={[8, 8, 12]} fov={45} />
+            <PerspectiveCamera makeDefault position={[6, 6, 9]} fov={45} />
             <Environment preset="city" />
             <color attach="background" args={[currentTheme.bgColor]} />
             

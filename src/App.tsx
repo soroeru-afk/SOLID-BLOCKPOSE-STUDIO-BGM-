@@ -1105,7 +1105,7 @@ export default function App() {
                             <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} rounded`}>{rotateSpeed.toFixed(1)}x</span>
                           </div>
                           <input 
-                            type="range" min="0.1" max="3" step="0.1" value={rotateSpeed} 
+                            type="range" min="0.1" max="10" step="0.1" value={rotateSpeed} 
                             onChange={(e) => setRotateSpeed(parseFloat(e.target.value))}
                             className={`w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer ${highlightClasses.accent}`}
                           />
@@ -1168,7 +1168,7 @@ export default function App() {
                           <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 rounded">{autoCameraSpeed.toFixed(1)}x</span>
                         </div>
                         <input 
-                          type="range" min="0.1" max="3" step="0.1" value={autoCameraSpeed} 
+                          type="range" min="0.1" max="10" step="0.1" value={autoCameraSpeed} 
                           onChange={(e) => setAutoCameraSpeed(parseFloat(e.target.value))}
                           className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-500"
                         />

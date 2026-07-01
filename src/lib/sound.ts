@@ -137,15 +137,17 @@ export class SoundManager {
     }
   }
 
-  static playPoseChange(type: SoundEffectType = 'mechanical') {
-    if (this.isMuted) return;
+  static playPoseChange(type: SoundEffectType = 'mechanical', forceVolume?: number) {
+    if (this.isMuted && forceVolume === undefined) return;
     const ctx = this.getCtx();
     const now = ctx.currentTime;
     const gain = ctx.createGain();
     gain.connect(this.masterGain!);
     
     // SFX volume relative to master
-    const vol = this.sfxVolume * 0.5;
+    const vol = (forceVolume !== undefined ? forceVolume : this.sfxVolume) * 0.5;
+    
+    if (vol <= 0) return;
 
     switch (type) {
       case 'mechanical':

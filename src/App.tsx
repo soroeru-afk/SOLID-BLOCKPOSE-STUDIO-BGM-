@@ -8,12 +8,12 @@ import { POSES as INITIAL_POSES, THEMES } from './constants';
 import { ThemeId, PosePreset, PoseAngles } from './types';
 import { 
   User, Palette, Settings2, ZoomIn, RefreshCw, Layers, 
-  Play, Pause, Plus, Save, Trash2, Edit3, SlidersHorizontal,
+  Play, Pause, Plus, Minus, Save, Trash2, Edit3, SlidersHorizontal,
   Download, Upload, Volume2, VolumeX, Music, Music2,
   Camera, Video, Square, GripVertical, ChevronsUp,
   PanelLeftClose, PanelLeftOpen, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   LayoutGrid, Circle, Triangle, Target, Tornado, List, FolderPlus,
-  SkipBack, SkipForward, Zap
+  SkipBack, SkipForward, Zap, Maximize, Minimize
 } from 'lucide-react';
 import { SoundManager, SoundEffectType } from './lib/sound';
 import { AudioDB, StoredTrack } from './lib/audioDb';
@@ -115,6 +115,7 @@ export default function App() {
   const [currentBgmId, setCurrentBgmId] = useState<string | null>(null);
   const [isBgmPlaying, setIsBgmPlaying] = useState(false);
   const [isBgmLoading, setIsBgmLoading] = useState(false);
+  const [isSamplesLoading, setIsSamplesLoading] = useState(false);
   const [bgmRepeatMode, setBgmRepeatMode] = useState<0 | 1 | 2>(0); // 0: Off, 1: Playlist, 2: Track
   const [isRandomCycle, setIsRandomCycle] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isRandomCycle`) === 'true');
   const [isSlowRotate, setIsSlowRotate] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSlowRotate`) === 'true');
@@ -186,6 +187,7 @@ export default function App() {
   const [isAutoFormation, setIsAutoFormation] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isAutoFormation`) === 'true');
   const [isRandomFormation, setIsRandomFormation] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isRandomFormation`) === 'true');
   const [autoCameraSpeed, setAutoCameraSpeed] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_autoCameraSpeed`) || '1'));
+  const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isAdvancedOptionsOpen`) !== 'false');
 
   // UI Theme settings
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_accentColor`) || '#80858C');
@@ -197,6 +199,29 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSidebarOpen`) !== 'false');
   const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>(() => (localStorage.getItem(`${STORAGE_KEY}_sidebarPosition`) as 'left' | 'right') || 'left');
   const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'black');
+  const [isHUDControlsVisible, setIsHUDControlsVisible] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isHUDControlsVisible`) !== 'false');
+  const [hudOpacity, setHudOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_hudOpacity`) || '0.6'));
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
@@ -210,6 +235,7 @@ export default function App() {
   
   const orbitRef = React.useRef<any>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const resumeBgmRef = React.useRef(false);
 
   // Persistence logic
   useEffect(() => {
@@ -236,6 +262,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_isAutoFormation`, isAutoFormation.toString());
     localStorage.setItem(`${STORAGE_KEY}_isRandomFormation`, isRandomFormation.toString());
     localStorage.setItem(`${STORAGE_KEY}_autoCameraSpeed`, autoCameraSpeed.toString());
+    localStorage.setItem(`${STORAGE_KEY}_isAdvancedOptionsOpen`, isAdvancedOptionsOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_accentColor`, accentColor);
     localStorage.setItem(`${STORAGE_KEY}_characterColor`, characterColor);
     localStorage.setItem(`${STORAGE_KEY}_savedCustomCharacterColor`, savedCustomCharacterColor);
@@ -244,13 +271,17 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_isSidebarOpen`, isSidebarOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_sidebarPosition`, sidebarPosition);
     localStorage.setItem(`${STORAGE_KEY}_appTheme`, appTheme);
-  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme]);
+    localStorage.setItem(`${STORAGE_KEY}_isHUDControlsVisible`, isHUDControlsVisible.toString());
+    localStorage.setItem(`${STORAGE_KEY}_hudOpacity`, hudOpacity.toString());
+  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, isAdvancedOptionsOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme, isHUDControlsVisible, hudOpacity]);
 
   // Sync sound manager state
   useEffect(() => {
     SoundManager.setVolume(isSfxMuted ? 0 : sfxVolume);
     SoundManager.setBgmVolume(bgmVolume);
   }, [sfxVolume, bgmVolume, isSfxMuted]);
+
+
 
   const setSfxMutedWithSpeed = (mute: boolean) => {
     if (mute === isSfxMuted) return;
@@ -284,7 +315,7 @@ export default function App() {
     const data = {
       poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
       soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor,
-      characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition,
+      characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, isHUDControlsVisible, hudOpacity,
       playlists, activePlaylistId, isPlaylistExpanded,
       tracks: serializedTracks
     };
@@ -334,6 +365,8 @@ export default function App() {
         if (data.isColorSettingsOpen !== undefined) setIsColorSettingsOpen(data.isColorSettingsOpen);
         if (data.isSidebarOpen !== undefined) setIsSidebarOpen(data.isSidebarOpen);
         if (data.sidebarPosition) setSidebarPosition(data.sidebarPosition);
+        if (data.isHUDControlsVisible !== undefined) setIsHUDControlsVisible(data.isHUDControlsVisible);
+        if (data.hudOpacity !== undefined) setHudOpacity(data.hudOpacity);
         if (data.playlists) setPlaylists(data.playlists);
         if (data.activePlaylistId) setActivePlaylistId(data.activePlaylistId);
         if (data.isPlaylistExpanded !== undefined) setIsPlaylistExpanded(data.isPlaylistExpanded);
@@ -525,6 +558,46 @@ export default function App() {
 
   const bgmInputRef = React.useRef<HTMLInputElement>(null);
 
+  const loadSamples = async () => {
+    setIsSamplesLoading(true);
+    const samples = [
+      { name: "Outfoxing (MDN Sample)", url: "https://raw.githubusercontent.com/mdn/webaudio-examples/main/audio-basics/outfoxing.mp3" }
+    ];
+
+    const newTracks: { id: string, name: string, file: File | Blob }[] = [];
+    const newTrackIds: string[] = [];
+
+    try {
+      for (const sample of samples) {
+        const res = await fetch(sample.url);
+        const blob = await res.blob();
+        const id = Math.random().toString(36).substring(2, 9);
+        newTracks.push({ id, name: sample.name, file: blob });
+        newTrackIds.push(id);
+        
+        try {
+          await AudioDB.saveTrack({ id, name: sample.name, data: blob });
+        } catch (err) {
+          console.error('Failed to persist sample:', err);
+        }
+      }
+
+      setAllTracks(prev => [...prev, ...newTracks]);
+      
+      const newPlaylist = [...bgmPlaylist, ...newTracks];
+      setBgmPlaylist(newPlaylist);
+
+      if (currentBgmId === null && newPlaylist.length > 0) {
+        playTrackById(newTracks[0].id, true);
+      }
+    } catch (e) {
+      console.error('Failed to load samples', e);
+      alert('Failed to load samples due to network error.');
+    } finally {
+      setIsSamplesLoading(false);
+    }
+  };
+
   const handleBgmUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !files.length) return;
@@ -589,9 +662,11 @@ export default function App() {
       if (isBgmPlaying) {
         SoundManager.pauseBGM();
         setIsBgmPlaying(false);
+        setIsAutoCycle(false);
       } else {
-        SoundManager.playBGM();
         setIsBgmPlaying(true);
+        setIsAutoCycle(true);
+        SoundManager.playBGM();
         if (!isSfxMuted) setSfxMutedWithSpeed(true);
       }
       return;
@@ -601,8 +676,9 @@ export default function App() {
       setIsBgmLoading(true);
       await SoundManager.loadBGM(track.file as File);
       setCurrentBgmId(id);
-      SoundManager.playBGM();
       setIsBgmPlaying(true);
+      setIsAutoCycle(true);
+      SoundManager.playBGM();
       if (!isSfxMuted) setSfxMutedWithSpeed(true);
     } catch (e) {
       alert("Failed to load audio file. It may be corrupt or unsupported.");
@@ -665,31 +741,35 @@ export default function App() {
   };
 
   const deletePlaylist = (id: string) => {
-    setPlaylists(prev => {
-      const nextPlaylists = prev.filter(p => p.id !== id);
-      if (nextPlaylists.length === 0) {
-        const newId = Math.random().toString(36).substring(2, 9);
-        setActivePlaylistId(newId);
-        return [{ id: newId, name: 'Default Playlist', trackIds: [] }];
-      } else if (id === activePlaylistId) {
+    const nextPlaylists = playlists.filter(p => p.id !== id);
+    if (nextPlaylists.length === 0) {
+      const newId = Math.random().toString(36).substring(2, 9);
+      setActivePlaylistId(newId);
+      setPlaylists([{ id: newId, name: 'Default Playlist', trackIds: [] }]);
+    } else {
+      if (id === activePlaylistId) {
         setActivePlaylistId(nextPlaylists[0].id);
       }
-      return nextPlaylists;
-    });
+      setPlaylists(nextPlaylists);
+    }
   };
+
 
 
   const toggleBgm = () => {
     if (isBgmPlaying) {
       SoundManager.pauseBGM();
       setIsBgmPlaying(false);
+      setIsAutoCycle(false);
     } else {
+      setIsBgmPlaying(true);
+      setIsAutoCycle(true);
+      if (!isSfxMuted) setSfxMutedWithSpeed(true);
+      
       if (currentBgmId !== null) {
         SoundManager.playBGM();
-        setIsBgmPlaying(true);
-        if (!isSfxMuted) setSfxMutedWithSpeed(true);
       } else if (bgmPlaylist.length > 0) {
-        playTrackById(bgmPlaylist[0].id);
+        playTrackById(bgmPlaylist[0].id, true);
       }
     }
   };
@@ -697,6 +777,7 @@ export default function App() {
   const stopBgm = () => {
     SoundManager.stopBGM();
     setIsBgmPlaying(false);
+    setIsAutoCycle(false);
   };
 
   const playPreviousTrack = () => {
@@ -904,11 +985,11 @@ export default function App() {
   }, [formationLevel, formationType, formationSpacing]);
 
   const highlightClasses = {
-    text: appTheme === 'light' ? 'text-[#0481B0]' : 'text-[#05DFFC]',
-    bg: appTheme === 'light' ? 'bg-[#0481B0]' : 'bg-[#05DFFC]',
-    bgMuted: appTheme === 'light' ? 'bg-[#0481B0]/10' : 'bg-[#05DFFC]/10',
-    border: appTheme === 'light' ? 'border-[#0481B0]' : 'border-[#05DFFC]',
-    accent: appTheme === 'light' ? 'accent-[#0481B0]' : 'accent-[#05DFFC]',
+    text: appTheme === 'light' ? 'text-[#009FBA]' : 'text-[#05DFFC]',
+    bg: appTheme === 'light' ? 'bg-[#009FBA]' : 'bg-[#05DFFC]',
+    bgMuted: appTheme === 'light' ? 'bg-[#009FBA]/10' : 'bg-[#05DFFC]/10',
+    border: appTheme === 'light' ? 'border-[#009FBA]' : 'border-[#05DFFC]',
+    accent: appTheme === 'light' ? 'accent-[#009FBA]' : 'accent-[#05DFFC]',
   };
 
   return (
@@ -988,13 +1069,24 @@ export default function App() {
                     onClick={() => {
                       const nextState = !isAutoCycle;
                       setIsAutoCycle(nextState);
-                      if (nextState && !isBgmPlaying && bgmPlaylist.length > 0) {
-                        toggleBgm();
-                      } else if (!nextState && isBgmPlaying) {
-                        toggleBgm();
-                      }
                       
-                      if (!nextState) {
+                      if (nextState) {
+                        if (resumeBgmRef.current) {
+                          if (currentBgmId !== null) {
+                            SoundManager.playBGM();
+                            setIsBgmPlaying(true);
+                            if (!isSfxMuted) setSfxMutedWithSpeed(true);
+                          } else if (bgmPlaylist.length > 0) {
+                            playTrackById(bgmPlaylist[0].id, true);
+                          }
+                          resumeBgmRef.current = false;
+                        }
+                      } else {
+                        resumeBgmRef.current = isBgmPlaying;
+                        if (isBgmPlaying) {
+                          SoundManager.pauseBGM();
+                          setIsBgmPlaying(false);
+                        }
                         setIsAutoCamera(false);
                         setIsAutoFormation(false);
                         setIsSlowRotate(false);
@@ -1009,24 +1101,23 @@ export default function App() {
                   </button>
                 </div>
                 
-                {isAutoCycle && (
-                  <div className="pt-3">
+                <div className="pt-3">
                     <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#323238]/50">
                       <div className="flex gap-4">
                         <div className="flex flex-col gap-1.5">
                            <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">BGM</span>
                            <button 
                              onClick={toggleBgm}
-                             className={`flex items-center justify-center gap-1.5 px-2 py-1 rounded border transition-colors ${
+                             className={`flex items-center justify-center gap-1.5 w-[84px] py-1 rounded border transition-colors ${
                                isBgmPlaying ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : 'border-[#323238] bg-[#1a1a1e] text-gray-500'
                              }`}
                            >
                              {isBgmPlaying ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
-                             <span className="text-[9px] uppercase font-bold">{isBgmPlaying ? 'PLAYING' : 'MUTED'}</span>
+                             <span className="text-[9px] uppercase font-bold">{isBgmPlaying ? 'ON' : 'OFF'}</span>
                            </button>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">CYCLE SFX</span>
+                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">SFX</span>
                            <button 
                              onClick={() => {
                                const next = !isSfxMuted;
@@ -1036,12 +1127,12 @@ export default function App() {
                                }
                                setSfxMutedWithSpeed(next);
                              }}
-                             className={`flex items-center justify-center gap-1.5 px-2 py-1 rounded border transition-colors ${
+                             className={`flex items-center justify-center gap-1.5 w-[84px] py-1 rounded border transition-colors ${
                                !isSfxMuted ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : 'border-[#323238] bg-[#1a1a1e] text-gray-500'
                              }`}
                            >
                              {!isSfxMuted ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
-                             <span className="text-[9px] uppercase font-bold">{!isSfxMuted ? 'ON' : 'MUTED'}</span>
+                             <span className="text-[9px] uppercase font-bold">{!isSfxMuted ? 'ON' : 'OFF'}</span>
                            </button>
                         </div>
                       </div>
@@ -1049,7 +1140,7 @@ export default function App() {
 
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-[9px] font-bold text-gray-500 uppercase">Cycle Interval</label>
-                      <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} rounded`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
+                      <span className={`text-[9px] font-mono font-bold ${isAutoCycle ? `${highlightClasses.text} ${highlightClasses.bgMuted}` : 'text-gray-500 bg-[#1a1a1e]'} px-1.5 py-0.5 rounded transition-colors`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
                     </div>
                     <input 
                       type="range" 
@@ -1068,7 +1159,7 @@ export default function App() {
                         if (!isSfxMuted) minSpeed = 1000;
                         setCycleSpeed(Math.max(minSpeed, Math.min(10000, finalSpeed)));
                       }}
-                      className={`w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer ${highlightClasses.accent}`}
+                      className={`w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer ${isAutoCycle ? highlightClasses.accent : 'accent-gray-500'} transition-colors`}
                     />
 
                     <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#323238]/50">
@@ -1088,7 +1179,7 @@ export default function App() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Camera className={`w-4 h-4 ${isSlowRotate ? highlightClasses.text : 'text-gray-500'}`} />
-                          <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Rotate</span>
+                          <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Turn</span>
                         </div>
                         <button 
                           onClick={() => setIsSlowRotate(!isSlowRotate)}
@@ -1101,7 +1192,7 @@ export default function App() {
                       {isSlowRotate && (
                         <div className="pt-3 pb-1">
                           <div className="flex justify-between items-center mb-2">
-                            <label className="text-[9px] font-bold text-gray-500 uppercase">Rotation Speed</label>
+                            <label className="text-[9px] font-bold text-gray-500 uppercase">Turn Speed</label>
                             <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} rounded`}>{rotateSpeed.toFixed(1)}x</span>
                           </div>
                           <input 
@@ -1113,68 +1204,83 @@ export default function App() {
                       )}
                     </div>
 
-                  </div>
-                )}
-
-                <div className="pt-2 border-t border-[#323238]/50 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Zap className={`w-4 h-4 ${isAutoFormation ? 'text-amber-400' : 'text-gray-500'}`} />
-                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Format Change</span>
-                    </div>
-                    <button 
-                      onClick={() => setIsAutoFormation(!isAutoFormation)}
-                      className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoFormation ? 'bg-transparent border-amber-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
-                    >
-                      <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoFormation ? 'bg-amber-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
-                    </button>
-                  </div>
-                  
-                  {isAutoFormation && (
-                    <div className="flex items-center justify-between pt-1 border-t border-[#323238]/50 mt-2">
-                      <div className="flex items-center gap-2">
-                        <Zap className={`w-4 h-4 ${isRandomFormation ? 'text-amber-400' : 'text-gray-500'}`} />
-                        <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Random Format Change</span>
-                      </div>
+                    <div className="pt-4 mt-2 border-t border-[#323238]/50">
                       <button 
-                        onClick={() => setIsRandomFormation(!isRandomFormation)}
-                        className={`w-10 h-5 rounded-full transition-colors relative border ${isRandomFormation ? 'bg-transparent border-amber-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
+                        onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
+                        className="flex items-center justify-between w-full mb-3 group"
                       >
-                        <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isRandomFormation ? 'bg-amber-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-2 border-t border-[#323238]/50 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Video className={`w-4 h-4 ${isAutoCamera ? 'text-red-400' : 'text-gray-500'}`} />
-                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Cinematic View</span>
-                    </div>
-                    <button 
-                      onClick={() => setIsAutoCamera(!isAutoCamera)}
-                      className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoCamera ? 'bg-transparent border-red-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
-                    >
-                      <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoCamera ? 'bg-red-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
-                    </button>
-                  </div>
-
-                  {isAutoCamera && (
-                    <div className="pt-2 pb-2 space-y-4">
-                      <div>
-                        <div className="flex justify-between items-center mb-2">
-                          <label className="text-[9px] font-bold text-gray-500 uppercase">Camera Intensity</label>
-                          <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 rounded">{autoCameraSpeed.toFixed(1)}x</span>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-1 h-3 rounded-full transition-colors ${isAdvancedOptionsOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
+                          <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? 'text-[#E1E1E6]' : 'text-gray-500 group-hover:text-gray-300'}`}>Advanced Cycle Options</span>
                         </div>
-                        <input 
-                          type="range" min="0.1" max="10" step="0.1" value={autoCameraSpeed} 
-                          onChange={(e) => setAutoCameraSpeed(parseFloat(e.target.value))}
-                          className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-500"
-                        />
+                        <div className={`w-5 h-5 rounded border border-[#323238] bg-[#1a1a1e] flex items-center justify-center transition-colors ${isAdvancedOptionsOpen ? highlightClasses.border : 'group-hover:border-gray-500'}`}>
+                          {isAdvancedOptionsOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
+                        </div>
+                      </button>
+                      
+                      {isAdvancedOptionsOpen && (
+                        <div className="p-3 bg-[#1a1a1e]/60 border border-[#323238] rounded-xl space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Zap className={`w-4 h-4 ${isAutoFormation ? 'text-amber-400' : 'text-gray-500'}`} />
+                              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Format Change</span>
+                            </div>
+                          <button 
+                            onClick={() => setIsAutoFormation(!isAutoFormation)}
+                            className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoFormation ? 'bg-transparent border-amber-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
+                          >
+                            <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoFormation ? 'bg-amber-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
+                          </button>
+                        </div>
+                        
+                        {isAutoFormation && (
+                          <div className="flex items-center justify-between pt-1 border-t border-[#323238]/50 mt-2">
+                            <div className="flex items-center gap-2">
+                              <Zap className={`w-4 h-4 ${isRandomFormation ? 'text-amber-400' : 'text-gray-500'}`} />
+                              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Random Format Change</span>
+                            </div>
+                            <button 
+                              onClick={() => setIsRandomFormation(!isRandomFormation)}
+                              className={`w-10 h-5 rounded-full transition-colors relative border ${isRandomFormation ? 'bg-transparent border-amber-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
+                            >
+                              <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isRandomFormation ? 'bg-amber-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="pt-2 border-t border-[#323238]/50 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Video className={`w-4 h-4 ${isAutoCamera ? 'text-red-400' : 'text-gray-500'}`} />
+                              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Cinematic View</span>
+                            </div>
+                            <button 
+                              onClick={() => setIsAutoCamera(!isAutoCamera)}
+                              className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoCamera ? 'bg-transparent border-red-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
+                            >
+                              <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoCamera ? 'bg-red-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
+                            </button>
+                          </div>
+
+                          {isAutoCamera && (
+                            <div className="pt-2 pb-2 space-y-4">
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <label className="text-[9px] font-bold text-gray-500 uppercase">Camera Intensity</label>
+                                  <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 rounded">{autoCameraSpeed.toFixed(1)}x</span>
+                                </div>
+                                <input 
+                                  type="range" min="0.1" max="10" step="0.1" value={autoCameraSpeed} 
+                                  onChange={(e) => setAutoCameraSpeed(parseFloat(e.target.value))}
+                                  className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-500"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1474,15 +1580,14 @@ export default function App() {
           ) : (
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-left-2 duration-300 overflow-hidden min-h-0">
               <div className="p-4 space-y-4 border-b border-[#323238] bg-[var(--accent)]/5 flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Audio Settings</label>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
+                <div className="space-y-4">
+                  <div className={`p-3 rounded-xl flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : 'bg-[#1a1a1e]/40 border border-[#323238]'}`}>
+                    <div className={`flex items-center justify-between border-b pb-2 mb-1 ${appTheme === 'light' ? 'border-gray-200' : 'border-[#323238]/50'}`}>
+                      <label className={`text-[10px] uppercase tracking-widest font-bold ${appTheme === 'light' ? 'text-gray-700' : 'text-[#E1E1E6]'}`}>EFFECT SETTING</label>
+                    </div>
                     <div className="flex justify-between items-center mb-1">
                       <label className="text-[9px] text-gray-500 uppercase font-bold">Effect Style</label>
-                      <span className="text-[9px] text-[var(--accent)] font-mono">{soundType}</span>
+                      <span className={`text-[9px] ${highlightClasses.text} font-mono`}>{soundType}</span>
                     </div>
                     <div className="grid grid-cols-5 gap-1.5">
                       {(['mechanical', 'retro', 'ping', 'wood', 'pop'] as SoundEffectType[]).map((type) => (
@@ -1490,40 +1595,43 @@ export default function App() {
                           key={type}
                           onClick={() => {
                             setSoundType(type);
-                            if (!isSfxMuted) SoundManager.playPoseChange(type);
+                            SoundManager.playPoseChange(type, sfxVolume);
                           }}
                           className={`h-6 rounded border transition-all text-[8px] font-bold uppercase ${
                             soundType === type 
-                            ? 'bg-[var(--accent)] border-[var(--accent)] text-white' 
-                            : 'bg-[#2A2A30] border-[#323238] text-gray-500 hover:border-gray-500'
+                            ? `${highlightClasses.bg} ${highlightClasses.border} ${appTheme === 'light' ? 'text-white' : 'text-[#121214]'}` 
+                            : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 text-gray-600 hover:bg-gray-300 hover:border-gray-300' : 'bg-[#2A2A30] border-[#323238] text-gray-500 hover:border-[#424248] hover:text-gray-300')
                           }`}
                         >
                           {type.slice(0, 3)}
                         </button>
                       ))}
                     </div>
-                  </div>
 
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <div className="flex items-center gap-2">
-                        <label className="text-[9px] text-gray-500 uppercase font-bold">SFX Volume</label>
+                    <div className="pt-1">
+                      <div className="flex justify-between items-center mb-1">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[9px] text-gray-500 uppercase font-bold">SFX Volume</label>
+                        </div>
+                        <span className="text-[9px] text-gray-400 font-mono">{Math.round(sfxVolume * 100)}%</span>
                       </div>
-                      <span className="text-[9px] text-gray-400 font-mono">{Math.round(sfxVolume * 100)}%</span>
+                      <input 
+                        type="range" min="0" max="1" step="0.01" value={sfxVolume} 
+                        onChange={(e) => setSfxVolume(parseFloat(e.target.value))}
+                        className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `bg-[#2A2A30] ${highlightClasses.accent}`}`}
+                      />
                     </div>
-                    <input 
-                      type="range" min="0" max="1" step="0.01" value={sfxVolume} 
-                      onChange={(e) => setSfxVolume(parseFloat(e.target.value))}
-                      className="w-full h-1 bg-[#2A2A30] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
-                    />
                   </div>
 
-                  <div className="pt-2 pb-2">
+                  <div className={`p-3 rounded-xl flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : 'bg-[#1a1a1e]/40 border border-[#323238]'}`}>
+                    <div className={`flex items-center justify-between border-b pb-2 mb-1 ${appTheme === 'light' ? 'border-gray-200' : 'border-[#323238]/50'}`}>
+                      <label className={`text-[10px] uppercase tracking-widest font-bold ${appTheme === 'light' ? 'text-gray-700' : 'text-[#E1E1E6]'}`}>BGM SETTING</label>
+                    </div>
                     <div className="flex flex-col gap-3">
                        {/* Controls */}
                        <div className="flex flex-col gap-2 mb-0">
                          <div className="flex-1 overflow-hidden px-1 text-center">
-                           <p className="text-[11px] font-bold text-white truncate tracking-wider">
+                           <p className={`text-[11px] font-bold truncate tracking-wider ${appTheme === 'light' ? 'text-gray-800' : 'text-white'}`}>
                              {currentBgmId !== null ? (bgmPlaylist.find(t => t.id === currentBgmId)?.name || 'NO TRACK READY') : 'NO TRACK READY'}
                            </p>
                          </div>
@@ -1531,21 +1639,32 @@ export default function App() {
                          <div className="flex items-center justify-center gap-1.5">
                             <button 
                               onClick={playPreviousTrack}
-                              className="w-10 h-8 rounded border border-[#323238] bg-[#1a1a1e] hover:bg-[#323238] flex items-center justify-center text-white transition-all shadow-sm"
+                              className={`w-10 h-8 rounded border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-[#323238] bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
                               disabled={bgmPlaylist.length === 0}
                             >
                                <SkipBack className="w-4 h-4 mr-0.5" />
                             </button>
                             <button 
                               onClick={toggleBgm}
-                              className="w-12 h-8 rounded border border-[#323238] bg-[#1a1a1e] hover:bg-[#323238] flex items-center justify-center text-white transition-all shadow-sm"
+                              className={`w-12 h-8 rounded border transition-all shadow-sm flex items-center justify-center ${
+                                isBgmPlaying 
+                                  ? (appTheme === 'light' ? `bg-gray-500 border-gray-500 text-[#ffffff]` : `bg-[#1a1a1e] ${highlightClasses.border} ${highlightClasses.text}`) 
+                                  : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-[#323238] bg-[#1a1a1e] text-white hover:bg-[#323238]')
+                              }`}
                               disabled={bgmPlaylist.length === 0}
                             >
                               {isBgmPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
                             </button>
                             <button 
+                              onClick={stopBgm}
+                              className={`w-10 h-8 rounded border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-[#323238] bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
+                              disabled={bgmPlaylist.length === 0 || currentBgmId === null}
+                            >
+                              <Square className="w-3.5 h-3.5 fill-current" />
+                            </button>
+                            <button 
                               onClick={playNextTrack}
-                              className="w-10 h-8 rounded border border-[#323238] bg-[#1a1a1e] hover:bg-[#323238] flex items-center justify-center text-white transition-all shadow-sm"
+                              className={`w-10 h-8 rounded border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-[#323238] bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
                               disabled={bgmPlaylist.length === 0}
                             >
                                <SkipForward className="w-4 h-4 ml-0.5" />
@@ -1554,13 +1673,15 @@ export default function App() {
                             <button
                                onClick={() => setBgmRepeatMode(prev => prev === 0 ? 1 : prev === 1 ? 2 : 0)}
                                className={`w-10 h-8 rounded border transition-all shadow-sm flex items-center justify-center relative ${
-                                 bgmRepeatMode !== 0 ? 'bg-[#1a1a1e] border-[var(--accent)] text-[var(--accent)]' : 'bg-[#1a1a1e] border-[#323238] text-gray-400 hover:text-white hover:bg-[#323238]'
+                                 bgmRepeatMode !== 0 
+                                  ? (appTheme === 'light' ? `bg-gray-500 border-gray-500 text-[#ffffff]` : `bg-[#1a1a1e] ${highlightClasses.border} ${highlightClasses.text}`) 
+                                  : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'bg-[#1a1a1e] border-[#323238] text-gray-400 hover:text-white hover:bg-[#323238]')
                                }`}
                                title={bgmRepeatMode === 1 ? "Playlist Repeat" : bgmRepeatMode === 2 ? "Track Repeat" : "Repeat Off"}
                             >
                                <RefreshCw className="w-4 h-4" />
                                {bgmRepeatMode === 2 && (
-                                 <span className="absolute -top-1.5 -right-1.5 text-[8px] font-bold flex items-center justify-center rounded-md bg-[var(--accent)] text-white w-3.5 h-3.5 pt-[1px]">1</span>
+                                 <span className={`absolute -top-1.5 -right-1.5 text-[8px] font-bold flex items-center justify-center rounded-md ${highlightClasses.bg} text-[#121214] w-3.5 h-3.5 pt-[1px]`}>1</span>
                                )}
                             </button>
                          </div>
@@ -1577,9 +1698,9 @@ export default function App() {
                              <span className="text-[10px] text-gray-400 font-mono tracking-wider">{bgmTimeStr.split(' / ')[0]}</span>
                              <span className="text-[10px] text-gray-500 font-mono tracking-wider">{bgmTimeStr.split(' / ')[1]}</span>
                           </div>
-                          <div className="w-full h-1 bg-[#2A2A30] rounded-full overflow-hidden relative pointer-events-none transition-all">
+                          <div className={`w-full h-1 rounded-full overflow-hidden relative pointer-events-none transition-all ${appTheme === 'light' ? 'bg-gray-300' : 'bg-[#2A2A30]'}`}>
                              <div 
-                                className="h-full bg-[var(--accent)] transition-all ease-linear"
+                                className={`h-full ${appTheme === 'light' ? 'bg-gray-500' : highlightClasses.bg} transition-all ease-linear`}
                                 style={{ width: `${Math.max(0, Math.min(100, bgmProgress * 100))}%`, transitionDuration: isBgmPlaying ? '500ms' : '0ms' }}
                              />
                           </div>
@@ -1593,7 +1714,7 @@ export default function App() {
                           <input 
                             type="range" min="0" max="1" step="0.01" value={bgmVolume} 
                             onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
-                            className="w-full h-1 bg-[#2A2A30] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
+                            className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `bg-[#2A2A30] ${highlightClasses.accent}`}`}
                           />
                        </div>
                     </div>
@@ -1752,6 +1873,13 @@ export default function App() {
                         TRACKS
                       </label>
                       <div className="flex gap-2">
+                        <button 
+                          onClick={loadSamples}
+                          disabled={isSamplesLoading}
+                          className="text-[8px] text-[var(--accent)] hover:text-white font-bold uppercase underline cursor-pointer flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Music className="w-2.5 h-2.5" /> {isSamplesLoading ? 'Loading...' : 'Add Samples'}
+                        </button>
                         <label className="text-[8px] text-[var(--accent)] hover:text-white font-bold uppercase underline cursor-pointer flex items-center gap-1">
                           <Plus className="w-2.5 h-2.5" /> Add Files
                           <input 
@@ -1775,7 +1903,7 @@ export default function App() {
                       >
                         {bgmPlaylist.length > 0 ? bgmPlaylist.map((track, idx) => (
                           <Reorder.Item 
-                            key={track.id} 
+                            key={`${track.id}-${idx}`} 
                             value={track}
                             onClick={() => playTrackById(track.id)}
                             className={`group flex items-center justify-between p-2 rounded border transition-all cursor-pointer select-none ${
@@ -1892,69 +2020,15 @@ export default function App() {
         {/* Header Bar */}
         <header className="h-14 border-b border-[#323238] flex items-center justify-between px-6 bg-[#1a1a1e]/80 backdrop-blur-md z-10 flex-shrink-0">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Scale</span>
-              <input 
-                type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
-                onChange={(e) => setPersonScale(parseFloat(e.target.value))}
-                className="w-20 h-1 bg-[#2A2A30] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
-              />
-              <span className="text-[10px] font-mono text-white w-4 text-right">{personScale.toFixed(1)}</span>
-            </div>
-            <div className="h-6 w-px bg-gray-700/50"></div>
-            
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Level</span>
-              <input 
-                type="range" min="1" max="8" value={formationLevel} 
-                onChange={(e) => setFormationLevel(parseInt(e.target.value))}
-                className="w-20 h-1 bg-[#2A2A30] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
-              />
-              <span className="text-[10px] font-mono text-white w-3 text-right">{formationLevel}</span>
-            </div>
-
-            <div className="h-6 w-px bg-gray-700/50"></div>
-            
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Space</span>
-              <input 
-                type="range" min="1" max="5" step="0.5" value={formationSpacing} 
-                onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
-                className="w-20 h-1 bg-[#2A2A30] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
-              />
-              <span className="text-[10px] font-mono text-white w-5 text-right">{formationSpacing.toFixed(1)}</span>
-            </div>
-
-            <div className="h-6 w-px bg-gray-700/50"></div>
-
-            <div className="flex items-center gap-2">
-               <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Format</span>
-               <div className="flex bg-[#2A2A30] rounded p-0.5 gap-0.5">
-                 {(
-                   [
-                     { id: 'square', icon: LayoutGrid },
-                     { id: 'circle', icon: Target },
-                     { id: 'triangle', icon: Triangle },
-                     { id: 'cross', icon: Plus },
-                     { id: 'ring', icon: Circle },
-                     { id: 'spiral', icon: Tornado }
-                   ] as const
-                 ).map(({ id, icon: Icon }) => (
-                   <button
-                     key={id}
-                     onClick={() => setFormationType(id as any)}
-                     className={`p-1.5 rounded transition-all ${ 
-                       formationType === id 
-                         ? 'bg-[var(--accent)] text-white shadow-md' 
-                         : 'text-gray-400 hover:text-white hover:bg-white/5'
-                     }`}
-                     title={id.charAt(0).toUpperCase() + id.slice(1)}
-                   >
-                     <Icon className="w-3.5 h-3.5" />
-                   </button>
-                 ))}
-               </div>
-            </div>
+            <button
+              onClick={() => setIsHUDControlsVisible(!isHUDControlsVisible)}
+              className="flex items-center gap-2"
+            >
+              <div className={`p-1 border rounded-none ${isHUDControlsVisible ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+              </div>
+              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>Formation Settings</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-3">
@@ -1982,6 +2056,13 @@ export default function App() {
               Reset View
             </button>
             <button
+              onClick={toggleFullscreen}
+              className="p-1.5 rounded-md hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
+              title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            >
+              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+            </button>
+            <button
               onClick={() => setSidebarPosition(prev => prev === 'left' ? 'right' : 'left')}
               className="p-1.5 rounded-md hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
               title="Toggle Sidebar Position"
@@ -1995,6 +2076,88 @@ export default function App() {
         <div className="flex-1 relative overflow-hidden bg-[radial-gradient(#333_1px,transparent_1px)] [background-size:24px_24px]">
           <div className="absolute inset-0 bg-gradient-to-t from-[#121214] via-transparent to-transparent opacity-80 pointer-events-none"></div>
           
+          {isHUDControlsVisible && (
+            <div 
+              className="absolute top-4 left-4 z-20 flex items-center gap-6 px-5 py-2.5 transition-opacity"
+              style={{ opacity: hudOpacity }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Scale</span>
+                <input 
+                  type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
+                  onChange={(e) => setPersonScale(parseFloat(e.target.value))}
+                  className={`w-20 h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : 'bg-[#2A2A30] accent-gray-500'}`}
+                />
+                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] rounded-sm border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{personScale.toFixed(1)}</span>
+              </div>
+              <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
+              
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Level</span>
+                <input 
+                  type="range" min="1" max="8" value={formationLevel} 
+                  onChange={(e) => setFormationLevel(parseInt(e.target.value))}
+                  className={`w-20 h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : 'bg-[#2A2A30] accent-gray-500'}`}
+                />
+                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] rounded-sm border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{formationLevel}</span>
+              </div>
+
+              <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
+              
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Space</span>
+                <input 
+                  type="range" min="1" max="5" step="0.5" value={formationSpacing} 
+                  onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
+                  className={`w-20 h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : 'bg-[#2A2A30] accent-gray-500'}`}
+                />
+                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] rounded-sm border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{formationSpacing.toFixed(1)}</span>
+              </div>
+
+              <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
+
+              <div className="flex items-center gap-2">
+                 <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Format</span>
+                 <div className="flex rounded gap-0.5">
+                   {(
+                     [
+                       { id: 'square', icon: LayoutGrid },
+                       { id: 'circle', icon: Target },
+                       { id: 'triangle', icon: Triangle },
+                       { id: 'cross', icon: Plus },
+                       { id: 'ring', icon: Circle },
+                       { id: 'spiral', icon: Tornado }
+                     ] as const
+                   ).map(({ id, icon: Icon }) => (
+                     <button
+                       key={id}
+                       onClick={() => setFormationType(id as any)}
+                       className={`p-1.5 rounded transition-all ${ 
+                         formationType === id 
+                           ? (appTheme === 'light' ? 'bg-gray-500 text-white' : 'bg-gray-500 text-white')
+                           : (appTheme === 'light' ? 'text-gray-500 hover:text-gray-800' : 'text-gray-500 hover:text-white')
+                       }`}
+                       title={id.charAt(0).toUpperCase() + id.slice(1)}
+                     >
+                       <Icon className="w-3.5 h-3.5" />
+                     </button>
+                   ))}
+                 </div>
+              </div>
+              
+              <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
+              
+              <div className="flex items-center gap-3 relative group">
+                <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Opacity</span>
+                <input 
+                  type="range" min="0.1" max="1" step="0.05" value={hudOpacity} 
+                  onChange={(e) => setHudOpacity(parseFloat(e.target.value))}
+                  className={`w-16 h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : 'bg-[#2A2A30] accent-gray-500'}`}
+                />
+              </div>
+            </div>
+          )}
+
           <Canvas 
             shadows={{ type: THREE.PCFShadowMap }}
             gl={{ 

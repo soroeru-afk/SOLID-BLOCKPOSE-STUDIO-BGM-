@@ -80,7 +80,7 @@ html[data-theme="black"] .hover\:bg-\[\#323238\]:hover { background-color: #1A1A
   .dark-scrollbar::-webkit-scrollbar-thumb {
     background: #111111;
     border: 1px solid #222222;
-    border-radius: 10px;
+    border-radius: 0px;
   }
   .dark-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #000000;

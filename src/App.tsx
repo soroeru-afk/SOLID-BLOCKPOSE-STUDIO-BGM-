@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence, Reorder } from 'motion/react';
+import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Center, PerspectiveCamera, ContactShadows, Environment } from '@react-three/drei';
@@ -10,10 +10,10 @@ import {
   User, Palette, Settings2, ZoomIn, RefreshCw, Layers, 
   Play, Pause, Plus, Minus, Save, Trash2, Edit3, SlidersHorizontal,
   Download, Upload, Volume2, VolumeX, Music, Music2,
-  Camera, Video, Square, GripVertical, ChevronsUp,
+  Camera, Video, Square, GripVertical, ChevronsUp, ChevronsDown,
   PanelLeftClose, PanelLeftOpen, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   LayoutGrid, Circle, Triangle, Target, Tornado, List, FolderPlus,
-  SkipBack, SkipForward, Zap, Maximize, Minimize
+  SkipBack, SkipForward, Zap, Maximize, Minimize, Check
 } from 'lucide-react';
 import { SoundManager, SoundEffectType } from './lib/sound';
 import { AudioDB, StoredTrack } from './lib/audioDb';
@@ -114,9 +114,12 @@ export default function App() {
 
   const [currentBgmId, setCurrentBgmId] = useState<string | null>(null);
   const [isBgmPlaying, setIsBgmPlaying] = useState(false);
+  const [soundMode, setSoundMode] = useState<'bgm' | 'sfx'>('bgm');
+  const [isSoundOn, setIsSoundOn] = useState(false);
   const [isBgmLoading, setIsBgmLoading] = useState(false);
   const [isSamplesLoading, setIsSamplesLoading] = useState(false);
   const [bgmRepeatMode, setBgmRepeatMode] = useState<0 | 1 | 2>(0); // 0: Off, 1: Playlist, 2: Track
+  const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const [isRandomCycle, setIsRandomCycle] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isRandomCycle`) === 'true');
   const [isSlowRotate, setIsSlowRotate] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSlowRotate`) === 'true');
   const [rotateSpeed, setRotateSpeed] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_rotateSpeed`) || '0.5'));
@@ -140,6 +143,7 @@ export default function App() {
       const { bgmPlaylist, currentBgmId, bgmRepeatMode } = stateRefs.current;
       if (!currentBgmId || bgmPlaylist.length === 0) {
         setIsBgmPlaying(false);
+        setIsSoundOn(false);
         return;
       }
       
@@ -157,6 +161,7 @@ export default function App() {
         } else {
           // Off
           setIsBgmPlaying(false);
+          setIsSoundOn(false);
           setCurrentBgmId(null);
         }
       }
@@ -188,6 +193,8 @@ export default function App() {
   const [isRandomFormation, setIsRandomFormation] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isRandomFormation`) === 'true');
   const [autoCameraSpeed, setAutoCameraSpeed] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_autoCameraSpeed`) || '1'));
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isAdvancedOptionsOpen`) !== 'false');
+  const [isEffectSettingOpen, setIsEffectSettingOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isEffectSettingOpen`) !== 'false');
+  const [isBgmSettingOpen, setIsBgmSettingOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isBgmSettingOpen`) !== 'false');
 
   // UI Theme settings
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_accentColor`) || '#80858C');
@@ -263,6 +270,8 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_isRandomFormation`, isRandomFormation.toString());
     localStorage.setItem(`${STORAGE_KEY}_autoCameraSpeed`, autoCameraSpeed.toString());
     localStorage.setItem(`${STORAGE_KEY}_isAdvancedOptionsOpen`, isAdvancedOptionsOpen.toString());
+    localStorage.setItem(`${STORAGE_KEY}_isEffectSettingOpen`, isEffectSettingOpen.toString());
+    localStorage.setItem(`${STORAGE_KEY}_isBgmSettingOpen`, isBgmSettingOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_accentColor`, accentColor);
     localStorage.setItem(`${STORAGE_KEY}_characterColor`, characterColor);
     localStorage.setItem(`${STORAGE_KEY}_savedCustomCharacterColor`, savedCustomCharacterColor);
@@ -273,7 +282,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_appTheme`, appTheme);
     localStorage.setItem(`${STORAGE_KEY}_isHUDControlsVisible`, isHUDControlsVisible.toString());
     localStorage.setItem(`${STORAGE_KEY}_hudOpacity`, hudOpacity.toString());
-  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, isAdvancedOptionsOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme, isHUDControlsVisible, hudOpacity]);
+  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, isAdvancedOptionsOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme, isHUDControlsVisible, hudOpacity]);
 
   // Sync sound manager state
   useEffect(() => {
@@ -561,6 +570,7 @@ export default function App() {
   const loadSamples = async () => {
     setIsSamplesLoading(true);
     const samples = [
+      { name: "Casa Bossa Nova (Kevin MacLeod)", url: "https://upload.wikimedia.org/wikipedia/commons/7/70/Casa_Bossa_Nova_%28ISRC_USUAN1600012%29.mp3" },
       { name: "Outfoxing (MDN Sample)", url: "https://raw.githubusercontent.com/mdn/webaudio-examples/main/audio-basics/outfoxing.mp3" }
     ];
 
@@ -653,6 +663,26 @@ export default function App() {
     setBgmPlaylist(newPlaylist);
   };
 
+  const moveTrackUp = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (index === 0) return;
+    const newPlaylist = [...bgmPlaylist];
+    const temp = newPlaylist[index];
+    newPlaylist[index] = newPlaylist[index - 1];
+    newPlaylist[index - 1] = temp;
+    setBgmPlaylist(newPlaylist);
+  };
+
+  const moveTrackDown = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (index === bgmPlaylist.length - 1) return;
+    const newPlaylist = [...bgmPlaylist];
+    const temp = newPlaylist[index];
+    newPlaylist[index] = newPlaylist[index + 1];
+    newPlaylist[index + 1] = temp;
+    setBgmPlaylist(newPlaylist);
+  };
+
   const playTrackById = async (id: string | null, forcePlay: boolean = false) => {
     if (!id) return;
     const track = allTracks.find(t => t.id === id);
@@ -662,9 +692,12 @@ export default function App() {
       if (isBgmPlaying) {
         SoundManager.pauseBGM();
         setIsBgmPlaying(false);
+        setIsSoundOn(false);
         setIsAutoCycle(false);
       } else {
         setIsBgmPlaying(true);
+        setIsSoundOn(true);
+        setSoundMode('bgm');
         setIsAutoCycle(true);
         SoundManager.playBGM();
         if (!isSfxMuted) setSfxMutedWithSpeed(true);
@@ -677,6 +710,8 @@ export default function App() {
       await SoundManager.loadBGM(track.file as File);
       setCurrentBgmId(id);
       setIsBgmPlaying(true);
+      setIsSoundOn(true);
+      setSoundMode('bgm');
       setIsAutoCycle(true);
       SoundManager.playBGM();
       if (!isSfxMuted) setSfxMutedWithSpeed(true);
@@ -684,12 +719,33 @@ export default function App() {
       alert("Failed to load audio file. It may be corrupt or unsupported.");
       setCurrentBgmId(null);
       setIsBgmPlaying(false);
+      setIsSoundOn(false);
+      setIsAutoCycle(false);
     } finally {
       setIsBgmLoading(false);
     }
   };
 
   playTrackByIdRef.current = playTrackById;
+
+  const removeSelectedTracks = () => {
+    if (selectedTrackIds.size === 0) return;
+    
+    const selectedIds = Array.from(selectedTrackIds);
+    setPlaylists(prev => prev.map(p => {
+      if (p.id === activePlaylistId) {
+        return { ...p, trackIds: p.trackIds.filter(id => !selectedIds.includes(id)) };
+      }
+      return p;
+    }));
+    setSelectedTrackIds(new Set());
+    
+    if (currentBgmId && selectedIds.includes(currentBgmId)) {
+      SoundManager.stopBGM();
+      setIsBgmPlaying(false);
+      setCurrentBgmId(null);
+    }
+  };
 
   const removeTrack = async (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -705,6 +761,35 @@ export default function App() {
     setBgmPlaylist(bgmPlaylist.filter((_, i) => i !== index));
     
     // Optionally remove from AudioDB if orphaned, but for now just keep simple
+  };
+
+  const toggleTrackSelection = (trackId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedTrackIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(trackId)) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      return newSet;
+    });
+  };
+
+  const moveSelectedTracksToPlaylist = (targetPlaylistId: string) => {
+    if (selectedTrackIds.size === 0 || !targetPlaylistId) return;
+    
+    const selectedIds = Array.from(selectedTrackIds);
+    setPlaylists(prev => prev.map(p => {
+      if (p.id === activePlaylistId) {
+        return { ...p, trackIds: p.trackIds.filter(id => !selectedIds.includes(id)) };
+      }
+      if (p.id === targetPlaylistId) {
+        return { ...p, trackIds: [...p.trackIds, ...selectedIds] };
+      }
+      return p;
+    }));
+    setSelectedTrackIds(new Set()); // Clear selection after move
   };
 
   const createPlaylist = () => {
@@ -756,13 +841,64 @@ export default function App() {
 
 
 
-  const toggleBgm = () => {
-    if (isBgmPlaying) {
-      SoundManager.pauseBGM();
+  const toggleSound = () => {
+    const nextIsSoundOn = !isSoundOn;
+    setIsSoundOn(nextIsSoundOn);
+    
+    if (nextIsSoundOn) {
+      if (soundMode === 'bgm') {
+        setSfxMutedWithSpeed(true);
+        if (isAutoCycle) {
+          setIsBgmPlaying(true);
+          if (currentBgmId !== null) {
+            SoundManager.playBGM();
+          } else if (bgmPlaylist.length > 0) {
+            playTrackById(bgmPlaylist[0].id, true);
+          }
+        }
+      } else {
+        setIsBgmPlaying(false);
+        SoundManager.pauseBGM();
+        setSfxMutedWithSpeed(false);
+      }
+    } else {
       setIsBgmPlaying(false);
+      SoundManager.pauseBGM();
+      setSfxMutedWithSpeed(true);
+    }
+  };
+
+  const changeSoundMode = (mode: 'bgm' | 'sfx') => {
+    setSoundMode(mode);
+    if (isSoundOn) {
+      if (mode === 'bgm') {
+        setSfxMutedWithSpeed(true);
+        if (isAutoCycle) {
+          setIsBgmPlaying(true);
+          if (currentBgmId !== null) {
+            SoundManager.playBGM();
+          } else if (bgmPlaylist.length > 0) {
+            playTrackById(bgmPlaylist[0].id, true);
+          }
+        }
+      } else {
+        setIsBgmPlaying(false);
+        SoundManager.pauseBGM();
+        setSfxMutedWithSpeed(false);
+      }
+    }
+  };
+
+  const toggleBgmFromPlayer = () => {
+    if (isBgmPlaying) {
+      setIsBgmPlaying(false);
+      SoundManager.pauseBGM();
+      setIsSoundOn(false);
       setIsAutoCycle(false);
     } else {
       setIsBgmPlaying(true);
+      setIsSoundOn(true);
+      setSoundMode('bgm');
       setIsAutoCycle(true);
       if (!isSfxMuted) setSfxMutedWithSpeed(true);
       
@@ -777,6 +913,7 @@ export default function App() {
   const stopBgm = () => {
     SoundManager.stopBGM();
     setIsBgmPlaying(false);
+    setIsSoundOn(false);
     setIsAutoCycle(false);
   };
 
@@ -1062,7 +1199,7 @@ export default function App() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {isAutoCycle ? <Play className={`w-4 h-4 ${highlightClasses.text} opacity-80`} /> : <Pause className="w-4 h-4 text-gray-500" />}
-                    <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Cycle</span>
+                    <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Auto Cycle</span>
                   </div>
                   
                   <button 
@@ -1071,22 +1208,27 @@ export default function App() {
                       setIsAutoCycle(nextState);
                       
                       if (nextState) {
-                        if (resumeBgmRef.current) {
-                          if (currentBgmId !== null) {
-                            SoundManager.playBGM();
+                        if (isSoundOn) {
+                          if (soundMode === 'bgm') {
                             setIsBgmPlaying(true);
-                            if (!isSfxMuted) setSfxMutedWithSpeed(true);
-                          } else if (bgmPlaylist.length > 0) {
-                            playTrackById(bgmPlaylist[0].id, true);
+                            setSfxMutedWithSpeed(true);
+                            if (currentBgmId !== null) {
+                              SoundManager.playBGM();
+                            } else if (bgmPlaylist.length > 0) {
+                              playTrackById(bgmPlaylist[0].id, true);
+                            }
+                          } else {
+                            setIsBgmPlaying(false);
+                            SoundManager.pauseBGM();
+                            setSfxMutedWithSpeed(false);
                           }
-                          resumeBgmRef.current = false;
                         }
                       } else {
-                        resumeBgmRef.current = isBgmPlaying;
-                        if (isBgmPlaying) {
-                          SoundManager.pauseBGM();
+                        if (isSoundOn && soundMode === 'bgm') {
                           setIsBgmPlaying(false);
+                          SoundManager.pauseBGM();
                         }
+                        setSfxMutedWithSpeed(true);
                         setIsAutoCamera(false);
                         setIsAutoFormation(false);
                         setIsSlowRotate(false);
@@ -1095,52 +1237,52 @@ export default function App() {
                         }
                       }
                     }}
-                    className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : 'border-[#323238] bg-[#1a1a1e]'}`}
+                    className={`w-10 h-5  transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
                   >
-                    <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
+                    <div className={`absolute top-[1px] w-4 h-4  transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
                   </button>
                 </div>
                 
                 <div className="pt-3">
-                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-[#323238]/50">
+                    <div className={`flex items-center justify-between mb-4 pb-4 border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
                       <div className="flex gap-4">
                         <div className="flex flex-col gap-1.5">
-                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">BGM</span>
+                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">SOUND</span>
                            <button 
-                             onClick={toggleBgm}
-                             className={`flex items-center justify-center gap-1.5 w-[84px] py-1 rounded border transition-colors ${
-                               isBgmPlaying ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : 'border-[#323238] bg-[#1a1a1e] text-gray-500'
+                             onClick={toggleSound}
+                             className={`flex items-center justify-center gap-1.5 w-[84px] py-1  border transition-colors ${
+                               isSoundOn 
+                                 ? (isAutoCycle ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : (appTheme === 'light' ? 'bg-transparent border-gray-400 text-gray-800' : 'bg-transparent border-gray-300 text-gray-200'))
+                                 : 'border-gray-500 bg-[#1a1a1e] text-gray-500'
                              }`}
                            >
-                             {isBgmPlaying ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
-                             <span className="text-[9px] uppercase font-bold">{isBgmPlaying ? 'ON' : 'OFF'}</span>
+                             {isSoundOn ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                             <span className="text-[9px] uppercase font-bold">{isSoundOn ? 'ON' : 'OFF'}</span>
                            </button>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">SFX</span>
-                           <button 
-                             onClick={() => {
-                               const next = !isSfxMuted;
-                               if (!next && isBgmPlaying) {
-                                 SoundManager.pauseBGM();
-                                 setIsBgmPlaying(false);
-                               }
-                               setSfxMutedWithSpeed(next);
-                             }}
-                             className={`flex items-center justify-center gap-1.5 w-[84px] py-1 rounded border transition-colors ${
-                               !isSfxMuted ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : 'border-[#323238] bg-[#1a1a1e] text-gray-500'
-                             }`}
-                           >
-                             {!isSfxMuted ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
-                             <span className="text-[9px] uppercase font-bold">{!isSfxMuted ? 'ON' : 'OFF'}</span>
-                           </button>
+                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">MODE</span>
+                           <div className="flex items-center h-[26px] w-[96px] bg-[#1a1a1e] border border-[#323238]  p-0.5">
+                             <button
+                               onClick={() => changeSoundMode('bgm')}
+                               className={`flex-1 flex items-center justify-center h-full  transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'bgm' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                             >
+                               BGM
+                             </button>
+                             <button
+                               onClick={() => changeSoundMode('sfx')}
+                               className={`flex-1 flex items-center justify-center h-full  transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'sfx' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                             >
+                               SFX
+                             </button>
+                           </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center mb-2">
                       <label className="text-[9px] font-bold text-gray-500 uppercase">Cycle Interval</label>
-                      <span className={`text-[9px] font-mono font-bold ${isAutoCycle ? `${highlightClasses.text} ${highlightClasses.bgMuted}` : 'text-gray-500 bg-[#1a1a1e]'} px-1.5 py-0.5 rounded transition-colors`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
+                      <span className={`text-[9px] font-mono font-bold ${isAutoCycle ? `${highlightClasses.text} ${highlightClasses.bgMuted}` : 'text-gray-500 bg-[#1a1a1e]'} px-1.5 py-0.5  transition-colors`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
                     </div>
                     <input 
                       type="range" 
@@ -1159,33 +1301,33 @@ export default function App() {
                         if (!isSfxMuted) minSpeed = 1000;
                         setCycleSpeed(Math.max(minSpeed, Math.min(10000, finalSpeed)));
                       }}
-                      className={`w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer ${isAutoCycle ? highlightClasses.accent : 'accent-gray-500'} transition-colors`}
+                      className={`w-full h-1 bg-gray-700  appearance-none cursor-pointer ${isAutoCycle ? highlightClasses.accent : 'accent-gray-500'} transition-colors`}
                     />
 
-                    <div className="flex items-center justify-between pt-4 mt-2 border-t border-[#323238]/50">
+                    <div className={`flex items-center justify-between pt-4 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
                       <div className="flex items-center gap-2">
                         <RefreshCw className={`w-4 h-4 ${isRandomCycle ? highlightClasses.text : 'text-gray-500'}`} />
-                        <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Random Pose</span>
+                        <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Random Pose</span>
                       </div>
                       <button 
                         onClick={() => setIsRandomCycle(!isRandomCycle)}
-                        className={`w-10 h-5 rounded-full transition-colors relative border ${isRandomCycle ? `bg-transparent ${highlightClasses.border}` : 'border-[#323238] bg-[#1a1a1e]'}`}
+                        className={`w-10 h-5  transition-colors relative border ${isRandomCycle ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
                       >
-                        <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isRandomCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
+                        <div className={`absolute top-[1px] w-4 h-4  transition-all ${isRandomCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
                       </button>
                     </div>
 
-                    <div className="pt-4 mt-2 border-t border-[#323238]/50">
+                    <div className={`pt-4 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Camera className={`w-4 h-4 ${isSlowRotate ? highlightClasses.text : 'text-gray-500'}`} />
-                          <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Turn</span>
+                          <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Auto Turn</span>
                         </div>
                         <button 
                           onClick={() => setIsSlowRotate(!isSlowRotate)}
-                          className={`w-10 h-5 rounded-full transition-colors relative border ${isSlowRotate ? `bg-transparent ${highlightClasses.border}` : 'border-[#323238] bg-[#1a1a1e]'}`}
+                          className={`w-10 h-5  transition-colors relative border ${isSlowRotate ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
                         >
-                          <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isSlowRotate ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
+                          <div className={`absolute top-[1px] w-4 h-4  transition-all ${isSlowRotate ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
                         </button>
                       </div>
                       
@@ -1193,72 +1335,72 @@ export default function App() {
                         <div className="pt-3 pb-1">
                           <div className="flex justify-between items-center mb-2">
                             <label className="text-[9px] font-bold text-gray-500 uppercase">Turn Speed</label>
-                            <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} rounded`}>{rotateSpeed.toFixed(1)}x</span>
+                            <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} `}>{rotateSpeed.toFixed(1)}x</span>
                           </div>
                           <input 
                             type="range" min="0.1" max="10" step="0.1" value={rotateSpeed} 
                             onChange={(e) => setRotateSpeed(parseFloat(e.target.value))}
-                            className={`w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer ${highlightClasses.accent}`}
+                            className={`w-full h-1 bg-gray-700  appearance-none cursor-pointer ${highlightClasses.accent}`}
                           />
                         </div>
                       )}
                     </div>
 
-                    <div className="pt-4 mt-2 border-t border-[#323238]/50">
+                    <div className={`pt-4 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
                       <button 
                         onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
                         className="flex items-center justify-between w-full mb-3 group"
                       >
                         <div className="flex items-center gap-2">
-                          <div className={`w-1 h-3 rounded-full transition-colors ${isAdvancedOptionsOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                          <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? 'text-[#E1E1E6]' : 'text-gray-500 group-hover:text-gray-300'}`}>Advanced Cycle Options</span>
+                          <div className={`w-1 h-3  transition-colors ${isAdvancedOptionsOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
+                          <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : (appTheme === 'light' ? 'text-gray-500 group-hover:text-gray-600' : 'text-gray-500 group-hover:text-gray-300')}`}>Advanced Cycle Options</span>
                         </div>
-                        <div className={`w-5 h-5 rounded border border-[#323238] bg-[#1a1a1e] flex items-center justify-center transition-colors ${isAdvancedOptionsOpen ? highlightClasses.border : 'group-hover:border-gray-500'}`}>
+                        <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-gray-500'} ${isAdvancedOptionsOpen ? highlightClasses.border : (appTheme === 'light' ? 'group-hover:border-gray-400' : 'group-hover:border-gray-500')}`}>
                           {isAdvancedOptionsOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
                         </div>
                       </button>
                       
                       {isAdvancedOptionsOpen && (
-                        <div className="p-3 bg-[#1a1a1e]/60 border border-[#323238] rounded-xl space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
+                        <div className={`-mx-2 px-2 py-3 border space-y-4 ${appTheme === 'light' ? 'bg-gray-100/50 border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border-[#4A4A52]' : 'bg-[#1a1a1e]/60 border-[#323238]')}`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Zap className={`w-4 h-4 ${isAutoFormation ? 'text-amber-400' : 'text-gray-500'}`} />
-                              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Auto Format Change</span>
+                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Auto Format Change</span>
                             </div>
                           <button 
                             onClick={() => setIsAutoFormation(!isAutoFormation)}
-                            className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoFormation ? 'bg-transparent border-amber-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
+                            className={`w-10 h-5  transition-colors relative border ${isAutoFormation ? 'bg-transparent border-amber-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
                           >
-                            <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoFormation ? 'bg-amber-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
+                            <div className={`absolute top-[1px] w-4 h-4  transition-all ${isAutoFormation ? 'bg-amber-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
                           </button>
                         </div>
                         
                         {isAutoFormation && (
-                          <div className="flex items-center justify-between pt-1 border-t border-[#323238]/50 mt-2">
+                          <div className={`flex items-center justify-between pt-1 border-t ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} mt-2`}>
                             <div className="flex items-center gap-2">
                               <Zap className={`w-4 h-4 ${isRandomFormation ? 'text-amber-400' : 'text-gray-500'}`} />
-                              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Random Format Change</span>
+                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Random Format Change</span>
                             </div>
                             <button 
                               onClick={() => setIsRandomFormation(!isRandomFormation)}
-                              className={`w-10 h-5 rounded-full transition-colors relative border ${isRandomFormation ? 'bg-transparent border-amber-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
+                              className={`w-10 h-5  transition-colors relative border ${isRandomFormation ? 'bg-transparent border-amber-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
                             >
-                              <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isRandomFormation ? 'bg-amber-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
+                              <div className={`absolute top-[1px] w-4 h-4  transition-all ${isRandomFormation ? 'bg-amber-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
                             </button>
                           </div>
                         )}
 
-                        <div className="pt-2 border-t border-[#323238]/50 space-y-4">
+                        <div className={`pt-2 border-t ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} space-y-4`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Video className={`w-4 h-4 ${isAutoCamera ? 'text-red-400' : 'text-gray-500'}`} />
-                              <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Cinematic View</span>
+                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Cinematic View</span>
                             </div>
                             <button 
                               onClick={() => setIsAutoCamera(!isAutoCamera)}
-                              className={`w-10 h-5 rounded-full transition-colors relative border ${isAutoCamera ? 'bg-transparent border-red-500' : 'border-[#323238] bg-[#1a1a1e]'}`}
+                              className={`w-10 h-5  transition-colors relative border ${isAutoCamera ? 'bg-transparent border-red-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
                             >
-                              <div className={`absolute top-[1px] w-4 h-4 rounded-full transition-all ${isAutoCamera ? 'bg-red-500 right-[1px]' : 'bg-gray-500 left-[1px]'}`} />
+                              <div className={`absolute top-[1px] w-4 h-4  transition-all ${isAutoCamera ? 'bg-red-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
                             </button>
                           </div>
 
@@ -1267,12 +1409,12 @@ export default function App() {
                               <div>
                                 <div className="flex justify-between items-center mb-2">
                                   <label className="text-[9px] font-bold text-gray-500 uppercase">Camera Intensity</label>
-                                  <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 rounded">{autoCameraSpeed.toFixed(1)}x</span>
+                                  <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">{autoCameraSpeed.toFixed(1)}x</span>
                                 </div>
                                 <input 
                                   type="range" min="0.1" max="10" step="0.1" value={autoCameraSpeed} 
                                   onChange={(e) => setAutoCameraSpeed(parseFloat(e.target.value))}
-                                  className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-red-500"
+                                  className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
                                 />
                               </div>
                             </div>
@@ -1304,7 +1446,7 @@ export default function App() {
                         <div
                           key={pose.id}
                           onClick={() => handlePoseChange(pose.id)}
-                          className={`text-left p-2 rounded border transition-all flex flex-col justify-between h-[45px] relative overflow-hidden group cursor-pointer ${
+                          className={`text-left p-2  border transition-all flex flex-col justify-between h-[45px] relative overflow-hidden group cursor-pointer ${
                             isActive 
                             ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-lg z-10' 
                             : 'bg-[#2A2A30] border-[#323238] hover:border-gray-500 text-gray-400'
@@ -1316,13 +1458,13 @@ export default function App() {
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
                                   onClick={(e) => { e.stopPropagation(); startEditing(pose); }} 
-                                  className="p-1 hover:bg-white/20 rounded cursor-pointer"
+                                  className="p-1 hover:bg-white/20  cursor-pointer"
                                 >
                                   <Edit3 className="w-2.5 h-2.5" />
                                 </button>
                                 <button 
                                   onClick={(e) => deletePose(pose.id, e)} 
-                                  className="p-1 hover:bg-red-500/50 rounded cursor-pointer"
+                                  className="p-1 hover:bg-red-500/50  cursor-pointer"
                                 >
                                   <Trash2 className="w-2.5 h-2.5" />
                                 </button>
@@ -1333,10 +1475,10 @@ export default function App() {
                             {String(idx + 1).padStart(2, '0')}
                           </span>
                           {isActive && (
-                            <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 rounded-bl-3xl -mr-2 -mt-2" />
+                            <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 -3xl -mr-2 -mt-2" />
                           )}
                           {!isActive && poseId === pose.id && isAutoCycle && (
-                            <div className="absolute inset-0 border border-[var(--accent)]/50 rounded pointer-events-none" />
+                            <div className="absolute inset-0 border border-[var(--accent)]/50  pointer-events-none" />
                           )}
                         </div>
                       );
@@ -1365,20 +1507,20 @@ export default function App() {
                         value={editPoseName}
                         onChange={(e) => setEditPoseName(e.target.value)}
                         placeholder="Pose name..."
-                        className="w-full bg-[#121214] border border-[#323238] rounded p-2 text-xs focus:border-[var(--accent)] outline-none"
+                        className="w-full bg-[#121214] border border-[#323238]  p-2 text-xs focus:border-[var(--accent)] outline-none"
                       />
                     </div>
 
-                    <div className="flex items-center justify-between p-2 rounded bg-black/20 border border-[#323238]">
+                    <div className="flex items-center justify-between p-2  bg-black/20 border border-[#323238]">
                       <div className="flex items-center gap-2">
                         <Layers className={`w-3 h-3 ${isSymmetric ? 'text-[var(--accent)]' : 'text-gray-500'}`} />
                         <span className="text-[10px] uppercase font-bold text-gray-400">Mirror Symmetry</span>
                       </div>
                       <button 
                         onClick={() => setIsSymmetric(!isSymmetric)}
-                        className={`w-8 h-4 rounded-full transition-colors relative ${isSymmetric ? 'bg-[var(--accent)]' : 'bg-gray-600'}`}
+                        className={`w-8 h-4  transition-colors relative ${isSymmetric ? 'bg-[var(--accent)]' : 'bg-gray-600'}`}
                       >
-                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${isSymmetric ? 'right-0.5' : 'left-0.5'}`} />
+                        <div className={`absolute top-0.5 w-3 h-3 bg-white  transition-all ${isSymmetric ? 'right-0.5' : 'left-0.5'}`} />
                       </button>
                     </div>
 
@@ -1397,7 +1539,7 @@ export default function App() {
                           leg_r_lower: [0, 0, 0],
                         });
                       }}
-                      className="w-full py-2 bg-[#2A2A30] hover:bg-[#323238] rounded border border-[#323238] text-[10px] font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-wider"
+                      className="w-full py-2 bg-[#2A2A30] hover:bg-[#323238]  border border-[#323238] text-[10px] font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-wider"
                     >
                       All Reset
                     </button>
@@ -1424,7 +1566,7 @@ export default function App() {
                           <div className="flex justify-between items-center mb-1">
                             <div className="flex items-center gap-2">
                               <label className="text-[9px] text-gray-500 uppercase block font-bold">{part.name}</label>
-                              <span className={`text-[9px] font-mono font-bold px-1 rounded ${degVal === 0 ? 'text-gray-500 bg-gray-500/10' : 'text-[var(--accent)] bg-[var(--accent)]/10'}`}>
+                              <span className={`text-[9px] font-mono font-bold px-1  ${degVal === 0 ? 'text-gray-500 bg-gray-500/10' : 'text-[var(--accent)] bg-[var(--accent)]/10'}`}>
                                 {degVal > 0 ? '+' : ''}{degVal}°
                               </span>
                             </div>
@@ -1439,7 +1581,7 @@ export default function App() {
                             type="range" min="-3.14" max="3.14" step="0.1" 
                             value={rawVal}
                             onChange={(e) => updateEditPart(part.id as any, part.axis, parseFloat(e.target.value))}
-                            className="w-full h-1 bg-[#2A2A30] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
+                            className="w-full h-1 bg-[#2A2A30]  appearance-none cursor-pointer accent-[var(--accent)]"
                           />
                         </div>
                       );
@@ -1484,19 +1626,19 @@ export default function App() {
                               <button
                                 key={color}
                                 onClick={() => setCharacterColor(color)}
-                                className={`w-6 h-6 rounded border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
+                                className={`w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
                                   characterColor === color ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
                                 }`}
                                 style={{ backgroundColor: color }}
                                 title="Character Color"
                               >
-                                {characterColor === color && <div className={`w-1.5 h-1.5 rounded bg-white shadow-sm mix-blend-difference`} />}
+                                {characterColor === color && <div className={`w-1.5 h-1.5  bg-white shadow-sm mix-blend-difference`} />}
                               </button>
                             ))}
                             
                             <div className="w-[1px] h-6 bg-[#323238] mx-0.5" />
                             
-                            <div className={`relative w-6 h-6 rounded border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
+                            <div className={`relative w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
                               !['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069', '#7A4860', '#0F172A', '#7A662E', '#316167'].includes(characterColor) ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
                             }`}>
                               <input 
@@ -1515,7 +1657,7 @@ export default function App() {
                               <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
                                 <Plus className="w-3 h-3 text-white opacity-75" />
                               </div>
-                              {!['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069', '#7A4860', '#0F172A', '#7A662E', '#316167'].includes(characterColor) && <div className="w-1.5 h-1.5 rounded bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
+                              {!['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069', '#7A4860', '#0F172A', '#7A662E', '#316167'].includes(characterColor) && <div className="w-1.5 h-1.5  bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
                             </div>
                           </div>
                         </div>
@@ -1532,7 +1674,7 @@ export default function App() {
                                   setThemeId(theme.id);
                                   setCustomBgColor(null);
                                 }}
-                                className={`w-6 h-6 rounded border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
+                                className={`w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
                                   themeId === theme.id && !customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
                                 }`}
                                 style={{ backgroundColor: theme.bodyColor }}
@@ -1552,13 +1694,13 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={exportSettings}
-                    className="flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] rounded-lg text-[10px] font-bold text-gray-300 transition-colors border border-[#323238]"
+                    className="flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238]  text-[10px] font-bold text-gray-300 transition-colors border border-[#323238]"
                   >
                     <Download className="w-3 h-3" /> EXPORT
                   </button>
                   <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] rounded-lg text-[10px] font-bold text-gray-300 transition-colors border border-[#323238]"
+                    className="flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238]  text-[10px] font-bold text-gray-300 transition-colors border border-[#323238]"
                   >
                     <Upload className="w-3 h-3" /> IMPORT
                   </button>
@@ -1570,7 +1712,7 @@ export default function App() {
                   accept=".json" 
                   className="hidden" 
                 />
-                <div className="bg-[var(--accent)]/10 p-4 rounded-xl border border-[var(--accent)]/20">
+                <div className="bg-[var(--accent)]/10 p-4  border border-[var(--accent)]/20">
                   <p className="text-xs text-[var(--accent)] font-medium">Auto-save Ready</p>
                   <p className="text-[10px] text-[var(--accent)]/60 uppercase tracking-tighter">Workspace persistence active</p>
                 </div>
@@ -1581,53 +1723,78 @@ export default function App() {
             <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-left-2 duration-300 overflow-hidden min-h-0">
               <div className="p-4 space-y-4 border-b border-[#323238] bg-[var(--accent)]/5 flex-shrink-0">
                 <div className="space-y-4">
-                  <div className={`p-3 rounded-xl flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : 'bg-[#1a1a1e]/40 border border-[#323238]'}`}>
-                    <div className={`flex items-center justify-between border-b pb-2 mb-1 ${appTheme === 'light' ? 'border-gray-200' : 'border-[#323238]/50'}`}>
-                      <label className={`text-[10px] uppercase tracking-widest font-bold ${appTheme === 'light' ? 'text-gray-700' : 'text-[#E1E1E6]'}`}>EFFECT SETTING</label>
-                    </div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="text-[9px] text-gray-500 uppercase font-bold">Effect Style</label>
-                      <span className={`text-[9px] ${highlightClasses.text} font-mono`}>{soundType}</span>
-                    </div>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {(['mechanical', 'retro', 'ping', 'wood', 'pop'] as SoundEffectType[]).map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => {
-                            setSoundType(type);
-                            SoundManager.playPoseChange(type, sfxVolume);
-                          }}
-                          className={`h-6 rounded border transition-all text-[8px] font-bold uppercase ${
-                            soundType === type 
-                            ? `${highlightClasses.bg} ${highlightClasses.border} ${appTheme === 'light' ? 'text-white' : 'text-[#121214]'}` 
-                            : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 text-gray-600 hover:bg-gray-300 hover:border-gray-300' : 'bg-[#2A2A30] border-[#323238] text-gray-500 hover:border-[#424248] hover:text-gray-300')
-                          }`}
-                        >
-                          {type.slice(0, 3)}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="pt-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="flex items-center gap-2">
-                          <label className="text-[9px] text-gray-500 uppercase font-bold">SFX Volume</label>
-                        </div>
-                        <span className="text-[9px] text-gray-400 font-mono">{Math.round(sfxVolume * 100)}%</span>
+                  <div className={`p-3  flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border border-[#4A4A52]' : 'bg-[#1a1a1e]/40 border border-[#323238]')}`}>
+                    <button 
+                      onClick={() => setIsEffectSettingOpen(!isEffectSettingOpen)}
+                      className={`flex items-center justify-between w-full ${isEffectSettingOpen ? 'border-b pb-2 mb-1' : ''} ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} group`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1 h-3  transition-colors ${isEffectSettingOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
+                        <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isEffectSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>EFFECT SETTING</span>
                       </div>
-                      <input 
-                        type="range" min="0" max="1" step="0.01" value={sfxVolume} 
-                        onChange={(e) => setSfxVolume(parseFloat(e.target.value))}
-                        className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `bg-[#2A2A30] ${highlightClasses.accent}`}`}
-                      />
-                    </div>
+                      <div className={`w-5 h-5  border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-[#323238]'} ${isEffectSettingOpen ? highlightClasses.border : 'group-hover:border-gray-400'}`}>
+                        {isEffectSettingOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
+                      </div>
+                    </button>
+                    
+                    {isEffectSettingOpen && (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="text-[9px] text-gray-500 uppercase font-bold">Effect Style</label>
+                          <span className={`text-[9px] ${highlightClasses.text} font-mono`}>{soundType}</span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-1.5">
+                          {(['mechanical', 'retro', 'ping', 'wood', 'pop'] as SoundEffectType[]).map((type) => (
+                            <button
+                              key={type}
+                              onClick={() => {
+                                setSoundType(type);
+                                SoundManager.playPoseChange(type, sfxVolume);
+                              }}
+                              className={`h-6  border transition-all text-[8px] font-bold uppercase ${
+                                soundType === type 
+                                ? `${highlightClasses.bg} ${highlightClasses.border} ${appTheme === 'light' ? 'text-white' : 'text-[#121214]'}` 
+                                : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 text-gray-600 hover:bg-gray-300 hover:border-gray-300' : 'bg-[#2A2A30] border-[#323238] text-gray-500 hover:border-[#424248] hover:text-gray-300')
+                              }`}
+                            >
+                              {type.slice(0, 3)}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="pt-1">
+                          <div className="flex justify-between items-center mb-1">
+                            <div className="flex items-center gap-2">
+                              <label className="text-[9px] text-gray-500 uppercase font-bold">SFX Volume</label>
+                            </div>
+                            <span className="text-[9px] text-gray-400 font-mono">{Math.round(sfxVolume * 100)}%</span>
+                          </div>
+                          <input 
+                            type="range" min="0" max="1" step="0.01" value={sfxVolume} 
+                            onChange={(e) => setSfxVolume(parseFloat(e.target.value))}
+                            className={`w-full h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`}`}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className={`p-3 rounded-xl flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : 'bg-[#1a1a1e]/40 border border-[#323238]'}`}>
-                    <div className={`flex items-center justify-between border-b pb-2 mb-1 ${appTheme === 'light' ? 'border-gray-200' : 'border-[#323238]/50'}`}>
-                      <label className={`text-[10px] uppercase tracking-widest font-bold ${appTheme === 'light' ? 'text-gray-700' : 'text-[#E1E1E6]'}`}>BGM SETTING</label>
-                    </div>
-                    <div className="flex flex-col gap-3">
+                  <div className={`p-3  flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border border-[#4A4A52]' : 'bg-[#1a1a1e]/40 border border-[#323238]')}`}>
+                    <button 
+                      onClick={() => setIsBgmSettingOpen(!isBgmSettingOpen)}
+                      className={`flex items-center justify-between w-full ${isBgmSettingOpen ? 'border-b pb-2 mb-1' : ''} ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} group`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`w-1 h-3  transition-colors ${isBgmSettingOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
+                        <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isBgmSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>BGM SETTING</span>
+                      </div>
+                      <div className={`w-5 h-5  border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-[#323238]'} ${isBgmSettingOpen ? highlightClasses.border : 'group-hover:border-gray-400'}`}>
+                        {isBgmSettingOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
+                      </div>
+                    </button>
+                    
+                    {isBgmSettingOpen && (
+                      <div className="flex flex-col gap-3">
                        {/* Controls */}
                        <div className="flex flex-col gap-2 mb-0">
                          <div className="flex-1 overflow-hidden px-1 text-center">
@@ -1639,17 +1806,17 @@ export default function App() {
                          <div className="flex items-center justify-center gap-1.5">
                             <button 
                               onClick={playPreviousTrack}
-                              className={`w-10 h-8 rounded border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-[#323238] bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
+                              className={`w-10 h-8  border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
                               disabled={bgmPlaylist.length === 0}
                             >
                                <SkipBack className="w-4 h-4 mr-0.5" />
                             </button>
                             <button 
-                              onClick={toggleBgm}
-                              className={`w-12 h-8 rounded border transition-all shadow-sm flex items-center justify-center ${
+                              onClick={toggleBgmFromPlayer}
+                              className={`w-12 h-8  border transition-all shadow-sm flex items-center justify-center ${
                                 isBgmPlaying 
                                   ? (appTheme === 'light' ? `bg-gray-500 border-gray-500 text-[#ffffff]` : `bg-[#1a1a1e] ${highlightClasses.border} ${highlightClasses.text}`) 
-                                  : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-[#323238] bg-[#1a1a1e] text-white hover:bg-[#323238]')
+                                  : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] text-white hover:bg-[#323238]')
                               }`}
                               disabled={bgmPlaylist.length === 0}
                             >
@@ -1657,14 +1824,14 @@ export default function App() {
                             </button>
                             <button 
                               onClick={stopBgm}
-                              className={`w-10 h-8 rounded border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-[#323238] bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
+                              className={`w-10 h-8  border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
                               disabled={bgmPlaylist.length === 0 || currentBgmId === null}
                             >
                               <Square className="w-3.5 h-3.5 fill-current" />
                             </button>
                             <button 
                               onClick={playNextTrack}
-                              className={`w-10 h-8 rounded border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-[#323238] bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
+                              className={`w-10 h-8  border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
                               disabled={bgmPlaylist.length === 0}
                             >
                                <SkipForward className="w-4 h-4 ml-0.5" />
@@ -1672,7 +1839,7 @@ export default function App() {
 
                             <button
                                onClick={() => setBgmRepeatMode(prev => prev === 0 ? 1 : prev === 1 ? 2 : 0)}
-                               className={`w-10 h-8 rounded border transition-all shadow-sm flex items-center justify-center relative ${
+                               className={`w-10 h-8  border transition-all shadow-sm flex items-center justify-center relative ${
                                  bgmRepeatMode !== 0 
                                   ? (appTheme === 'light' ? `bg-gray-500 border-gray-500 text-[#ffffff]` : `bg-[#1a1a1e] ${highlightClasses.border} ${highlightClasses.text}`) 
                                   : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'bg-[#1a1a1e] border-[#323238] text-gray-400 hover:text-white hover:bg-[#323238]')
@@ -1681,7 +1848,7 @@ export default function App() {
                             >
                                <RefreshCw className="w-4 h-4" />
                                {bgmRepeatMode === 2 && (
-                                 <span className={`absolute -top-1.5 -right-1.5 text-[8px] font-bold flex items-center justify-center rounded-md ${highlightClasses.bg} text-[#121214] w-3.5 h-3.5 pt-[1px]`}>1</span>
+                                 <span className={`absolute -top-1.5 -right-1.5 text-[8px] font-bold flex items-center justify-center  ${highlightClasses.bg} text-[#121214] w-3.5 h-3.5 pt-[1px]`}>1</span>
                                )}
                             </button>
                          </div>
@@ -1698,7 +1865,7 @@ export default function App() {
                              <span className="text-[10px] text-gray-400 font-mono tracking-wider">{bgmTimeStr.split(' / ')[0]}</span>
                              <span className="text-[10px] text-gray-500 font-mono tracking-wider">{bgmTimeStr.split(' / ')[1]}</span>
                           </div>
-                          <div className={`w-full h-1 rounded-full overflow-hidden relative pointer-events-none transition-all ${appTheme === 'light' ? 'bg-gray-300' : 'bg-[#2A2A30]'}`}>
+                          <div className={`w-full h-1  overflow-hidden relative pointer-events-none transition-all ${appTheme === 'light' ? 'bg-gray-300' : 'bg-[#2A2A30]'}`}>
                              <div 
                                 className={`h-full ${appTheme === 'light' ? 'bg-gray-500' : highlightClasses.bg} transition-all ease-linear`}
                                 style={{ width: `${Math.max(0, Math.min(100, bgmProgress * 100))}%`, transitionDuration: isBgmPlaying ? '500ms' : '0ms' }}
@@ -1714,10 +1881,11 @@ export default function App() {
                           <input 
                             type="range" min="0" max="1" step="0.01" value={bgmVolume} 
                             onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
-                            className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `bg-[#2A2A30] ${highlightClasses.accent}`}`}
+                            className={`w-full h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`}`}
                           />
                        </div>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1730,22 +1898,20 @@ export default function App() {
                     <div className="flex gap-2 mb-3">
                       <button 
                         onClick={createPlaylist}
-                        className="flex-1 bg-[#1a1a1e] hover:bg-[#323238] text-[var(--accent)] text-[10px] font-bold uppercase py-1.5 px-3 rounded border border-[#323238] transition-colors flex items-center justify-center gap-1.5"
+                        className={`flex-1 bg-[#1a1a1e] hover:bg-[#323238] text-[var(--accent)] text-[10px] font-bold uppercase py-1.5 px-3  border ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'} transition-colors flex items-center justify-center gap-1.5`}
                       >
                         <Plus className="w-3 h-3" /> New Set
                       </button>
                       <button 
                         onClick={() => setIsPlaylistExpanded(!isPlaylistExpanded)}
-                        className={`w-8 flex items-center justify-center rounded border transition-colors ${
-                          isPlaylistExpanded ? 'bg-[var(--accent)]/10 border-[var(--accent)] text-[var(--accent)]' : 'bg-[#1a1a1e] border-[#323238] text-gray-500 hover:text-gray-300'
-                        }`}
+                        className={`w-8 flex items-center justify-center  border transition-colors bg-[#1a1a1e] ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'} text-gray-500 hover:text-gray-300`}
                         title="Toggle Playlist View"
                       >
                         {isPlaylistExpanded ? <ChevronDown className="w-4 h-4" /> : <List className="w-4 h-4" />}
                       </button>
                       <button 
                         onClick={() => setShowClearConfirm(true)}
-                        className="w-8 flex items-center justify-center rounded border transition-colors bg-[#1a1a1e] hover:bg-red-500/10 text-gray-500 hover:text-red-400 border-[#323238]"
+                        className={`w-8 flex items-center justify-center  border transition-colors bg-[#1a1a1e] hover:bg-red-500/10 text-gray-500 hover:text-red-400 ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'}`}
                         title="Delete all tracks"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1766,9 +1932,9 @@ export default function App() {
                         {playlists.map(p => (
                           <div 
                             key={p.id} 
-                            className={`flex items-center justify-between p-2 rounded border transition-colors cursor-pointer group ${
+                            className={`flex items-center justify-between p-2  border transition-colors cursor-pointer group ${
                               activePlaylistId === p.id 
-                              ? 'bg-[var(--accent)]/10 border-[var(--accent)] text-[var(--accent)]' 
+                              ? `${highlightClasses.bgMuted} ${highlightClasses.border} ${highlightClasses.text}` 
                               : 'bg-[#121214] border-[#323238] hover:border-gray-500 text-white'
                             }`}
                             onClick={() => {
@@ -1796,14 +1962,14 @@ export default function App() {
                                       setEditingPlaylistId(null);
                                     }
                                   }}
-                                  className="bg-black/50 text-white text-[10px] uppercase font-bold w-full px-1 py-0.5 outline-none border border-[var(--accent)] rounded"
+                                  className="bg-black/50 text-white text-[10px] uppercase font-bold w-full px-1 py-0.5 outline-none border border-[var(--accent)] "
                                 />
                               ) : (
                                 <>
-                                  <span className={`text-[10px] uppercase font-bold truncate ${activePlaylistId === p.id ? 'text-white' : 'text-gray-400'}`}>
+                                  <span className={`text-[10px] uppercase font-bold truncate ${activePlaylistId === p.id ? highlightClasses.text : 'text-gray-400'}`}>
                                     {p.name}
                                   </span>
-                                  <span className={`text-[9px] ${activePlaylistId === p.id ? 'text-gray-300' : 'text-gray-600'}`}>({p.trackIds.length})</span>
+                                  <span className={`text-[9px] ${activePlaylistId === p.id ? highlightClasses.text : 'text-gray-600'}`}>({p.trackIds.length})</span>
                                 </>
                               )}
                             </div>
@@ -1844,7 +2010,7 @@ export default function App() {
                                      setTimeout(() => setConfirmDeleteId(null), 3000);
                                    }
                                  }} 
-                                 className={`p-0.5 rounded transition-all ${confirmDeleteId === p.id ? 'text-red-500 bg-red-500/20' : 'text-gray-500 hover:text-red-400'}`}
+                                 className={`p-0.5  transition-all ${confirmDeleteId === p.id ? 'text-red-500 bg-red-500/20' : 'text-gray-500 hover:text-red-400'}`}
                                  title={confirmDeleteId === p.id ? "Click to confirm" : "Delete"}
                                >
                                  <Trash2 className="w-2.5 h-2.5" />
@@ -1858,7 +2024,7 @@ export default function App() {
                         <select 
                           value={activePlaylistId} 
                           onChange={e => setActivePlaylistId(e.target.value)}
-                          className="w-full bg-[#121214] hover:border-gray-500 transition-colors text-[var(--accent)] text-[10px] font-bold uppercase p-2 border border-[#323238] rounded outline-none cursor-pointer appearance-none"
+                          className="w-full bg-[#121214] hover:border-gray-500 transition-colors text-[var(--accent)] text-[10px] font-bold uppercase p-2 border border-[#323238]  outline-none cursor-pointer appearance-none"
                         >
                           {playlists.map(p => (
                             <option key={p.id} value={p.id}>{p.name} ({p.trackIds.length})</option>
@@ -1894,74 +2060,122 @@ export default function App() {
                       </div>
                     </div>
                     
-                    <div className="mt-2">
-                      <Reorder.Group 
-                        axis="y" 
-                        values={bgmPlaylist} 
-                        onReorder={setBgmPlaylist}
-                        className="space-y-1"
-                      >
-                        {bgmPlaylist.length > 0 ? bgmPlaylist.map((track, idx) => (
-                          <Reorder.Item 
-                            key={`${track.id}-${idx}`} 
-                            value={track}
-                            onClick={() => playTrackById(track.id)}
-                            className={`group flex items-center justify-between p-2 rounded border transition-all cursor-pointer select-none ${
-                              currentBgmId === track.id 
-                              ? 'bg-[var(--accent)]/20 border-[var(--accent)]' 
-                              : 'bg-[#121214] border-[#323238] hover:border-gray-500'
-                            }`}
+                    <div className={`mt-1 mb-2 px-1 flex items-center justify-between border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'} pb-2`}>
+                      <div className="flex items-center gap-2 cursor-pointer group" onClick={() => {
+                        const activePlaylist = playlists.find(p => p.id === activePlaylistId);
+                        if (!activePlaylist) return;
+                        const allActiveTrackIds = activePlaylist.trackIds;
+                        if (allActiveTrackIds.length === 0) return;
+                        
+                        const isAllSelected = allActiveTrackIds.every(id => selectedTrackIds.has(id));
+                        if (isAllSelected) {
+                          setSelectedTrackIds(new Set());
+                        } else {
+                          setSelectedTrackIds(new Set(allActiveTrackIds));
+                        }
+                      }}>
+                        <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
+                          playlists.find(p => p.id === activePlaylistId)?.trackIds.length && playlists.find(p => p.id === activePlaylistId)?.trackIds.every(id => selectedTrackIds.has(id))
+                            ? 'bg-[#323238] border-gray-500' 
+                            : 'bg-transparent border-gray-500 group-hover:border-gray-400'
+                        }`}>
+                          {playlists.find(p => p.id === activePlaylistId)?.trackIds.length > 0 && playlists.find(p => p.id === activePlaylistId)?.trackIds.every(id => selectedTrackIds.has(id)) && <Check className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-gray-400 transition-colors select-none">
+                          {selectedTrackIds.size > 0 ? `${selectedTrackIds.size} Selected` : '0 Selected'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {playlists.length > 1 && (
+                          <select 
+                            onChange={(e) => moveSelectedTracksToPlaylist(e.target.value)}
+                            value=""
+                            className="bg-[#121214] w-28 text-[9px] font-bold uppercase text-[var(--accent)] border border-[#323238]  px-1.5 py-0.5 outline-none cursor-pointer hover:border-gray-500 transition-colors appearance-none"
                           >
-                            <div className="flex items-center gap-2 overflow-hidden">
-                              <GripVertical className="w-3 h-3 text-gray-700 group-hover:text-gray-500 flex-shrink-0" />
-                              {currentBgmId === track.id && (isBgmPlaying || isBgmLoading) ? (
-                                <div className="flex items-center justify-center w-2.5 h-2.5">
-                                  {isBgmLoading ? (
-                                    <div className="w-2.5 h-2.5 border border-t-[var(--accent)] border-[var(--accent)]/30 rounded-full animate-spin"></div>
-                                  ) : (
-                                    <div className="flex gap-0.5 items-end h-2 w-2">
-                                      <div className="w-[1.5px] bg-[var(--accent)] animate-bounce h-full"></div>
-                                      <div className="w-[1.5px] bg-[var(--accent)] animate-bounce h-1/2" style={{ animationDelay: '0.1s' }}></div>
-                                      <div className="w-[1.5px] bg-[var(--accent)] animate-bounce h-2/3" style={{ animationDelay: '0.2s' }}></div>
-                                    </div>
-                                  )}
+                            <option value="" disabled>Move to...</option>
+                            {playlists.filter(p => p.id !== activePlaylistId).map(p => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
+                        )}
+                        <button
+                          onClick={removeSelectedTracks}
+                          className="p-1 hover:text-red-400 text-gray-500 transition-colors border border-[#323238]  bg-[#121214]"
+                          title="Delete Selected"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-2">
+                      <div className="space-y-1">
+                        {bgmPlaylist.length > 0 ? bgmPlaylist.map((track, idx) => (
+                          <div 
+                            key={`${track.id}-${idx}`} 
+                            onClick={() => playTrackById(track.id)}
+                            className="group flex items-center justify-between p-2  border bg-[#121214] border-[#323238] hover:border-gray-500 transition-all cursor-pointer select-none"
+                          >
+                            <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+                              <div 
+                                className="flex items-center justify-center p-1 -ml-1 cursor-pointer flex-shrink-0"
+                                onClick={(e) => toggleTrackSelection(track.id, e)}
+                              >
+                                <div className={`w-3 h-3 border flex items-center justify-center transition-colors ${
+                                  selectedTrackIds.has(track.id) 
+                                  ? 'bg-[#323238] border-gray-500' 
+                                  : 'border-gray-500'
+                                }`}>
+                                  {selectedTrackIds.has(track.id) && <Check className="w-2.5 h-2.5 text-white" />}
                                 </div>
-                              ) : (
-                                <Play className={`w-2.5 h-2.5 ${currentBgmId === track.id ? 'text-[var(--accent)]' : 'text-gray-600'}`} />
-                              )}
+                              </div>
                               <span className={`text-[10px] truncate ${
-                                currentBgmId === track.id ? 'text-white font-bold' : 'text-white'
+                                currentBgmId === track.id ? `${highlightClasses.text} font-bold` : (selectedTrackIds.has(track.id) ? highlightClasses.text : 'text-white')
                               }`}>
                                 {track.name}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 ml-2">
                               <button 
                                 onClick={(e) => moveToTop(idx, e)}
-                                className="p-1 hover:text-[var(--accent)] transition-colors"
+                                className="p-0.5 hover:text-[var(--accent)] transition-colors"
                                 title="Move to Top"
                               >
                                 <ChevronsUp className="w-3 h-3" />
                               </button>
                               <button 
-                                onClick={(e) => removeTrack(idx, e)}
-                                className="p-1 hover:text-red-400 transition-all"
-                                title="Remove"
+                                onClick={(e) => moveTrackUp(idx, e)}
+                                className="p-0.5 hover:text-[var(--accent)] transition-colors"
+                                title="Move Up"
                               >
-                                <Trash2 className="w-2.5 h-2.5" />
+                                <ChevronUp className="w-3 h-3" />
+                              </button>
+                              <button 
+                                onClick={(e) => moveTrackDown(idx, e)}
+                                className="p-0.5 hover:text-[var(--accent)] transition-colors"
+                                title="Move Down"
+                              >
+                                <ChevronDown className="w-3 h-3" />
+                              </button>
+                              <button 
+                                onClick={(e) => moveToBottom(idx, e)}
+                                className="p-0.5 hover:text-[var(--accent)] transition-colors"
+                                title="Move to Bottom"
+                              >
+                                <ChevronsDown className="w-3 h-3" />
                               </button>
                             </div>
-                          </Reorder.Item>
+                          </div>
                         )) : (
                           <div className="flex flex-col items-center justify-center p-4 text-center opacity-50 border border-transparent border-dashed h-12">
                             <p className="text-[9px] uppercase tracking-widest font-bold">No tracks in this playlist</p>
                           </div>
                         )}
-                      </Reorder.Group>
+                      </div>
                     </div>
 
                     <div 
-                      className="mt-3 border-2 border-dashed border-[#323238] rounded-lg transition-colors relative flex flex-col items-center justify-center p-4 text-center group hover:border-[var(--accent)] cursor-pointer"
+                      className="mt-3 border-2 border-dashed border-[#323238]  transition-colors relative flex flex-col items-center justify-center p-4 text-center group hover:border-[var(--accent)] cursor-pointer"
                       onDragOver={(e) => {
                         e.preventDefault();
                         e.currentTarget.classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/5');
@@ -2002,7 +2216,7 @@ export default function App() {
       {/* Sidebar Toggle Vertical Container */}
       <div className="w-0 relative z-20 flex flex-col justify-center">
         <div 
-          className={`absolute ${sidebarPosition === 'left' ? 'left-0 rounded-r-lg' : 'right-0 rounded-l-lg'} top-1/2 -translate-y-1/2 w-2 hover:w-6 h-16 bg-white/10 hover:bg-[var(--accent)] flex items-center justify-center cursor-pointer transition-all group backdrop-blur-sm shadow-xl border border-white/5`}
+          className={`absolute ${sidebarPosition === 'left' ? 'left-0 -lg' : 'right-0 -lg'} top-1/2 -translate-y-1/2 w-2 hover:w-6 h-16 bg-white/10 hover:bg-[var(--accent)] flex items-center justify-center cursor-pointer transition-all group backdrop-blur-sm shadow-xl border border-white/5`}
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         >
           <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute">
@@ -2024,7 +2238,7 @@ export default function App() {
               onClick={() => setIsHUDControlsVisible(!isHUDControlsVisible)}
               className="flex items-center gap-2"
             >
-              <div className={`p-1 border rounded-none ${isHUDControlsVisible ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
+              <div className={`p-1 border  ${isHUDControlsVisible ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
                 <SlidersHorizontal className="w-3.5 h-3.5" />
               </div>
               <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>Formation Settings</span>
@@ -2034,7 +2248,7 @@ export default function App() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 mr-4">
               <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest font-bold">Theme:</span>
-              <div className="flex rounded border border-[#323238] overflow-hidden bg-[#1E1E22]">
+              <div className="flex  border border-[#323238] overflow-hidden bg-[#1E1E22]">
                 {(['colors', 'black', 'light'] as const).map(th => (
                   <button
                     key={th}
@@ -2050,21 +2264,21 @@ export default function App() {
             </div>
             <button 
               onClick={resetCamera}
-              className="px-3 py-1.5 bg-[#2A2A30] text-[11px] rounded border border-[#3A3A42] hover:bg-[#323238] transition-colors flex items-center gap-2"
+              className="px-3 py-1.5 bg-[#2A2A30] text-[11px]  border border-[#3A3A42] hover:bg-[#323238] transition-colors flex items-center gap-2"
             >
               <ZoomIn className="w-3 h-3" />
               Reset View
             </button>
             <button
               onClick={toggleFullscreen}
-              className="p-1.5 rounded-md hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
+              className="p-1.5  hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
               title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
             >
               {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
             <button
               onClick={() => setSidebarPosition(prev => prev === 'left' ? 'right' : 'left')}
-              className="p-1.5 rounded-md hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
+              className="p-1.5  hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
               title="Toggle Sidebar Position"
             >
               {sidebarPosition === 'right' ? <PanelLeftOpen className="w-5 h-5 scale-x-[-1]" /> : <PanelLeftOpen className="w-5 h-5" />}
@@ -2086,9 +2300,9 @@ export default function App() {
                 <input 
                   type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
                   onChange={(e) => setPersonScale(parseFloat(e.target.value))}
-                  className={`w-20 h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : 'bg-[#2A2A30] accent-gray-500'}`}
+                  className={`w-20 h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} accent-gray-500`}`}
                 />
-                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] rounded-sm border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{personScale.toFixed(1)}</span>
+                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px]  border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{personScale.toFixed(1)}</span>
               </div>
               <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
               
@@ -2097,9 +2311,9 @@ export default function App() {
                 <input 
                   type="range" min="1" max="8" value={formationLevel} 
                   onChange={(e) => setFormationLevel(parseInt(e.target.value))}
-                  className={`w-20 h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : 'bg-[#2A2A30] accent-gray-500'}`}
+                  className={`w-20 h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} accent-gray-500`}`}
                 />
-                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] rounded-sm border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{formationLevel}</span>
+                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px]  border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{formationLevel}</span>
               </div>
 
               <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
@@ -2109,16 +2323,16 @@ export default function App() {
                 <input 
                   type="range" min="1" max="5" step="0.5" value={formationSpacing} 
                   onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
-                  className={`w-20 h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : 'bg-[#2A2A30] accent-gray-500'}`}
+                  className={`w-20 h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} accent-gray-500`}`}
                 />
-                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] rounded-sm border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{formationSpacing.toFixed(1)}</span>
+                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px]  border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{formationSpacing.toFixed(1)}</span>
               </div>
 
               <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
 
               <div className="flex items-center gap-2">
                  <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Format</span>
-                 <div className="flex rounded gap-0.5">
+                 <div className="flex  gap-0.5">
                    {(
                      [
                        { id: 'square', icon: LayoutGrid },
@@ -2132,7 +2346,7 @@ export default function App() {
                      <button
                        key={id}
                        onClick={() => setFormationType(id as any)}
-                       className={`p-1.5 rounded transition-all ${ 
+                       className={`p-1.5  transition-all ${ 
                          formationType === id 
                            ? (appTheme === 'light' ? 'bg-gray-500 text-white' : 'bg-gray-500 text-white')
                            : (appTheme === 'light' ? 'text-gray-500 hover:text-gray-800' : 'text-gray-500 hover:text-white')
@@ -2152,7 +2366,7 @@ export default function App() {
                 <input 
                   type="range" min="0.1" max="1" step="0.05" value={hudOpacity} 
                   onChange={(e) => setHudOpacity(parseFloat(e.target.value))}
-                  className={`w-16 h-1 rounded-lg appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : 'bg-[#2A2A30] accent-gray-500'}`}
+                  className={`w-16 h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} accent-gray-500`}`}
                 />
               </div>
             </div>
@@ -2208,8 +2422,8 @@ export default function App() {
           </Canvas>
 
           {/* HUD Overlay Info */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 bg-[#1E1E22]/90 backdrop-blur-md rounded-full border border-[#323238] shadow-2xl pointer-events-none">
-            <div className="flex items-center gap-4">
+          <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 bg-[#1E1E22]/70 backdrop-blur-sm border ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'} shadow-xl pointer-events-none scale-90 opacity-70 origin-bottom`}>
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <User className="w-3.5 h-3.5 text-[var(--accent)]" />
                 <span className="text-[10px] font-mono text-gray-300 uppercase">{people.length} Entities</span>

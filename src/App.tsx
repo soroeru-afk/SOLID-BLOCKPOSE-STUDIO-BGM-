@@ -1842,7 +1842,7 @@ export default function App() {
                                className={`w-10 h-8  border transition-all shadow-sm flex items-center justify-center relative ${
                                  bgmRepeatMode !== 0 
                                   ? (appTheme === 'light' ? `bg-gray-500 border-gray-500 text-[#ffffff]` : `bg-[#1a1a1e] ${highlightClasses.border} ${highlightClasses.text}`) 
-                                  : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'bg-[#1a1a1e] border-[#323238] text-gray-400 hover:text-white hover:bg-[#323238]')
+                                  : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] hover:bg-[#323238] text-gray-400 hover:text-white')
                                }`}
                                title={bgmRepeatMode === 1 ? "Playlist Repeat" : bgmRepeatMode === 2 ? "Track Repeat" : "Repeat Off"}
                             >

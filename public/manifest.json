@@ -1,13 +1,13 @@
 {
   "name": "SOLID BLOCKPOSE STUDIO BGM+",
-  "short_name": "BLOCKPOSE BGM+",
+  "short_name": "SOLID BLOCKPOSE",
   "description": "BLOCKPOSE STUDIO BGM+",
   "lang": "ja",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0E1014",
-  "theme_color": "#0E1014",
+  "background_color": "#121214",
+  "theme_color": "#121214",
   "orientation": "any",
   "icons": [
     {
@@ -20,6 +20,12 @@
       "src": "./icon-512.png?v=20260704",
       "sizes": "512x512",
       "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon.svg?v=20260704",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]

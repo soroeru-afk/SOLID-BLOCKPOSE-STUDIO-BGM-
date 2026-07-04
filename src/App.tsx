@@ -1551,12 +1551,16 @@ export default function App() {
                       { id: 'torso', name: 'Body Twist', axis: 1 },
                       { id: 'head', name: 'Head Turn', axis: 0 },
                       { id: 'arm_l_upper', name: 'L-Arm Upper', axis: 0 },
+                      { id: 'arm_l_lower', name: 'L-Elbow', axis: 0 },
                       { id: 'arm_l_upper', name: 'L-Arm Spread', axis: 2 },
                       { id: 'arm_r_upper', name: 'R-Arm Upper', axis: 0 },
+                      { id: 'arm_r_lower', name: 'R-Elbow', axis: 0 },
                       { id: 'arm_r_upper', name: 'R-Arm Spread', axis: 2 },
                       { id: 'leg_l_upper', name: 'L-Leg Upper', axis: 0 },
+                      { id: 'leg_l_lower', name: 'L-Knee', axis: 0 },
                       { id: 'leg_l_upper', name: 'L-Leg Spread', axis: 2 },
                       { id: 'leg_r_upper', name: 'R-Leg Upper', axis: 0 },
+                      { id: 'leg_r_lower', name: 'R-Knee', axis: 0 },
                       { id: 'leg_r_upper', name: 'R-Leg Spread', axis: 2 }
                     ].map((part: any, pIdx) => {
                       const rawVal = editPose[part.id as keyof PoseAngles]?.[part.axis] || 0;

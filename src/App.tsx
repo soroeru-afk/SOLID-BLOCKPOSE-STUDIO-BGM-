@@ -26,6 +26,71 @@ console.warn = (...args) => {
   originalWarn(...args);
 };
 
+const CinematicCamera = ({ isAutoCamera, isSlowRotate, autoCameraSpeed, rotateSpeed, isEditing, orbitRef }: { isAutoCamera: boolean, isSlowRotate: boolean, autoCameraSpeed: number, rotateSpeed: number, isEditing: boolean, orbitRef: any }) => {
+  useFrame((state) => {
+    // Re-center target and FOV incrementally if autoCamera is off
+    if (!isAutoCamera && orbitRef.current) {
+      if (Math.abs(orbitRef.current.target.x) > 0.01 || Math.abs(orbitRef.current.target.z) > 0.01) {
+        orbitRef.current.target.x = THREE.MathUtils.lerp(orbitRef.current.target.x, 0, 0.05);
+        orbitRef.current.target.z = THREE.MathUtils.lerp(orbitRef.current.target.z, 0, 0.05);
+        orbitRef.current.update();
+      }
+    }
+    if (!isAutoCamera && state.camera instanceof THREE.PerspectiveCamera) {
+      if (Math.abs(state.camera.fov - 45) > 0.1) {
+        state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, 45, 0.05);
+        state.camera.updateProjectionMatrix();
+      }
+    }
+
+    // Return early if neither is active, or if currently editing
+    if ((!isAutoCamera && !isSlowRotate) || isEditing) {
+      if (orbitRef.current && orbitRef.current.autoRotate) {
+        orbitRef.current.autoRotate = false;
+      }
+      return;
+    }
+    
+    const time = state.clock.getElapsedTime() * autoCameraSpeed * 0.5;
+          
+    if (isAutoCamera) {
+      // Auto Rotation
+      if (orbitRef.current) {
+        orbitRef.current.autoRotate = true;
+        orbitRef.current.autoRotateSpeed = autoCameraSpeed * 2.5;
+        
+        // Smooth Target Breathing
+        const targetX = Math.sin(time * 0.5) * 0.8;
+        const targetZ = Math.cos(time * 0.3) * 0.8;
+        orbitRef.current.target.x = THREE.MathUtils.lerp(orbitRef.current.target.x, targetX, 0.03);
+        orbitRef.current.target.z = THREE.MathUtils.lerp(orbitRef.current.target.z, targetZ, 0.03);
+        
+        orbitRef.current.update();
+      }
+
+      // Vertical oscillation & subtle zoom - Smooth Transition
+      const camera = state.camera;
+      const targetY = 8 + Math.sin(time) * 4;
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.05);
+      
+      // Subtle focal depth variation
+      if (camera instanceof THREE.PerspectiveCamera) {
+        const targetFov = 45 + Math.cos(time * 0.4) * 5;
+        camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.02);
+        camera.updateProjectionMatrix();
+      }
+    } else if (isSlowRotate) {
+      // Slow Rotation only
+      if (orbitRef.current) {
+        orbitRef.current.autoRotate = true;
+        orbitRef.current.autoRotateSpeed = rotateSpeed; // configurable rotation
+        orbitRef.current.update();
+      }
+    }
+  });
+  return null;
+};
+
 export default function App() {
   // State Initialization from LocalStorage
   const [poses, setPoses] = useState<PosePreset[]>(() => {
@@ -950,70 +1015,6 @@ export default function App() {
     }
   };
 
-  const CinematicCamera = () => {
-    useFrame((state) => {
-      // Re-center target and FOV incrementally if autoCamera is off
-      if (!isAutoCamera && orbitRef.current) {
-        if (Math.abs(orbitRef.current.target.x) > 0.01 || Math.abs(orbitRef.current.target.z) > 0.01) {
-          orbitRef.current.target.x = THREE.MathUtils.lerp(orbitRef.current.target.x, 0, 0.05);
-          orbitRef.current.target.z = THREE.MathUtils.lerp(orbitRef.current.target.z, 0, 0.05);
-          orbitRef.current.update();
-        }
-      }
-      if (!isAutoCamera && state.camera instanceof THREE.PerspectiveCamera) {
-        if (Math.abs(state.camera.fov - 45) > 0.1) {
-          state.camera.fov = THREE.MathUtils.lerp(state.camera.fov, 45, 0.05);
-          state.camera.updateProjectionMatrix();
-        }
-      }
-
-      // Return early if neither is active, or if currently editing
-      if ((!isAutoCamera && !isSlowRotate) || isEditing) {
-        if (orbitRef.current && orbitRef.current.autoRotate) {
-          orbitRef.current.autoRotate = false;
-        }
-        return;
-      }
-      
-      const time = state.clock.getElapsedTime() * autoCameraSpeed * 0.5;
-            
-      if (isAutoCamera) {
-        // Auto Rotation
-        if (orbitRef.current) {
-          orbitRef.current.autoRotate = true;
-          orbitRef.current.autoRotateSpeed = autoCameraSpeed * 2.5;
-          
-          // Smooth Target Breathing
-          const targetX = Math.sin(time * 0.5) * 0.8;
-          const targetZ = Math.cos(time * 0.3) * 0.8;
-          orbitRef.current.target.x = THREE.MathUtils.lerp(orbitRef.current.target.x, targetX, 0.03);
-          orbitRef.current.target.z = THREE.MathUtils.lerp(orbitRef.current.target.z, targetZ, 0.03);
-          
-          orbitRef.current.update();
-        }
-
-        // Vertical oscillation & subtle zoom - Smooth Transition
-        const camera = state.camera;
-        const targetY = 8 + Math.sin(time) * 4;
-        camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.05);
-        
-        // Subtle focal depth variation
-        if (camera instanceof THREE.PerspectiveCamera) {
-          const targetFov = 45 + Math.cos(time * 0.4) * 5;
-          camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.02);
-          camera.updateProjectionMatrix();
-        }
-      } else if (isSlowRotate) {
-        // Slow Rotation only
-        if (orbitRef.current) {
-          orbitRef.current.autoRotate = true;
-          orbitRef.current.autoRotateSpeed = rotateSpeed; // configurable rotation
-          orbitRef.current.update();
-        }
-      }
-    });
-    return null;
-  };
 
   const people = useMemo(() => {
     const items = [];
@@ -2585,6 +2586,14 @@ export default function App() {
               minDistance={2}
               maxDistance={30}
               maxPolarAngle={Math.PI / 2 + 0.1}
+            />
+            <CinematicCamera 
+              isAutoCamera={isAutoCamera} 
+              isSlowRotate={isSlowRotate} 
+              autoCameraSpeed={autoCameraSpeed} 
+              rotateSpeed={rotateSpeed} 
+              isEditing={isEditing} 
+              orbitRef={orbitRef} 
             />
           </Canvas>
         </div>

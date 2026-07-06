@@ -13,7 +13,7 @@ import {
   Camera, Video, Square, GripVertical, ChevronsUp, ChevronsDown,
   PanelLeftClose, PanelLeftOpen, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   LayoutGrid, Circle, Triangle, Target, Tornado, List, FolderPlus,
-  SkipBack, SkipForward, Zap, Maximize, Minimize, Check
+  SkipBack, SkipForward, Zap, Maximize, Minimize, Check, Monitor
 } from 'lucide-react';
 import { SoundManager, SoundEffectType } from './lib/sound';
 import { AudioDB, StoredTrack } from './lib/audioDb';
@@ -207,7 +207,12 @@ export default function App() {
   const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>(() => (localStorage.getItem(`${STORAGE_KEY}_sidebarPosition`) as 'left' | 'right') || 'left');
   const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'black');
   const [isHUDControlsVisible, setIsHUDControlsVisible] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isHUDControlsVisible`) !== 'false');
-  const [hudOpacity, setHudOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_hudOpacity`) || '0.6'));
+  const [hudPanelTab, setHudPanelTab] = useState<'formation' | 'shadow' | 'display'>('formation');
+  const [hudOpacity, setHudOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_hudOpacity`) || '0.9'));
+  const [shadowOpacity, setShadowOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowOpacity`) || '0.15'));
+  const [shadowAngle, setShadowAngle] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowAngle`) || '0.6981317007977318'));
+  const [shadowBlur, setShadowBlur] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowBlur`) || '5.0'));
+  const [shadowLength, setShadowLength] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowLength`) || '0.8'));
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -282,7 +287,11 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_appTheme`, appTheme);
     localStorage.setItem(`${STORAGE_KEY}_isHUDControlsVisible`, isHUDControlsVisible.toString());
     localStorage.setItem(`${STORAGE_KEY}_hudOpacity`, hudOpacity.toString());
-  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, isAdvancedOptionsOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme, isHUDControlsVisible, hudOpacity]);
+    localStorage.setItem(`${STORAGE_KEY}_shadowOpacity`, shadowOpacity.toString());
+    localStorage.setItem(`${STORAGE_KEY}_shadowAngle`, shadowAngle.toString());
+    localStorage.setItem(`${STORAGE_KEY}_shadowBlur`, shadowBlur.toString());
+    localStorage.setItem(`${STORAGE_KEY}_shadowLength`, shadowLength.toString());
+  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, isAdvancedOptionsOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength]);
 
   // Sync sound manager state
   useEffect(() => {
@@ -324,7 +333,7 @@ export default function App() {
     const data = {
       poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
       soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor,
-      characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, isHUDControlsVisible, hudOpacity,
+      characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
       playlists, activePlaylistId, isPlaylistExpanded,
       tracks: serializedTracks
     };
@@ -376,6 +385,10 @@ export default function App() {
         if (data.sidebarPosition) setSidebarPosition(data.sidebarPosition);
         if (data.isHUDControlsVisible !== undefined) setIsHUDControlsVisible(data.isHUDControlsVisible);
         if (data.hudOpacity !== undefined) setHudOpacity(data.hudOpacity);
+        if (data.shadowOpacity !== undefined) setShadowOpacity(data.shadowOpacity);
+        if (data.shadowAngle !== undefined) setShadowAngle(data.shadowAngle);
+        if (data.shadowBlur !== undefined) setShadowBlur(data.shadowBlur);
+        if (data.shadowLength !== undefined) setShadowLength(data.shadowLength);
         if (data.playlists) setPlaylists(data.playlists);
         if (data.activePlaylistId) setActivePlaylistId(data.activePlaylistId);
         if (data.isPlaylistExpanded !== undefined) setIsPlaylistExpanded(data.isPlaylistExpanded);
@@ -615,7 +628,7 @@ export default function App() {
     const newTracks: { id: string, name: string, file: File | Blob }[] = [];
     const newTrackIds: string[] = [];
     
-    for (const file of Array.from(files)) {
+    for (const file of Array.from(files) as File[]) {
       const id = Math.random().toString(36).substring(2, 9);
       const name = file.name.replace(/\.[^/.]+$/, "");
       const track = { id, name, file };
@@ -1009,10 +1022,10 @@ export default function App() {
 
     if (formationType === 'square') {
       if (level === 1) {
-        items.push({ id: 0, position: [0, 1, 0] });
+        items.push({ id: 0, position: [0, 0, 0] });
       } else if (level === 2) {
-        items.push({ id: 0, position: [-spacing/2, 1, 0] });
-        items.push({ id: 1, position: [spacing/2, 1, 0] });
+        items.push({ id: 0, position: [-spacing/2, 0, 0] });
+        items.push({ id: 1, position: [spacing/2, 0, 0] });
       } else {
         const side = level;
         const total = side * side;
@@ -1021,17 +1034,17 @@ export default function App() {
           const col = i % side;
           const x = (col - (side - 1) / 2) * spacing;
           const z = (row - (side - 1) / 2) * spacing;
-          items.push({ id: i, position: [x, 1, z] as [number, number, number] });
+          items.push({ id: i, position: [x, 0, z] as [number, number, number] });
         }
       }
     } else if (formationType === 'circle') {
       if (level === 1) {
-        items.push({ id: 0, position: [0, 1, 0] });
+        items.push({ id: 0, position: [0, 0, 0] });
       } else if (level === 2) {
-        items.push({ id: 0, position: [-spacing/2, 1, 0] });
-        items.push({ id: 1, position: [spacing/2, 1, 0] });
+        items.push({ id: 0, position: [-spacing/2, 0, 0] });
+        items.push({ id: 1, position: [spacing/2, 0, 0] });
       } else {
-        items.push({ id: 0, position: [0, 1, 0] });
+        items.push({ id: 0, position: [0, 0, 0] });
         let currentId = 1;
         const numRings = Math.max(1, level - 2);
         for (let ring = 1; ring <= numRings; ring++) {
@@ -1041,17 +1054,17 @@ export default function App() {
             const theta = i * (Math.PI * 2) / ringCount;
             items.push({ 
               id: currentId++, 
-              position: [Math.cos(theta) * radius, 1, Math.sin(theta) * radius] 
+              position: [Math.cos(theta) * radius, 0, Math.sin(theta) * radius] 
             });
           }
         }
       }
     } else if (formationType === 'triangle') {
       if (level === 1) {
-        items.push({ id: 0, position: [0, 1, 0] });
+        items.push({ id: 0, position: [0, 0, 0] });
       } else if (level === 2) {
-        items.push({ id: 0, position: [-spacing/2, 1, 0] });
-        items.push({ id: 1, position: [spacing/2, 1, 0] });
+        items.push({ id: 0, position: [-spacing/2, 0, 0] });
+        items.push({ id: 1, position: [spacing/2, 0, 0] });
       } else {
         let currentId = 0;
         const totalRows = Math.floor(level * 1.2);
@@ -1061,18 +1074,18 @@ export default function App() {
           const z = (row - (totalRows - 1) / 2) * rowSpacing;
           for (let col = 0; col < cols; col++) {
             const x = (col - (cols - 1) / 2) * spacing;
-            items.push({ id: currentId++, position: [x, 1, z] as [number, number, number] });
+            items.push({ id: currentId++, position: [x, 0, z] as [number, number, number] });
           }
         }
       }
     } else if (formationType === 'cross') {
       if (level === 1) {
-        items.push({ id: 0, position: [0, 1, 0] });
+        items.push({ id: 0, position: [0, 0, 0] });
       } else if (level === 2) {
-        items.push({ id: 0, position: [-spacing/2, 1, 0] });
-        items.push({ id: 1, position: [spacing/2, 1, 0] });
+        items.push({ id: 0, position: [-spacing/2, 0, 0] });
+        items.push({ id: 1, position: [spacing/2, 0, 0] });
       } else {
-        items.push({ id: 0, position: [0, 1, 0] });
+        items.push({ id: 0, position: [0, 0, 0] });
         let currentId = 1;
         const arms = 4;
         const distLimit = Math.floor(level * 1.5);
@@ -1083,7 +1096,7 @@ export default function App() {
               id: currentId++, 
               position: [
                 Math.round(Math.cos(theta)) * dist * spacing, 
-                1, 
+                0, 
                 Math.round(Math.sin(theta)) * dist * spacing
               ] as [number, number, number]
             });
@@ -1092,7 +1105,7 @@ export default function App() {
       }
     } else if (formationType === 'ring') {
       if (level === 1) {
-        items.push({ id: 0, position: [0, 1, 0] });
+        items.push({ id: 0, position: [0, 0, 0] });
       } else {
         const radius = (level - 1) * spacing * 1.2;
         const targetCount = (level - 1) * 8;
@@ -1100,12 +1113,12 @@ export default function App() {
           const theta = i * (Math.PI * 2) / targetCount;
           items.push({ 
             id: i, 
-            position: [Math.cos(theta) * radius, 1, Math.sin(theta) * radius] 
+            position: [Math.cos(theta) * radius, 0, Math.sin(theta) * radius] 
           });
         }
       }
     } else if (formationType === 'spiral') {
-      items.push({ id: 0, position: [0, 1, 0] });
+      items.push({ id: 0, position: [0, 0, 0] });
       const targetCount = level * level + 1;
       let currentTheta = 0;
       for (let i = 1; i < targetCount; i++) {
@@ -1113,7 +1126,7 @@ export default function App() {
         currentTheta += spacing * 0.85 / r;
         items.push({ 
           id: i, 
-          position: [Math.cos(currentTheta) * r, 1, Math.sin(currentTheta) * r] 
+          position: [Math.cos(currentTheta) * r, 0, Math.sin(currentTheta) * r] 
         });
       }
     }
@@ -1625,43 +1638,46 @@ export default function App() {
                               RESET
                             </button>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069', '#7A4860', '#0F172A', '#7A662E', '#316167'].map((color) => (
-                              <button
-                                key={color}
-                                onClick={() => setCharacterColor(color)}
-                                className={`w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
-                                  characterColor === color ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
-                                }`}
-                                style={{ backgroundColor: color }}
-                                title="Character Color"
-                              >
-                                {characterColor === color && <div className={`w-1.5 h-1.5  bg-white shadow-sm mix-blend-difference`} />}
-                              </button>
-                            ))}
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-wrap gap-1.5">
+                              {['#0F172A', '#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069'].map((color) => (
+                                <button
+                                  key={color}
+                                  onClick={() => setCharacterColor(color)}
+                                  className={`w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
+                                    characterColor === color ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
+                                  }`}
+                                  style={{ backgroundColor: color }}
+                                  title="Character Color"
+                                >
+                                  {characterColor === color && <div className={`w-1.5 h-1.5  bg-white shadow-sm mix-blend-difference`} />}
+                                </button>
+                              ))}
+                            </div>
                             
-                            <div className="w-[1px] h-6 bg-[#323238] mx-0.5" />
-                            
-                            <div className={`relative w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
-                              !['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069', '#7A4860', '#0F172A', '#7A662E', '#316167'].includes(characterColor) ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
-                            }`}>
-                              <input 
-                                type="color" 
-                                value={savedCustomCharacterColor}
-                                onChange={(e) => {
-                                  setSavedCustomCharacterColor(e.target.value);
-                                  setCharacterColor(e.target.value);
-                                }}
-                                onClick={() => {
-                                  setCharacterColor(savedCustomCharacterColor);
-                                }}
-                                className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
-                                title="Custom Character Color"
-                              />
-                              <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
-                                <Plus className="w-3 h-3 text-white opacity-75" />
+                            <div className="flex items-center gap-3 pt-2 border-t border-[#323238]/50 mt-1">
+                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Custom</span>
+                              <div className={`relative w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
+                                !['#0F172A', '#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069'].includes(characterColor) ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
+                              }`}>
+                                <input 
+                                  type="color" 
+                                  value={savedCustomCharacterColor}
+                                  onChange={(e) => {
+                                    setSavedCustomCharacterColor(e.target.value);
+                                    setCharacterColor(e.target.value);
+                                  }}
+                                  onClick={() => {
+                                    setCharacterColor(savedCustomCharacterColor);
+                                  }}
+                                  className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
+                                  title="Custom Character Color"
+                                />
+                                <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
+                                  <Plus className="w-3 h-3 text-white opacity-75" />
+                                </div>
+                                {!['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069', '#0F172A'].includes(characterColor) && <div className="w-1.5 h-1.5  bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
                               </div>
-                              {!['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069', '#7A4860', '#0F172A', '#7A662E', '#316167'].includes(characterColor) && <div className="w-1.5 h-1.5  bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
                             </div>
                           </div>
                         </div>
@@ -1670,23 +1686,48 @@ export default function App() {
                           <div className="flex items-center justify-between mb-3">
                             <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Visual Themes</label>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {THEMES.map((theme) => (
-                              <button
-                                key={theme.id}
-                                onClick={() => {
-                                  setThemeId(theme.id);
-                                  setCustomBgColor(null);
-                                }}
-                                className={`w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
-                                  themeId === theme.id && !customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
-                                }`}
-                                style={{ backgroundColor: theme.bodyColor }}
-                                title={theme.name}
-                              >
-                                {themeId === theme.id && !customBgColor && <div className="w-1 h-1 bg-white shadow-sm" />}
-                              </button>
-                            ))}
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-wrap gap-1.5">
+                              {THEMES.map((theme) => (
+                                <button
+                                  key={theme.id}
+                                  onClick={() => {
+                                    setThemeId(theme.id);
+                                    setCustomBgColor(null);
+                                  }}
+                                  className={`w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
+                                    themeId === theme.id && !customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
+                                  }`}
+                                  style={{ backgroundColor: theme.bodyColor }}
+                                  title={theme.name}
+                                >
+                                  {themeId === theme.id && !customBgColor && <div className="w-1 h-1 bg-white shadow-sm" />}
+                                </button>
+                              ))}
+                            </div>
+                            
+                            <div className="flex items-center gap-3 pt-2 border-t border-[#323238]/50 mt-1">
+                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Custom</span>
+                              <div className={`relative w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
+                                customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
+                              }`}>
+                                <input 
+                                  type="color" 
+                                  value={savedCustomBgColor}
+                                  onChange={(e) => {
+                                    setSavedCustomBgColor(e.target.value);
+                                    setCustomBgColor(e.target.value);
+                                  }}
+                                  onClick={() => setCustomBgColor(savedCustomBgColor)}
+                                  className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
+                                  title="Custom Background Color"
+                                />
+                                <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
+                                  <Plus className="w-3 h-3 text-white opacity-75" />
+                                </div>
+                                {customBgColor && <div className="w-1.5 h-1.5 bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1879,7 +1920,7 @@ export default function App() {
 
                        <div className="flex flex-col gap-1">
                           <div className="flex justify-between items-center">
-                             <span className="text-[8px] text-gray-500 uppercase font-bold tracking-widest">BGM Volume</span>
+                             <span className="text-[8px] `text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-700' : 'text-gray-300'}`">BGM Volume</span>
                              <span className="text-[8px] text-gray-400 font-mono">{Math.round(bgmVolume * 100)}%</span>
                           </div>
                           <input 
@@ -2194,7 +2235,7 @@ export default function App() {
                         e.currentTarget.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/5');
                         e.currentTarget.classList.add('border-[#323238]');
                         
-                        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('audio/'));
+                        const files = Array.from(e.dataTransfer.files).filter((f: any) => f.type.startsWith('audio/'));
                         if (files.length > 0) {
                           handleBgmUpload({ target: { files } } as any);
                         }
@@ -2238,14 +2279,53 @@ export default function App() {
         {/* Header Bar */}
         <header className="h-14 border-b border-[#323238] flex items-center justify-between px-6 bg-[#1a1a1e]/80 backdrop-blur-md z-10 flex-shrink-0">
           <div className="flex items-center gap-6">
-            <button
-              onClick={() => setIsHUDControlsVisible(!isHUDControlsVisible)}
+            <button 
+              onClick={() => {
+                if (hudPanelTab === 'formation' && isHUDControlsVisible) {
+                  setIsHUDControlsVisible(false);
+                } else {
+                  setHudPanelTab('formation');
+                  setIsHUDControlsVisible(true);
+                }
+              }}
               className="flex items-center gap-2"
             >
-              <div className={`p-1 border  ${isHUDControlsVisible ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
+              <div className={`p-1 border  ${isHUDControlsVisible && hudPanelTab === 'formation' ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
                 <SlidersHorizontal className="w-3.5 h-3.5" />
               </div>
-              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>Formation Settings</span>
+              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible && hudPanelTab === 'formation' ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>Formation</span>
+            </button>
+            <button 
+              onClick={() => {
+                if (hudPanelTab === 'shadow' && isHUDControlsVisible) {
+                  setIsHUDControlsVisible(false);
+                } else {
+                  setHudPanelTab('shadow');
+                  setIsHUDControlsVisible(true);
+                }
+              }}
+              className="flex items-center gap-2"
+            >
+              <div className={`p-1 border  ${isHUDControlsVisible && hudPanelTab === 'shadow' ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
+                <Layers className="w-3.5 h-3.5" />
+              </div>
+              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible && hudPanelTab === 'shadow' ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>Shadow</span>
+            </button>
+            <button 
+              onClick={() => {
+                if (hudPanelTab === 'display' && isHUDControlsVisible) {
+                  setIsHUDControlsVisible(false);
+                } else {
+                  setHudPanelTab('display');
+                  setIsHUDControlsVisible(true);
+                }
+              }}
+              className="flex items-center gap-2"
+            >
+              <div className={`p-1 border  ${isHUDControlsVisible && hudPanelTab === 'display' ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
+                <Monitor className="w-3.5 h-3.5" />
+              </div>
+              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible && hudPanelTab === 'display' ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>Display</span>
             </button>
           </div>
 
@@ -2296,88 +2376,149 @@ export default function App() {
           
           {isHUDControlsVisible && (
             <div 
-              className="absolute top-4 left-4 z-20 flex items-center gap-6 px-5 py-2.5 transition-opacity"
+              className="absolute top-4 left-4 z-20 flex items-center h-12 gap-6 px-5 transition-opacity"
               style={{ opacity: hudOpacity }}
             >
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Scale</span>
-                <input 
-                  type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
-                  onChange={(e) => setPersonScale(parseFloat(e.target.value))}
-                  className={`w-20 h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} accent-gray-500`}`}
-                />
-                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px]  border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{personScale.toFixed(1)}</span>
-              </div>
-              <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
-              
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Level</span>
-                <input 
-                  type="range" min="1" max="8" value={formationLevel} 
-                  onChange={(e) => setFormationLevel(parseInt(e.target.value))}
-                  className={`w-20 h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} accent-gray-500`}`}
-                />
-                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px]  border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{formationLevel}</span>
-              </div>
+              {hudPanelTab === 'formation' && (
+                <>
+                  <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Scale</span>
+                    <input 
+                      type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
+                      onChange={(e) => setPersonScale(parseFloat(e.target.value))}
+                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                    />
+                    <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{personScale.toFixed(1)}</span>
+                  </div>
+                    
+                  <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Level</span>
+                    <input 
+                      type="range" min="1" max="8" value={formationLevel} 
+                      onChange={(e) => setFormationLevel(parseInt(e.target.value))}
+                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                    />
+                    <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{formationLevel}</span>
+                  </div>
+                    
+                  <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Space</span>
+                    <input 
+                      type="range" min="1" max="5" step="0.5" value={formationSpacing} 
+                      onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
+                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                    />
+                    <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{formationSpacing.toFixed(1)}</span>
+                  </div>
 
-              <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
-              
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Space</span>
-                <input 
-                  type="range" min="1" max="5" step="0.5" value={formationSpacing} 
-                  onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
-                  className={`w-20 h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} accent-gray-500`}`}
-                />
-                <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px]  border border-[#3A3A42] shadow-sm leading-none flex items-center justify-center">{formationSpacing.toFixed(1)}</span>
-              </div>
+                  <div className="flex items-center gap-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Format</span>
+                     <div className="flex gap-0.5">
+                       {(
+                         [
+                           { id: 'square', icon: LayoutGrid },
+                           { id: 'circle', icon: Target },
+                           { id: 'triangle', icon: Triangle },
+                           { id: 'cross', icon: Plus },
+                           { id: 'ring', icon: Circle },
+                           { id: 'spiral', icon: Tornado }
+                         ] as const
+                       ).map(({ id, icon: Icon }) => (
+                         <button
+                           key={id}
+                           onClick={() => setFormationType(id as any)}
+                           className={`p-1.5 transition-all drop-shadow-md rounded ${ 
+                             formationType === id 
+                               ? (appTheme === 'light' ? 'bg-gray-500 text-white' : 'bg-gray-500 text-white')
+                               : (appTheme === 'light' ? 'text-gray-800 bg-white/50 hover:bg-white/80' : 'text-gray-300 bg-[#121214]/50 hover:bg-[#121214]/80')
+                           }`}
+                           title={id.charAt(0).toUpperCase() + id.slice(1)}
+                         >
+                           <Icon className="w-3.5 h-3.5" />
+                         </button>
+                       ))}
+                     </div>
+                  </div>
+                </>
+              )}
+              {hudPanelTab === 'shadow' && (
+                <>
+                  <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Shadow Op</span>
+                    <input 
+                      type="range" min="0" max="1" step="0.05" value={shadowOpacity} 
+                      onChange={(e) => setShadowOpacity(parseFloat(e.target.value))}
+                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                    />
+                    <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{shadowOpacity.toFixed(2)}</span>
+                  </div>
 
-              <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
+                  <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Angle</span>
+                    <input 
+                      type="range" min="0" max="6.28" step="0.1" value={shadowAngle} 
+                      onChange={(e) => setShadowAngle(parseFloat(e.target.value))}
+                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                    />
+                    <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{(shadowAngle * (180/Math.PI)).toFixed(0)}°</span>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                 <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Format</span>
-                 <div className="flex  gap-0.5">
-                   {(
-                     [
-                       { id: 'square', icon: LayoutGrid },
-                       { id: 'circle', icon: Target },
-                       { id: 'triangle', icon: Triangle },
-                       { id: 'cross', icon: Plus },
-                       { id: 'ring', icon: Circle },
-                       { id: 'spiral', icon: Tornado }
-                     ] as const
-                   ).map(({ id, icon: Icon }) => (
-                     <button
-                       key={id}
-                       onClick={() => setFormationType(id as any)}
-                       className={`p-1.5  transition-all ${ 
-                         formationType === id 
-                           ? (appTheme === 'light' ? 'bg-gray-500 text-white' : 'bg-gray-500 text-white')
-                           : (appTheme === 'light' ? 'text-gray-500 hover:text-gray-800' : 'text-gray-500 hover:text-white')
-                       }`}
-                       title={id.charAt(0).toUpperCase() + id.slice(1)}
-                     >
-                       <Icon className="w-3.5 h-3.5" />
-                     </button>
-                   ))}
-                 </div>
-              </div>
-              
-              <div className={`h-6 w-px ${appTheme === 'light' ? 'bg-gray-400' : 'bg-gray-700/50'}`}></div>
-              
-              <div className="flex items-center gap-3 relative group">
-                <span className="text-[10px] font-mono text-gray-500 uppercase font-bold tracking-widest">Opacity</span>
-                <input 
-                  type="range" min="0.1" max="1" step="0.05" value={hudOpacity} 
-                  onChange={(e) => setHudOpacity(parseFloat(e.target.value))}
-                  className={`w-16 h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} accent-gray-500`}`}
-                />
-              </div>
+                  <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Length</span>
+                    <input 
+                      type="range" min="0.5" max="5" step="0.1" value={shadowLength} 
+                      onChange={(e) => setShadowLength(parseFloat(e.target.value))}
+                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                    />
+                    <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{shadowLength.toFixed(1)}</span>
+                  </div>
+
+                  <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Blur</span>
+                    <input 
+                      type="range" min="0" max="25" step="0.1" value={shadowBlur} 
+                      onChange={(e) => setShadowBlur(parseFloat(e.target.value))}
+                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                    />
+                    <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{shadowBlur.toFixed(1)}</span>
+                  </div>
+                  
+                  <div className="flex items-center drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ml-2">
+                    <button 
+                      onClick={() => {
+                        setShadowOpacity(0.15);
+                        setShadowAngle(0.6981317007977318);
+                        setShadowLength(0.8);
+                        setShadowBlur(5.0);
+                      }}
+                      className="px-3 py-1 bg-[#2A2A30] text-[10px] font-mono font-bold uppercase tracking-widest border border-[#3A3A42] hover:bg-[#323238] transition-colors flex items-center gap-2 drop-shadow-md text-gray-300 hover:text-white"
+                      title="Reset Shadow Settings"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Reset Shadow
+                    </button>
+                  </div>
+                </>
+              )}
+              {hudPanelTab === 'display' && (
+                <>
+                  <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>HUD Opacity</span>
+                    <input 
+                      type="range" min="0.1" max="1" step="0.05" value={hudOpacity} 
+                      onChange={(e) => setHudOpacity(parseFloat(e.target.value))}
+                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                    />
+                    <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{hudOpacity.toFixed(2)}</span>
+                  </div>
+                  
+                </>
+              )}
             </div>
           )}
 
           <Canvas 
-            shadows={{ type: THREE.PCFShadowMap }}
+            shadows={{ type: THREE.PCFSoftShadowMap }}
             gl={{ 
               antialias: true,
             }}
@@ -2387,97 +2528,67 @@ export default function App() {
           >
             <PerspectiveCamera makeDefault position={[6, 6, 9]} fov={45} />
             <Environment preset="city" />
-            <color attach="background" args={[currentTheme.bgColor]} />
-            
-            <CinematicCamera />
-            
-            <ambientLight intensity={0.7} />
-            <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
-            <pointLight position={[-10, 5, -10]} intensity={1} color={currentTheme.bodyColor} />
-
-            <Center top>
-              <group>
-                {people.map((p) => (
-                  <BlockPerson 
-                    key={p.id} 
-                    pose={currentPose} 
-                    color={characterColor} 
-                    position={p.position}
-                    scale={personScale}
-                  />
-                ))}
-              </group>
-            </Center>
-
-            <Grid
-              infiniteGrid
-              cellSize={1}
-              sectionSize={5}
-              fadeDistance={35}
-              fadeStrength={4}
-              sectionThickness={1.5}
-              sectionColor={currentTheme.gridColor}
-              cellColor={currentTheme.gridColor}
-              position={[0, -0.01, 0]}
+            <color attach="background" args={[customBgColor || currentTheme.bgColor]} />
+              
+            <ambientLight intensity={currentTheme.id === 'light-gray' ? 2.5 : 1.5} />
+            <directionalLight 
+              position={[
+                Math.cos(shadowAngle) * 10 * shadowLength, 
+                8, 
+                Math.sin(shadowAngle) * 10 * shadowLength
+              ]} 
+              intensity={currentTheme.id === 'light-gray' ? 2.5 : 2.0} 
+              castShadow 
+              shadow-mapSize={[2048, 2048]}
+              shadow-camera-near={0.5}
+              shadow-camera-far={50}
+              shadow-camera-left={-15}
+              shadow-camera-right={15}
+              shadow-camera-top={15}
+              shadow-camera-bottom={-15}
+              shadow-bias={-0.0001}
+              shadow-radius={shadowBlur}
             />
-            <ContactShadows position={[0, -0.02, 0]} opacity={0.6} scale={25} blur={1.5} far={5} />
+            <pointLight position={[-5, 5, -5]} intensity={currentTheme.id === 'light-gray' ? 1.5 : 1.0} color="#a0c0ff" />
+            <pointLight position={[5, 2, 5]} intensity={currentTheme.id === 'light-gray' ? 1.0 : 0.5} color="#ffa0a0" />
             
-            <OrbitControls ref={orbitRef} makeDefault minDistance={2} maxDistance={50} />
-          </Canvas>
+            <group>
+              {people.map((person, i) => (
+                <BlockPerson 
+                  key={person.id} 
+                  position={person.position} 
+                  pose={currentPose} 
+                  color={characterColor}
+                  scale={personScale}
+                />
+              ))}
+            </group>
 
-          {/* HUD Overlay Info */}
-          <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 bg-[#1E1E22]/70 backdrop-blur-sm border ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'} shadow-xl pointer-events-none scale-90 opacity-70 origin-bottom`}>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <User className="w-3.5 h-3.5 text-[var(--accent)]" />
-                <span className="text-[10px] font-mono text-gray-300 uppercase">{people.length} Entities</span>
-              </div>
-              <div className="h-4 w-px bg-gray-700"></div>
-              <div className="flex items-center gap-2">
-                <Settings2 className="w-3.5 h-3.5 text-[var(--accent)]" />
-                <span className="text-[10px] font-mono text-gray-300 uppercase">Pose: {poseId}</span>
-              </div>
-            </div>
-          </div>
+            
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0]} receiveShadow>
+              <planeGeometry args={[100, 100]} />
+              <shadowMaterial transparent opacity={Math.min(shadowOpacity * 3, 1)} />
+            </mesh>
+
+            <Grid 
+              infiniteGrid 
+              fadeDistance={50} 
+              sectionColor={currentTheme.gridColor} 
+              cellColor={currentTheme.gridColor} 
+              position={[0, -0.02, 0]} 
+            />
+            <OrbitControls 
+              ref={orbitRef}
+              makeDefault
+              enableDamping
+              dampingFactor={0.05}
+              minDistance={2}
+              maxDistance={30}
+              maxPolarAngle={Math.PI / 2 + 0.1}
+            />
+          </Canvas>
         </div>
       </main>
-
-      {/* Clear Confirmation Modal */}
-      {showClearConfirm && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 text-white font-mono">
-            <div className="w-full max-w-sm flex flex-col border shadow-2xl bg-[#1e1e22] border-[#323238]">
-               <div className="p-4 border-b flex items-center gap-3 border-[#323238]">
-                  <h2 className="text-sm font-bold text-red-500">WARNING</h2>
-               </div>
-               <div className="p-6 text-xs text-center leading-relaxed text-gray-400">
-                  ARE YOU SURE YOU WANT TO CLEAR ALL DATA? THIS WILL EMPTY YOUR ENTIRE LIBRARY.
-               </div>
-               <div className="p-4 flex flex-col gap-2 border-t border-[#323238]">
-                  <button 
-                     onClick={() => {
-                        setPlaylists([{ id: 'default', name: 'Default Playlist', trackIds: [] }]);
-                        setActivePlaylistId('default');
-                        setAllTracks([]);
-                        AudioDB.clearAllTracks().catch(console.error);
-                        setCurrentBgmId(null);
-                        setIsBgmPlaying(false);
-                        SoundManager.stopBGM();
-                        setShowClearConfirm(false);
-                     }}
-                     className="px-6 py-2 border uppercase hover:bg-red-500/10 transition-colors font-bold border-red-500/50 text-red-500"
-                  >
-                     DELETE EVERYTHING
-                  </button>
-                  <button 
-                     onClick={() => setShowClearConfirm(false)} 
-                     className="px-6 py-2 border uppercase hover:bg-[#323238] transition-colors border-[#323238] text-gray-400"
-                  >
-                     CANCEL
-                  </button>
-               </div>
-            </div>
-         </div>
-      )}
 
       <style dangerouslySetInnerHTML={{ __html: `
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -2486,3 +2597,5 @@ export default function App() {
     </div>
   );
 }
+
+

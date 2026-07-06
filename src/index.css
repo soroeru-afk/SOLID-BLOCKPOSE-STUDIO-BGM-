@@ -86,3 +86,12 @@ html[data-theme="black"] .hover\:bg-\[\#323238\]:hover { background-color: #1A1A
     background: #000000;
   }
 }
+
+@layer utilities {
+  .text-outline-white {
+    text-shadow: 1px 1px 0 #FFF, -1px -1px 0 #FFF, 1px -1px 0 #FFF, -1px 1px 0 #FFF, 0px 1px 0 #FFF, 1px 0px 0 #FFF, 0px -1px 0 #FFF, -1px 0px 0 #FFF;
+  }
+  .text-outline-black {
+    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0px 1px 0 #000, 1px 0px 0 #000, 0px -1px 0 #000, -1px 0px 0 #000;
+  }
+}

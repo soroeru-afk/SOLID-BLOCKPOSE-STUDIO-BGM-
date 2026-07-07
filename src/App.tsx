@@ -1641,7 +1641,7 @@ export default function App() {
                           </div>
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-wrap gap-1.5">
-                              {['#0F172A', '#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069'].map((color) => (
+                              {['#0F172A', '#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#5C0909'].map((color) => (
                                 <button
                                   key={color}
                                   onClick={() => setCharacterColor(color)}
@@ -1677,7 +1677,7 @@ export default function App() {
                                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
                                   <Plus className="w-3 h-3 text-white opacity-75" />
                                 </div>
-                                {!['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069', '#0F172A'].includes(characterColor) && <div className="w-1.5 h-1.5  bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
+                                {!['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#5C0909', '#0F172A'].includes(characterColor) && <div className="w-1.5 h-1.5  bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
                               </div>
                             </div>
                           </div>

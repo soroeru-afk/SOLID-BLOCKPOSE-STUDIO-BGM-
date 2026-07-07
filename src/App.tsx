@@ -385,30 +385,39 @@ export default function App() {
 
   // Export Logic
   const exportSettings = async () => {
-    // Generate Base64 for all BGM tracks
-    const serializedTracks = await Promise.all(allTracks.map(async (t) => {
-      return new Promise<{id: string, name: string, data: string}>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve({ id: t.id, name: t.name, data: reader.result as string });
-        reader.onerror = reject;
-        reader.readAsDataURL(t.file);
-      });
-    }));
+    try {
+      // Generate Base64 for all BGM tracks
+      const serializedTracks = await Promise.all(allTracks.map(async (t) => {
+        return new Promise<{id: string, name: string, data: string}>((resolve) => {
+          if (!t.file) {
+            resolve({ id: t.id, name: t.name, data: '' });
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => resolve({ id: t.id, name: t.name, data: reader.result as string });
+          reader.onerror = () => resolve({ id: t.id, name: t.name, data: '' });
+          reader.readAsDataURL(t.file);
+        });
+      }));
 
-    const data = {
-      poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
-      soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor,
-      characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
-      playlists, activePlaylistId, isPlaylistExpanded,
-      tracks: serializedTracks
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `voxelpose_settings_${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+      const data = {
+        poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
+        soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor,
+        characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
+        playlists, activePlaylistId, isPlaylistExpanded,
+        tracks: serializedTracks
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `voxelpose_settings_${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Failed to export settings: ' + (err instanceof Error ? err.message : String(err)));
+    }
   };
 
   // Import Logic
@@ -1146,7 +1155,7 @@ export default function App() {
   return (
     <div 
       className={`flex h-screen w-full overflow-hidden bg-[#121214] text-[#E1E1E6] font-sans ${sidebarPosition === 'right' ? 'flex-row-reverse' : 'flex-row'}`}
-      style={{ '--accent': appTheme === 'red' ? '#B91C1C' : accentColor } as React.CSSProperties}
+      style={{ '--accent': appTheme === 'red' ? '#7A1F1F' : accentColor } as React.CSSProperties}
     >
       {/* Sidebar */}
       <AnimatePresence initial={false}>

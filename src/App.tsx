@@ -270,7 +270,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'visual' | 'sound'>('visual');
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSidebarOpen`) !== 'false');
   const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>(() => (localStorage.getItem(`${STORAGE_KEY}_sidebarPosition`) as 'left' | 'right') || 'left');
-  const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'black');
+  const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light' | 'red'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'black');
   const [isHUDControlsVisible, setIsHUDControlsVisible] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isHUDControlsVisible`) !== 'false');
   const [hudPanelTab, setHudPanelTab] = useState<'formation' | 'shadow' | 'display'>('formation');
   const [hudOpacity, setHudOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_hudOpacity`) || '0.9'));
@@ -1146,7 +1146,7 @@ export default function App() {
   return (
     <div 
       className={`flex h-screen w-full overflow-hidden bg-[#121214] text-[#E1E1E6] font-sans ${sidebarPosition === 'right' ? 'flex-row-reverse' : 'flex-row'}`}
-      style={{ '--accent': accentColor } as React.CSSProperties}
+      style={{ '--accent': appTheme === 'red' ? '#B91C1C' : accentColor } as React.CSSProperties}
     >
       {/* Sidebar */}
       <AnimatePresence initial={false}>
@@ -1178,7 +1178,7 @@ export default function App() {
                     <rect x="12.5" y="16.5" width="3" height="6" />
                   </svg>
                   <span className="flex flex-col">
-                    <span className="text-base font-black leading-none tracking-wider">SOLID BLOCKPOSE</span>
+                    <span className={`text-base font-black leading-none tracking-wider ${appTheme === 'red' ? 'text-white' : ''}`}>SOLID BLOCKPOSE</span>
                     <span className="text-[var(--accent)] text-xs mt-0.5 tracking-widest">STUDIO BGM+</span>
                   </span>
                 </h1>
@@ -1261,7 +1261,7 @@ export default function App() {
                     <div className={`flex items-center justify-between mb-4 pb-4 border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
                       <div className="flex gap-4">
                         <div className="flex flex-col gap-1.5">
-                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">SOUND</span>
+                           <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>SOUND</span>
                            <button 
                              onClick={toggleSound}
                              className={`flex items-center justify-center gap-1.5 w-[84px] py-1  border transition-colors ${
@@ -1275,7 +1275,7 @@ export default function App() {
                            </button>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                           <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest leading-none">MODE</span>
+                           <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>MODE</span>
                            <div className="flex items-center h-[26px] w-[96px] bg-[#1a1a1e] border border-[#323238]  p-0.5">
                              <button
                                onClick={() => changeSoundMode('bgm')}
@@ -1367,7 +1367,7 @@ export default function App() {
                       >
                         <div className="flex items-center gap-2">
                           <div className={`w-1 h-3  transition-colors ${isAdvancedOptionsOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                          <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : (appTheme === 'light' ? 'text-gray-500 group-hover:text-gray-600' : 'text-gray-500 group-hover:text-gray-300')}`}>Advanced Cycle Options</span>
+                          <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : (appTheme === 'light' ? 'text-gray-500 group-hover:text-gray-600' : (appTheme === 'red' ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'))}`}>Advanced Cycle Options</span>
                         </div>
                         <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-gray-500'} ${isAdvancedOptionsOpen ? highlightClasses.border : (appTheme === 'light' ? 'group-hover:border-gray-400' : 'group-hover:border-gray-500')}`}>
                           {isAdvancedOptionsOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
@@ -1467,7 +1467,7 @@ export default function App() {
                           }`}
                         >
                           <div className="flex justify-between items-start w-full relative z-10">
-                            <span className="font-bold text-[9px] truncate uppercase tracking-tighter leading-tight max-w-[70%]">{pose.name}</span>
+                            <span className={`font-bold text-[9px] truncate uppercase tracking-tighter leading-tight max-w-[70%] ${isActive || appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{pose.name}</span>
                             {isCustom && (
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
@@ -1599,7 +1599,7 @@ export default function App() {
                             type="range" min="-3.14" max="3.14" step="0.1" 
                             value={rawVal}
                             onChange={(e) => updateEditPart(part.id as any, part.axis, parseFloat(e.target.value))}
-                            className="w-full h-1 bg-[#2A2A30]  appearance-none cursor-pointer accent-[var(--accent)]"
+                            className={`w-full h-1 bg-[#2A2A30]  appearance-none cursor-pointer ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'}`}
                           />
                         </div>
                       );
@@ -1740,13 +1740,13 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={exportSettings}
-                    className="flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238]  text-[10px] font-bold text-gray-300 transition-colors border border-[#323238]"
+                    className={`flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] text-[10px] font-bold transition-colors border border-[#323238] ${appTheme === 'red' ? 'text-white' : 'text-gray-300'}`}
                   >
                     <Download className="w-3 h-3" /> EXPORT
                   </button>
                   <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238]  text-[10px] font-bold text-gray-300 transition-colors border border-[#323238]"
+                    className={`flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] text-[10px] font-bold transition-colors border border-[#323238] ${appTheme === 'red' ? 'text-white' : 'text-gray-300'}`}
                   >
                     <Upload className="w-3 h-3" /> IMPORT
                   </button>
@@ -2334,7 +2334,7 @@ export default function App() {
             <div className="flex items-center gap-2 mr-4">
               <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest font-bold">Theme:</span>
               <div className="flex  border border-[#323238] overflow-hidden bg-[#1E1E22]">
-                {(['colors', 'black', 'light'] as const).map(th => (
+                {(['colors', 'black', 'red', 'light'] as const).map(th => (
                   <button
                     key={th}
                     onClick={() => setAppTheme(th)}
@@ -2377,7 +2377,7 @@ export default function App() {
           
           {isHUDControlsVisible && (
             <div 
-              className="absolute top-4 left-4 z-20 flex items-center h-12 gap-6 px-5 transition-opacity"
+              className="canvas-hud absolute top-4 left-4 z-20 flex items-center h-12 gap-6 px-5 transition-opacity"
               style={{ opacity: hudOpacity }}
             >
               {hudPanelTab === 'formation' && (
@@ -2387,7 +2387,7 @@ export default function App() {
                     <input 
                       type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
                       onChange={(e) => setPersonScale(parseFloat(e.target.value))}
-                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{personScale.toFixed(1)}</span>
                   </div>
@@ -2397,7 +2397,7 @@ export default function App() {
                     <input 
                       type="range" min="1" max="8" value={formationLevel} 
                       onChange={(e) => setFormationLevel(parseInt(e.target.value))}
-                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{formationLevel}</span>
                   </div>
@@ -2407,7 +2407,7 @@ export default function App() {
                     <input 
                       type="range" min="1" max="5" step="0.5" value={formationSpacing} 
                       onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
-                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{formationSpacing.toFixed(1)}</span>
                   </div>
@@ -2449,7 +2449,7 @@ export default function App() {
                     <input 
                       type="range" min="0" max="1" step="0.05" value={shadowOpacity} 
                       onChange={(e) => setShadowOpacity(parseFloat(e.target.value))}
-                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{shadowOpacity.toFixed(2)}</span>
                   </div>
@@ -2459,7 +2459,7 @@ export default function App() {
                     <input 
                       type="range" min="0" max="6.28" step="0.1" value={shadowAngle} 
                       onChange={(e) => setShadowAngle(parseFloat(e.target.value))}
-                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{(shadowAngle * (180/Math.PI)).toFixed(0)}°</span>
                   </div>
@@ -2469,7 +2469,7 @@ export default function App() {
                     <input 
                       type="range" min="0.5" max="5" step="0.1" value={shadowLength} 
                       onChange={(e) => setShadowLength(parseFloat(e.target.value))}
-                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{shadowLength.toFixed(1)}</span>
                   </div>
@@ -2479,7 +2479,7 @@ export default function App() {
                     <input 
                       type="range" min="0" max="25" step="0.1" value={shadowBlur} 
                       onChange={(e) => setShadowBlur(parseFloat(e.target.value))}
-                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{shadowBlur.toFixed(1)}</span>
                   </div>
@@ -2508,7 +2508,7 @@ export default function App() {
                     <input 
                       type="range" min="0.1" max="1" step="0.05" value={hudOpacity} 
                       onChange={(e) => setHudOpacity(parseFloat(e.target.value))}
-                      className="w-20 h-1 bg-[#4A4A52] accent-[var(--accent)] appearance-none cursor-pointer rounded-full drop-shadow-md"
+                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{hudOpacity.toFixed(2)}</span>
                   </div>
@@ -2606,5 +2606,7 @@ export default function App() {
     </div>
   );
 }
+
+
 
 

@@ -304,11 +304,23 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', appTheme);
   }, [appTheme]);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSymmetric, setIsSymmetric] = useState(false);
-  const [editingPoseId, setEditingPoseId] = useState<string | null>(null);
-  const [editPoseName, setEditPoseName] = useState('');
-  const [editPose, setEditPose] = useState<PoseAngles>(INITIAL_POSES[0].angles);
+  const [isEditing, setIsEditing] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isEditing`) === 'true');
+  const [isSymmetric, setIsSymmetric] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSymmetric`) === 'true');
+  const [editingPoseId, setEditingPoseId] = useState<string | null>(() => localStorage.getItem(`${STORAGE_KEY}_editingPoseId`));
+  const [editPoseName, setEditPoseName] = useState(() => localStorage.getItem(`${STORAGE_KEY}_editPoseName`) || '');
+  const [editPose, setEditPose] = useState<PoseAngles>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_editPose`);
+    return saved ? JSON.parse(saved) : INITIAL_POSES[0].angles;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(`${STORAGE_KEY}_isEditing`, isEditing.toString());
+    localStorage.setItem(`${STORAGE_KEY}_isSymmetric`, isSymmetric.toString());
+    if (editingPoseId) localStorage.setItem(`${STORAGE_KEY}_editingPoseId`, editingPoseId);
+    else localStorage.removeItem(`${STORAGE_KEY}_editingPoseId`);
+    localStorage.setItem(`${STORAGE_KEY}_editPoseName`, editPoseName);
+    localStorage.setItem(`${STORAGE_KEY}_editPose`, JSON.stringify(editPose));
+  }, [isEditing, isSymmetric, editingPoseId, editPoseName, editPose]);
   
   const orbitRef = React.useRef<any>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);

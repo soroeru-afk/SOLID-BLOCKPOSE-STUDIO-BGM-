@@ -326,6 +326,20 @@ export default function App() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const resumeBgmRef = React.useRef(false);
 
+  const initialCameraPos = useMemo(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_cameraPos`);
+      return saved ? JSON.parse(saved) : [6, 6, 9];
+    } catch { return [6, 6, 9]; }
+  }, []);
+
+  const initialCameraTarget = useMemo(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_cameraTarget`);
+      return saved ? JSON.parse(saved) : [0, 0, 0];
+    } catch { return [0, 0, 0]; }
+  }, []);
+
   // Persistence logic
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY}_poses`, JSON.stringify(poses));
@@ -660,7 +674,11 @@ export default function App() {
 
   const resetCamera = () => {
     if (orbitRef.current) {
-      orbitRef.current.reset();
+      orbitRef.current.target.set(0, 0, 0);
+      orbitRef.current.object.position.set(6, 6, 9);
+      orbitRef.current.update();
+      localStorage.removeItem(`${STORAGE_KEY}_cameraPos`);
+      localStorage.removeItem(`${STORAGE_KEY}_cameraTarget`);
     }
   };
 
@@ -2548,7 +2566,7 @@ export default function App() {
               gl.shadowMap.enabled = true;
             }}
           >
-            <PerspectiveCamera makeDefault position={[6, 6, 9]} fov={45} />
+            <PerspectiveCamera makeDefault position={initialCameraPos} fov={45} />
             <Environment preset="city" />
             <color attach="background" args={[customBgColor || currentTheme.bgColor]} />
               
@@ -2607,6 +2625,15 @@ export default function App() {
               minDistance={2}
               maxDistance={30}
               maxPolarAngle={Math.PI / 2 + 0.1}
+              target={initialCameraTarget}
+              onEnd={(e) => {
+                if (orbitRef.current && e?.target?.object) {
+                  const cam = e.target.object;
+                  const tgt = orbitRef.current.target;
+                  localStorage.setItem(`${STORAGE_KEY}_cameraPos`, JSON.stringify([cam.position.x, cam.position.y, cam.position.z]));
+                  localStorage.setItem(`${STORAGE_KEY}_cameraTarget`, JSON.stringify([tgt.x, tgt.y, tgt.z]));
+                }
+              }}
             />
             <CinematicCamera 
               isAutoCamera={isAutoCamera} 

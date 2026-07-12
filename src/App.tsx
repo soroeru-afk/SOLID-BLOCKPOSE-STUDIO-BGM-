@@ -412,18 +412,11 @@ export default function App() {
   // Export Logic
   const exportSettings = async () => {
     try {
-      // Generate Base64 for all BGM tracks
-      const serializedTracks = await Promise.all(allTracks.map(async (t) => {
-        return new Promise<{id: string, name: string, data: string}>((resolve) => {
-          if (!t.file) {
-            resolve({ id: t.id, name: t.name, data: '' });
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = () => resolve({ id: t.id, name: t.name, data: reader.result as string });
-          reader.onerror = () => resolve({ id: t.id, name: t.name, data: '' });
-          reader.readAsDataURL(t.file);
-        });
+      // Exclude binary data from BGM tracks to prevent "Invalid string length" error.
+      // We only export metadata (id and name) for track mapping.
+      const serializedTracks = allTracks.map((t) => ({
+        id: t.id,
+        name: t.name
       }));
 
       const data = {
@@ -435,9 +428,19 @@ export default function App() {
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const formattedDateTime = `${year}${month}${day}_${hours}${minutes}${seconds}`;
+
       const link = document.createElement('a');
       link.href = url;
-      link.download = `voxelpose_settings_${new Date().toISOString().slice(0, 10)}.json`;
+      link.download = `voxelpose_settings_${formattedDateTime}.json`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -494,17 +497,21 @@ export default function App() {
         if (data.isPlaylistExpanded !== undefined) setIsPlaylistExpanded(data.isPlaylistExpanded);
         
         if (data.tracks && Array.isArray(data.tracks)) {
-          const importedTracks = await Promise.all(data.tracks.map(async (t: any) => {
-            const res = await fetch(t.data);
-            const blob = await res.blob();
-            return { id: t.id, name: t.name, file: blob };
-          }));
-          
-          await AudioDB.clearAllTracks();
-          for (const track of importedTracks) {
-            await AudioDB.saveTrack({ id: track.id, name: track.name, data: track.file });
+          // Only import tracks if they actually contain base64 binary data (retro-compatibility).
+          const tracksWithData = data.tracks.filter((t: any) => t.data);
+          if (tracksWithData.length > 0) {
+            const importedTracks = await Promise.all(tracksWithData.map(async (t: any) => {
+              const res = await fetch(t.data);
+              const blob = await res.blob();
+              return { id: t.id, name: t.name, file: blob };
+            }));
+            
+            await AudioDB.clearAllTracks();
+            for (const track of importedTracks) {
+              await AudioDB.saveTrack({ id: track.id, name: track.name, data: track.file });
+            }
+            setAllTracks(importedTracks);
           }
-          setAllTracks(importedTracks);
         }
         
         SoundManager.playPoseChange(data.soundType || soundType);

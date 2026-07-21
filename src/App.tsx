@@ -1228,7 +1228,7 @@ export default function App() {
             animate={{ width: sidebarWidth }}
             exit={{ width: 0 }}
             transition={{ ease: "easeInOut", duration: isResizingSidebar ? 0 : 0.3 }}
-            className={`bg-[#1E1E22] ${sidebarPosition === 'left' ? 'border-r' : 'border-l'} border-[#323238] flex flex-col z-20 shadow-2xl flex-shrink-0 relative`}
+            className={`bg-[#1E1E22] ${sidebarPosition === 'left' ? 'border-r' : 'border-l'} border-[#323238] flex flex-col z-20 shadow-2xl flex-shrink-0 relative overflow-hidden`}
           >
             <div style={{ width: sidebarWidth }} className="flex flex-col h-full overflow-hidden">
               <div className="p-5 border-b border-[#323238]">
@@ -2329,7 +2329,7 @@ export default function App() {
             </div>
             {/* Resizer Handle */}
             <div
-              className={`absolute top-0 bottom-0 w-2 cursor-col-resize z-50 transition-colors ${sidebarPosition === 'left' ? '-right-1' : '-left-1'} ${isResizingSidebar ? 'bg-[var(--accent)]' : 'hover:bg-[var(--accent)]/50'}`}
+              className={`absolute top-0 bottom-0 w-2 cursor-col-resize z-50 transition-colors ${sidebarPosition === 'left' ? 'right-0' : 'left-0'} ${isResizingSidebar ? 'bg-[var(--accent)]' : 'hover:bg-[var(--accent)]/50'}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 setIsResizingSidebar(true);

@@ -270,6 +270,30 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'visual' | 'sound'>('visual');
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSidebarOpen`) !== 'false');
   const [sidebarPosition, setSidebarPosition] = useState<'left' | 'right'>(() => (localStorage.getItem(`${STORAGE_KEY}_sidebarPosition`) as 'left' | 'right') || 'left');
+  const [sidebarWidth, setSidebarWidth] = useState(() => parseInt(localStorage.getItem(`${STORAGE_KEY}_sidebarWidth`) || '300', 10));
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+
+  useEffect(() => {
+    if (!isResizingSidebar) return;
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault();
+      const newWidth = sidebarPosition === 'left' ? e.clientX : window.innerWidth - e.clientX;
+      setSidebarWidth(Math.max(300, Math.min(newWidth, window.innerWidth - 100)));
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false);
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingSidebar, sidebarPosition]);
   const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light' | 'red'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'black');
   const [isHUDControlsVisible, setIsHUDControlsVisible] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isHUDControlsVisible`) !== 'false');
   const [hudPanelTab, setHudPanelTab] = useState<'formation' | 'shadow' | 'display'>('formation');
@@ -375,6 +399,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_isColorSettingsOpen`, isColorSettingsOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isSidebarOpen`, isSidebarOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_sidebarPosition`, sidebarPosition);
+    localStorage.setItem(`${STORAGE_KEY}_sidebarWidth`, sidebarWidth.toString());
     localStorage.setItem(`${STORAGE_KEY}_appTheme`, appTheme);
     localStorage.setItem(`${STORAGE_KEY}_isHUDControlsVisible`, isHUDControlsVisible.toString());
     localStorage.setItem(`${STORAGE_KEY}_hudOpacity`, hudOpacity.toString());
@@ -382,7 +407,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_shadowAngle`, shadowAngle.toString());
     localStorage.setItem(`${STORAGE_KEY}_shadowBlur`, shadowBlur.toString());
     localStorage.setItem(`${STORAGE_KEY}_shadowLength`, shadowLength.toString());
-  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, isAdvancedOptionsOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, appTheme, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength]);
+  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, isAdvancedOptionsOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, sidebarWidth, appTheme, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength]);
 
   // Sync sound manager state
   useEffect(() => {
@@ -422,7 +447,7 @@ export default function App() {
       const data = {
         poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
         soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor,
-        characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
+        characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, sidebarWidth, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
         playlists, activePlaylistId, isPlaylistExpanded,
         tracks: serializedTracks
       };
@@ -486,6 +511,7 @@ export default function App() {
         if (data.isColorSettingsOpen !== undefined) setIsColorSettingsOpen(data.isColorSettingsOpen);
         if (data.isSidebarOpen !== undefined) setIsSidebarOpen(data.isSidebarOpen);
         if (data.sidebarPosition) setSidebarPosition(data.sidebarPosition);
+        if (data.sidebarWidth) setSidebarWidth(data.sidebarWidth);
         if (data.isHUDControlsVisible !== undefined) setIsHUDControlsVisible(data.isHUDControlsVisible);
         if (data.hudOpacity !== undefined) setHudOpacity(data.hudOpacity);
         if (data.shadowOpacity !== undefined) setShadowOpacity(data.shadowOpacity);
@@ -1199,12 +1225,12 @@ export default function App() {
         {isSidebarOpen && (
           <motion.aside
             initial={{ width: 0 }}
-            animate={{ width: 300 }}
+            animate={{ width: sidebarWidth }}
             exit={{ width: 0 }}
-            transition={{ ease: "easeInOut", duration: 0.3 }}
-            className="bg-[#1E1E22] border-r border-[#323238] flex flex-col z-20 shadow-2xl flex-shrink-0 overflow-hidden"
+            transition={{ ease: "easeInOut", duration: isResizingSidebar ? 0 : 0.3 }}
+            className={`bg-[#1E1E22] ${sidebarPosition === 'left' ? 'border-r' : 'border-l'} border-[#323238] flex flex-col z-20 shadow-2xl flex-shrink-0 relative`}
           >
-            <div className="w-[300px] flex flex-col h-full">
+            <div style={{ width: sidebarWidth }} className="flex flex-col h-full overflow-hidden">
               <div className="p-5 border-b border-[#323238]">
                 <h1 className="text-sm font-bold tracking-tight flex items-start gap-2 leading-tight">
                   <svg viewBox="0 0 24 24" className="w-6 h-6 flex-shrink-0 text-[var(--accent)]" fill="currentColor">
@@ -2301,6 +2327,14 @@ export default function App() {
           </div>
 
             </div>
+            {/* Resizer Handle */}
+            <div
+              className={`absolute top-0 bottom-0 w-2 cursor-col-resize z-50 transition-colors ${sidebarPosition === 'left' ? '-right-1' : '-left-1'} ${isResizingSidebar ? 'bg-[var(--accent)]' : 'hover:bg-[var(--accent)]/50'}`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsResizingSidebar(true);
+              }}
+            />
           </motion.aside>
         )}
       </AnimatePresence>

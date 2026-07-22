@@ -1,34 +1,20 @@
 <!doctype html>
-<!-- Deploy Trigger: 2026-07-04 13:42 -->
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#0E1014" />
-    <meta name="description" content="SOLID BLOCKPOSE STUDIO BGM+" />
-    <link rel="manifest" href="./manifest.json?v=20260704" />
-    <link rel="icon" type="image/png" href="./icon-512.png?v=20260704" />
-    <link rel="apple-touch-icon" href="./icon-192.png?v=20260704" />
+    <title>SOLID BLOCKPOSE</title>
     
-    <!-- PWA iOS Specific Meta Tags -->
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#121214" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="BLOCKPOSE BGM+" />
-    
-    <title>SOLID BLOCKPOSE STUDIO BGM+</title>
+    <meta name="apple-mobile-web-app-title" content="BLOCKPOSE" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js?v=20260704')
-            .then(reg => console.log('ServiceWorker registered:', reg.scope))
-            .catch(err => console.log('ServiceWorker registration failed:', err));
-        });
-      }
-    </script>
   </body>
 </html>
-

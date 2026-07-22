@@ -7,7 +7,7 @@ import { BlockPerson } from './components/BlockPerson';
 import { POSES as INITIAL_POSES, THEMES } from './constants';
 import { ThemeId, PosePreset, PoseAngles } from './types';
 import { 
-  User, Palette, Settings2, ZoomIn, RefreshCw, Layers, 
+  User, Palette, Library, Settings2, ZoomIn, RefreshCw, Layers, 
   Play, Pause, Plus, Minus, Save, Trash2, Edit3, SlidersHorizontal,
   Download, Upload, Volume2, VolumeX, Music, Music2,
   Camera, Video, Square, GripVertical, ChevronsUp, ChevronsDown,
@@ -26,7 +26,7 @@ console.warn = (...args) => {
   originalWarn(...args);
 };
 
-const CinematicCamera = ({ isAutoCamera, isSlowRotate, autoCameraSpeed, rotateSpeed, isEditing, orbitRef }: { isAutoCamera: boolean, isSlowRotate: boolean, autoCameraSpeed: number, rotateSpeed: number, isEditing: boolean, orbitRef: any }) => {
+const CinematicCamera = ({ isAutoCamera, isSlowRotate, autoCameraSpeed, autoCameraMinHeight, autoCameraMaxHeight, autoCameraMinDistance, autoCameraMaxDistance, autoCameraReverse, rotateSpeed, isEditing, orbitRef }: { isAutoCamera: boolean, isSlowRotate: boolean, autoCameraSpeed: number, autoCameraMinHeight: number, autoCameraMaxHeight: number, autoCameraMinDistance: number, autoCameraMaxDistance: number, autoCameraReverse: boolean, rotateSpeed: number, isEditing: boolean, orbitRef: any }) => {
   useFrame((state) => {
     // Re-center target and FOV incrementally if autoCamera is off
     if (!isAutoCamera && orbitRef.current) {
@@ -57,7 +57,7 @@ const CinematicCamera = ({ isAutoCamera, isSlowRotate, autoCameraSpeed, rotateSp
       // Auto Rotation
       if (orbitRef.current) {
         orbitRef.current.autoRotate = true;
-        orbitRef.current.autoRotateSpeed = autoCameraSpeed * 2.5;
+        orbitRef.current.autoRotateSpeed = autoCameraSpeed * 2.5 * (autoCameraReverse ? -1 : 1);
         
         // Smooth Target Breathing
         const targetX = Math.sin(time * 0.5) * 0.8;
@@ -68,14 +68,35 @@ const CinematicCamera = ({ isAutoCamera, isSlowRotate, autoCameraSpeed, rotateSp
         orbitRef.current.update();
       }
 
-      // Vertical oscillation & subtle zoom - Smooth Transition
+      // Vertical oscillation & dynamic zoom - Smooth Transition
       const camera = state.camera;
-      const targetY = 8 + Math.sin(time) * 4;
-      camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.05);
+      
+      // Calculate interpolation factor (0 to 1) based on a sine wave
+      const cycle = (Math.sin(time * 0.5) + 1) / 2;
+      
+      // Target Height logic: Oscillate between Min and Max
+      const targetY = THREE.MathUtils.lerp(autoCameraMinHeight, autoCameraMaxHeight, cycle);
+      camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.02);
+      
+      // Target Distance logic:
+      if (orbitRef.current && orbitRef.current.target) {
+        const offset = camera.position.clone().sub(orbitRef.current.target);
+        
+        // Oscillate between Min and Max Distance
+        // We use Math.cos to give it an elliptical breathing pattern relative to height
+        const distCycle = (Math.cos(time * 0.4) + 1) / 2;
+        const targetDistance = THREE.MathUtils.lerp(autoCameraMinDistance, autoCameraMaxDistance, distCycle);
+        
+        const currentDistance = offset.length();
+        const newDistance = THREE.MathUtils.lerp(currentDistance, targetDistance, 0.02);
+        
+        offset.setLength(newDistance);
+        camera.position.copy(orbitRef.current.target).add(offset);
+      }
       
       // Subtle focal depth variation
       if (camera instanceof THREE.PerspectiveCamera) {
-        const targetFov = 45 + Math.cos(time * 0.4) * 5;
+        const targetFov = 45 + Math.cos(time * 0.4) * 3;
         camera.fov = THREE.MathUtils.lerp(camera.fov, targetFov, 0.02);
         camera.updateProjectionMatrix();
       }
@@ -257,7 +278,13 @@ export default function App() {
   const [isAutoFormation, setIsAutoFormation] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isAutoFormation`) === 'true');
   const [isRandomFormation, setIsRandomFormation] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isRandomFormation`) === 'true');
   const [autoCameraSpeed, setAutoCameraSpeed] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_autoCameraSpeed`) || '1'));
+  const [autoCameraMinHeight, setAutoCameraMinHeight] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_autoCameraMinHeight`) || '2'));
+  const [autoCameraMaxHeight, setAutoCameraMaxHeight] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_autoCameraMaxHeight`) || '8'));
+  const [autoCameraMinDistance, setAutoCameraMinDistance] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_autoCameraMinDistance`) || '8'));
+  const [autoCameraMaxDistance, setAutoCameraMaxDistance] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_autoCameraMaxDistance`) || '16'));
+  const [autoCameraReverse, setAutoCameraReverse] = useState(() => localStorage.getItem(`${STORAGE_KEY}_autoCameraReverse`) === 'true');
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isAdvancedOptionsOpen`) !== 'false');
+  const [isPoseLibraryOpen, setIsPoseLibraryOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isPoseLibraryOpen`) !== 'false');
   const [isEffectSettingOpen, setIsEffectSettingOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isEffectSettingOpen`) !== 'false');
   const [isBgmSettingOpen, setIsBgmSettingOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isBgmSettingOpen`) !== 'false');
 
@@ -294,8 +321,110 @@ export default function App() {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizingSidebar, sidebarPosition]);
+  const [appLanguage, setAppLanguage] = useState<'en' | 'ja'>(() => (localStorage.getItem(`${STORAGE_KEY}_appLanguage`) as any) || 'en');
   const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light' | 'red'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'black');
   const [isHUDControlsVisible, setIsHUDControlsVisible] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isHUDControlsVisible`) !== 'false');
+
+  const t = (enText: string) => {
+    if (appLanguage === 'en') return enText;
+    const jaDict: Record<string, string> = {
+      'Theme:': 'テーマ:',
+      'Reset View': '視点リセット',
+      'Pose Library': 'ポーズライブラリ',
+      'Formation': '配置',
+      'Shadow': '影',
+      'Display': '表示',
+      'Advanced Cycle Options': '詳細自動サイクル設定',
+      'Colors': 'カラー',
+      'Effects': 'エフェクト',
+      'Sound': 'サウンド',
+      'Character Color': 'キャラクターカラー',
+      'Background Color': '背景カラー',
+      'Theme Accent': 'アクセントカラー',
+      'Visual Effects': '視覚効果',
+      'Enable Bloom': 'ブルーム効果',
+      'Enable Vignette': 'ビネット効果',
+      'Noise Filter': 'ノイズフィルター',
+      'Cinematic View': 'シネマティックビュー',
+      'Camera Speed': 'カメラスピード',
+      'Camera Height (Min / Max)': 'カメラの高さ (最小 / 最大)',
+      'Camera Zoom (Min / Max)': 'カメラズーム (最小 / 最大)',
+      'Reverse Rotation': '逆回転',
+      'Reset Camera': 'カメラ設定をリセット',
+      'Cycle Speed': '再生スピード',
+      'Base Scale': '基本スケール',
+      'Spacing': '間隔',
+      'Rotation Speed': '回転スピード',
+      'Sound Effects': '効果音',
+      'Mute SFX': '効果音ミュート',
+      'Background Music': 'BGM',
+      'HUD Controls': 'HUDコントロール',
+      'NEW': '新規',
+      'Scale': 'スケール',
+      'Level': 'レベル',
+      'Space': '間隔',
+      'Format': '形式',
+      'New Pose': '新規ポーズ',
+      'Edit Pose': 'ポーズ編集',
+      'Cancel': 'キャンセル',
+      'Save': '保存',
+      'Custom Poses': 'カスタムポーズ',
+      'Auto Cycle': '自動サイクル',
+      'Visual Themes': 'ビジュアルテーマ',
+      'EFFECT SETTING': 'エフェクト設定',
+      'BGM SETTING': 'BGM設定',
+      'Custom': 'カスタム',
+      'EXPORT': '出力',
+      'IMPORT': '入力',
+      'Mirror Symmetry': '左右対称',
+      'Drop Audio Files Here': 'ここにオーディオファイルをドロップ',
+      'DARK': 'ダーク',
+      'Visual': 'ビジュアル',
+      'Cycle Interval': 'サイクル間隔',
+      'Turn Speed': '回転速度',
+      'Camera Intensity': 'カメラ強度',
+      'Pose Name': 'ポーズ名',
+      'Effect Style': 'エフェクトスタイル',
+      'SFX Volume': '効果音音量',
+      'BGM Volume': 'BGM音量',
+      'Shadow Op': '影の濃さ',
+      'Angle': '角度',
+      'Length': '長さ',
+      'Blur': 'ぼかし',
+      'HUD Opacity': 'HUD不透明度',
+      'Reset Shadow': '影をリセット',
+      'Reset Shadow Settings': '影の設定をリセット',
+      'Random Pose': 'ランダムポーズ',
+      'Auto Turn': '自動回転',
+      'Auto-save Ready': 'オートセーブ準備完了',
+      'Workspace persistence active': 'ワークスペース永続化有効',
+      'OFF': 'オフ',
+      'ON': 'オン',
+      'MODE': 'モード',
+      'SOUND': 'サウンド',
+      'Custom Character Color': 'カスタムキャラクターカラー',
+      'Custom Background Color': 'カスタム背景カラー',
+      'Toggle Playlist View': 'プレイリスト表示切替',
+      'Delete all tracks': '全トラック削除',
+      'Move Up': '上に移動',
+      'Move Down': '下に移動',
+      'Rename': '名前の変更',
+      'Delete Selected': '選択したものを削除',
+      'Move to Top': '一番上に移動',
+      'Move to Bottom': '一番下に移動',
+      'Toggle Sidebar Position': 'サイドバー位置切替',
+      'Playlist Repeat': 'プレイリストリピート',
+      'Track Repeat': 'トラックリピート',
+      'Repeat Off': 'リピートオフ',
+      'Click to confirm': 'クリックして確定',
+      'Delete': '削除',
+      'Exit Fullscreen': 'フルスクリーン終了',
+      'Enter Fullscreen': 'フルスクリーン開始',
+      'Auto Format Change': 'フォーマットチェンジ',
+      'New Set': '新規作成',
+    };
+    return jaDict[enText] || enText;
+  };
   const [hudPanelTab, setHudPanelTab] = useState<'formation' | 'shadow' | 'display'>('formation');
   const [hudOpacity, setHudOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_hudOpacity`) || '0.9'));
   const [shadowOpacity, setShadowOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowOpacity`) || '0.15'));
@@ -328,41 +457,15 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', appTheme);
   }, [appTheme]);
 
-  const [isEditing, setIsEditing] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isEditing`) === 'true');
-  const [isSymmetric, setIsSymmetric] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSymmetric`) === 'true');
-  const [editingPoseId, setEditingPoseId] = useState<string | null>(() => localStorage.getItem(`${STORAGE_KEY}_editingPoseId`));
-  const [editPoseName, setEditPoseName] = useState(() => localStorage.getItem(`${STORAGE_KEY}_editPoseName`) || '');
-  const [editPose, setEditPose] = useState<PoseAngles>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_editPose`);
-    return saved ? JSON.parse(saved) : INITIAL_POSES[0].angles;
-  });
-
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_isEditing`, isEditing.toString());
-    localStorage.setItem(`${STORAGE_KEY}_isSymmetric`, isSymmetric.toString());
-    if (editingPoseId) localStorage.setItem(`${STORAGE_KEY}_editingPoseId`, editingPoseId);
-    else localStorage.removeItem(`${STORAGE_KEY}_editingPoseId`);
-    localStorage.setItem(`${STORAGE_KEY}_editPoseName`, editPoseName);
-    localStorage.setItem(`${STORAGE_KEY}_editPose`, JSON.stringify(editPose));
-  }, [isEditing, isSymmetric, editingPoseId, editPoseName, editPose]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSymmetric, setIsSymmetric] = useState(false);
+  const [editingPoseId, setEditingPoseId] = useState<string | null>(null);
+  const [editPoseName, setEditPoseName] = useState('');
+  const [editPose, setEditPose] = useState<PoseAngles>(INITIAL_POSES[0].angles);
   
   const orbitRef = React.useRef<any>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const resumeBgmRef = React.useRef(false);
-
-  const initialCameraPos = useMemo(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_cameraPos`);
-      return saved ? JSON.parse(saved) : [6, 6, 9];
-    } catch { return [6, 6, 9]; }
-  }, []);
-
-  const initialCameraTarget = useMemo(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_cameraTarget`);
-      return saved ? JSON.parse(saved) : [0, 0, 0];
-    } catch { return [0, 0, 0]; }
-  }, []);
 
   // Persistence logic
   useEffect(() => {
@@ -389,7 +492,13 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_isAutoFormation`, isAutoFormation.toString());
     localStorage.setItem(`${STORAGE_KEY}_isRandomFormation`, isRandomFormation.toString());
     localStorage.setItem(`${STORAGE_KEY}_autoCameraSpeed`, autoCameraSpeed.toString());
+    localStorage.setItem(`${STORAGE_KEY}_autoCameraMinHeight`, autoCameraMinHeight.toString());
+    localStorage.setItem(`${STORAGE_KEY}_autoCameraMaxHeight`, autoCameraMaxHeight.toString());
+    localStorage.setItem(`${STORAGE_KEY}_autoCameraMinDistance`, autoCameraMinDistance.toString());
+    localStorage.setItem(`${STORAGE_KEY}_autoCameraMaxDistance`, autoCameraMaxDistance.toString());
+    localStorage.setItem(`${STORAGE_KEY}_autoCameraReverse`, autoCameraReverse.toString());
     localStorage.setItem(`${STORAGE_KEY}_isAdvancedOptionsOpen`, isAdvancedOptionsOpen.toString());
+    localStorage.setItem(`${STORAGE_KEY}_isPoseLibraryOpen`, isPoseLibraryOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isEffectSettingOpen`, isEffectSettingOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isBgmSettingOpen`, isBgmSettingOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_accentColor`, accentColor);
@@ -400,6 +509,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_isSidebarOpen`, isSidebarOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_sidebarPosition`, sidebarPosition);
     localStorage.setItem(`${STORAGE_KEY}_sidebarWidth`, sidebarWidth.toString());
+    localStorage.setItem(`${STORAGE_KEY}_appLanguage`, appLanguage);
     localStorage.setItem(`${STORAGE_KEY}_appTheme`, appTheme);
     localStorage.setItem(`${STORAGE_KEY}_isHUDControlsVisible`, isHUDControlsVisible.toString());
     localStorage.setItem(`${STORAGE_KEY}_hudOpacity`, hudOpacity.toString());
@@ -407,7 +517,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_shadowAngle`, shadowAngle.toString());
     localStorage.setItem(`${STORAGE_KEY}_shadowBlur`, shadowBlur.toString());
     localStorage.setItem(`${STORAGE_KEY}_shadowLength`, shadowLength.toString());
-  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, isAdvancedOptionsOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, sidebarWidth, appTheme, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength]);
+  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, autoCameraMinHeight, autoCameraMaxHeight, autoCameraMinDistance, autoCameraMaxDistance, autoCameraReverse, isAdvancedOptionsOpen, isPoseLibraryOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, sidebarWidth, appLanguage, appTheme, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength]);
 
   // Sync sound manager state
   useEffect(() => {
@@ -436,42 +546,28 @@ export default function App() {
 
   // Export Logic
   const exportSettings = async () => {
-    try {
-      // Exclude binary data from BGM tracks to prevent "Invalid string length" error.
-      // We only export metadata (id and name) for track mapping.
-      const serializedTracks = allTracks.map((t) => ({
-        id: t.id,
-        name: t.name
-      }));
-
-      const data = {
-        poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
-        soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, accentColor,
-        characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, sidebarWidth, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
-        playlists, activePlaylistId, isPlaylistExpanded,
-        tracks: serializedTracks
-      };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-      const formattedDateTime = `${year}${month}${day}_${hours}${minutes}${seconds}`;
-
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `voxelpose_settings_${formattedDateTime}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export failed:', err);
-      alert('Failed to export settings: ' + (err instanceof Error ? err.message : String(err)));
-    }
+    const data = {
+      poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
+      soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, autoCameraMinHeight, autoCameraMaxHeight, autoCameraMinDistance, autoCameraMaxDistance, autoCameraReverse, accentColor,
+      characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isPoseLibraryOpen, isSidebarOpen, sidebarPosition, sidebarWidth, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
+      playlists, activePlaylistId, isPlaylistExpanded,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const now = new Date();
+    const dateStr = now.getFullYear() + 
+      String(now.getMonth() + 1).padStart(2, '0') + 
+      String(now.getDate()).padStart(2, '0') + '_' + 
+      String(now.getHours()).padStart(2, '0') + 
+      String(now.getMinutes()).padStart(2, '0') + 
+      String(now.getSeconds()).padStart(2, '0');
+    link.download = `voxelpose_settings_${dateStr}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   // Import Logic
@@ -504,11 +600,17 @@ export default function App() {
         if (data.isAutoFormation !== undefined) setIsAutoFormation(data.isAutoFormation);
         if (data.isRandomFormation !== undefined) setIsRandomFormation(data.isRandomFormation);
         if (data.autoCameraSpeed !== undefined) setAutoCameraSpeed(data.autoCameraSpeed);
+        if (data.autoCameraMinHeight !== undefined) setAutoCameraMinHeight(data.autoCameraMinHeight);
+        if (data.autoCameraMaxHeight !== undefined) setAutoCameraMaxHeight(data.autoCameraMaxHeight);
+        if (data.autoCameraMinDistance !== undefined) setAutoCameraMinDistance(data.autoCameraMinDistance);
+        if (data.autoCameraMaxDistance !== undefined) setAutoCameraMaxDistance(data.autoCameraMaxDistance);
+        if (data.autoCameraReverse !== undefined) setAutoCameraReverse(data.autoCameraReverse);
         if (data.accentColor) setAccentColor(data.accentColor);
         if (data.characterColor) setCharacterColor(data.characterColor);
         if (data.savedCustomCharacterColor) setSavedCustomCharacterColor(data.savedCustomCharacterColor);
         if (data.savedCustomBgColor) setSavedCustomBgColor(data.savedCustomBgColor);
         if (data.isColorSettingsOpen !== undefined) setIsColorSettingsOpen(data.isColorSettingsOpen);
+        if (data.isPoseLibraryOpen !== undefined) setIsPoseLibraryOpen(data.isPoseLibraryOpen);
         if (data.isSidebarOpen !== undefined) setIsSidebarOpen(data.isSidebarOpen);
         if (data.sidebarPosition) setSidebarPosition(data.sidebarPosition);
         if (data.sidebarWidth) setSidebarWidth(data.sidebarWidth);
@@ -523,21 +625,17 @@ export default function App() {
         if (data.isPlaylistExpanded !== undefined) setIsPlaylistExpanded(data.isPlaylistExpanded);
         
         if (data.tracks && Array.isArray(data.tracks)) {
-          // Only import tracks if they actually contain base64 binary data (retro-compatibility).
-          const tracksWithData = data.tracks.filter((t: any) => t.data);
-          if (tracksWithData.length > 0) {
-            const importedTracks = await Promise.all(tracksWithData.map(async (t: any) => {
-              const res = await fetch(t.data);
-              const blob = await res.blob();
-              return { id: t.id, name: t.name, file: blob };
-            }));
-            
-            await AudioDB.clearAllTracks();
-            for (const track of importedTracks) {
-              await AudioDB.saveTrack({ id: track.id, name: track.name, data: track.file });
-            }
-            setAllTracks(importedTracks);
+          const importedTracks = await Promise.all(data.tracks.map(async (t: any) => {
+            const res = await fetch(t.data);
+            const blob = await res.blob();
+            return { id: t.id, name: t.name, file: blob };
+          }));
+          
+          await AudioDB.clearAllTracks();
+          for (const track of importedTracks) {
+            await AudioDB.saveTrack({ id: track.id, name: track.name, data: track.file });
           }
+          setAllTracks(importedTracks);
         }
         
         SoundManager.playPoseChange(data.soundType || soundType);
@@ -707,11 +805,7 @@ export default function App() {
 
   const resetCamera = () => {
     if (orbitRef.current) {
-      orbitRef.current.target.set(0, 0, 0);
-      orbitRef.current.object.position.set(6, 6, 9);
-      orbitRef.current.update();
-      localStorage.removeItem(`${STORAGE_KEY}_cameraPos`);
-      localStorage.removeItem(`${STORAGE_KEY}_cameraTarget`);
+      orbitRef.current.reset();
     }
   };
 
@@ -1250,7 +1344,7 @@ export default function App() {
                     <rect x="12.5" y="16.5" width="3" height="6" />
                   </svg>
                   <span className="flex flex-col">
-                    <span className={`text-base font-black leading-none tracking-wider ${appTheme === 'red' ? 'text-white' : ''}`}>SOLID BLOCKPOSE</span>
+                    <span className="text-white text-base font-black leading-none tracking-wider">SOLID BLOCKPOSE</span>
                     <span className="text-[var(--accent)] text-xs mt-0.5 tracking-widest">STUDIO BGM+</span>
                   </span>
                 </h1>
@@ -1266,7 +1360,7 @@ export default function App() {
                 activeTab === 'visual' ? 'text-white border-[var(--accent)] bg-[var(--accent)]/5' : 'text-gray-500 border-transparent hover:text-gray-300'
               }`}
             >
-              <Palette className="w-3.5 h-3.5" /> Visual
+              <Palette className="w-3.5 h-3.5" /> {t('Visual')}
             </button>
             <button 
               onClick={() => setActiveTab('sound')}
@@ -1274,7 +1368,7 @@ export default function App() {
                 activeTab === 'sound' ? 'text-white border-[var(--accent)] bg-[var(--accent)]/5' : 'text-gray-500 border-transparent hover:text-gray-300'
               }`}
             >
-              <Music className="w-3.5 h-3.5" /> Sound
+              <Music className="w-3.5 h-3.5" /> {t('Sound')}
             </button>
           </div>
 
@@ -1285,7 +1379,7 @@ export default function App() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {isAutoCycle ? <Play className={`w-4 h-4 ${highlightClasses.text} opacity-80`} /> : <Pause className="w-4 h-4 text-gray-500" />}
-                    <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Auto Cycle</span>
+                    <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Cycle')}</span>
                   </div>
                   
                   <button 
@@ -1333,7 +1427,7 @@ export default function App() {
                     <div className={`flex items-center justify-between mb-4 pb-4 border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
                       <div className="flex gap-4">
                         <div className="flex flex-col gap-1.5">
-                           <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>SOUND</span>
+                           <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('SOUND')}</span>
                            <button 
                              onClick={toggleSound}
                              className={`flex items-center justify-center gap-1.5 w-[84px] py-1  border transition-colors ${
@@ -1343,11 +1437,11 @@ export default function App() {
                              }`}
                            >
                              {isSoundOn ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
-                             <span className="text-[9px] uppercase font-bold">{isSoundOn ? 'ON' : 'OFF'}</span>
+                             <span className="text-[9px] uppercase font-bold">{isSoundOn ? t('ON') : t('OFF')}</span>
                            </button>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                           <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>MODE</span>
+                           <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('MODE')}</span>
                            <div className="flex items-center h-[26px] w-[96px] bg-[#1a1a1e] border border-[#323238]  p-0.5">
                              <button
                                onClick={() => changeSoundMode('bgm')}
@@ -1367,7 +1461,7 @@ export default function App() {
                     </div>
 
                     <div className="flex justify-between items-center mb-2">
-                      <label className="text-[9px] font-bold text-gray-500 uppercase">Cycle Interval</label>
+                      <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Cycle Interval')}</label>
                       <span className={`text-[9px] font-mono font-bold ${isAutoCycle ? `${highlightClasses.text} ${highlightClasses.bgMuted}` : 'text-gray-500 bg-[#1a1a1e]'} px-1.5 py-0.5  transition-colors`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
                     </div>
                     <input 
@@ -1393,7 +1487,7 @@ export default function App() {
                     <div className={`flex items-center justify-between pt-4 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
                       <div className="flex items-center gap-2">
                         <RefreshCw className={`w-4 h-4 ${isRandomCycle ? highlightClasses.text : 'text-gray-500'}`} />
-                        <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Random Pose</span>
+                        <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Random Pose')}</span>
                       </div>
                       <button 
                         onClick={() => setIsRandomCycle(!isRandomCycle)}
@@ -1407,7 +1501,7 @@ export default function App() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Camera className={`w-4 h-4 ${isSlowRotate ? highlightClasses.text : 'text-gray-500'}`} />
-                          <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Auto Turn</span>
+                          <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Turn')}</span>
                         </div>
                         <button 
                           onClick={() => setIsSlowRotate(!isSlowRotate)}
@@ -1420,7 +1514,7 @@ export default function App() {
                       {isSlowRotate && (
                         <div className="pt-3 pb-1">
                           <div className="flex justify-between items-center mb-2">
-                            <label className="text-[9px] font-bold text-gray-500 uppercase">Turn Speed</label>
+                            <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Turn Speed')}</label>
                             <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} `}>{rotateSpeed.toFixed(1)}x</span>
                           </div>
                           <input 
@@ -1439,7 +1533,7 @@ export default function App() {
                       >
                         <div className="flex items-center gap-2">
                           <div className={`w-1 h-3  transition-colors ${isAdvancedOptionsOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                          <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : (appTheme === 'light' ? 'text-gray-500 group-hover:text-gray-600' : (appTheme === 'red' ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'))}`}>Advanced Cycle Options</span>
+                          <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : (appTheme === 'light' ? 'text-gray-500 group-hover:text-gray-600' : (appTheme === 'red' ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'))}`}>{t('Advanced Cycle Options')}</span>
                         </div>
                         <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-gray-500'} ${isAdvancedOptionsOpen ? highlightClasses.border : (appTheme === 'light' ? 'group-hover:border-gray-400' : 'group-hover:border-gray-500')}`}>
                           {isAdvancedOptionsOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
@@ -1451,7 +1545,7 @@ export default function App() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Zap className={`w-4 h-4 ${isAutoFormation ? 'text-amber-400' : 'text-gray-500'}`} />
-                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Auto Format Change</span>
+                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Format Change')}</span>
                             </div>
                           <button 
                             onClick={() => setIsAutoFormation(!isAutoFormation)}
@@ -1480,21 +1574,39 @@ export default function App() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <Video className={`w-4 h-4 ${isAutoCamera ? 'text-red-400' : 'text-gray-500'}`} />
-                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Cinematic View</span>
+                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Cinematic View')}</span>
                             </div>
-                            <button 
-                              onClick={() => setIsAutoCamera(!isAutoCamera)}
-                              className={`w-10 h-5  transition-colors relative border ${isAutoCamera ? 'bg-transparent border-red-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
-                            >
-                              <div className={`absolute top-[1px] w-4 h-4  transition-all ${isAutoCamera ? 'bg-red-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
-                            </button>
+                            <div className="flex items-center gap-3">
+                              {isAutoCamera && (
+                                <button 
+                                  onClick={() => {
+                                    setAutoCameraSpeed(1);
+                                    setAutoCameraMinHeight(-2);
+                                    setAutoCameraMaxHeight(10);
+                                    setAutoCameraMinDistance(6);
+                                    setAutoCameraMaxDistance(20);
+                                    setAutoCameraReverse(false);
+                                  }}
+                                  className="text-gray-500 hover:text-white transition-colors"
+                                  title={t('Reset Camera')}
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => setIsAutoCamera(!isAutoCamera)}
+                                className={`w-10 h-5  transition-colors relative border ${isAutoCamera ? 'bg-transparent border-red-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+                              >
+                                <div className={`absolute top-[1px] w-4 h-4  transition-all ${isAutoCamera ? 'bg-red-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+                              </button>
+                            </div>
                           </div>
 
                           {isAutoCamera && (
                             <div className="pt-2 pb-2 space-y-4">
                               <div>
                                 <div className="flex justify-between items-center mb-2">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase">Camera Intensity</label>
+                                  <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Intensity')}</label>
                                   <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">{autoCameraSpeed.toFixed(1)}x</span>
                                 </div>
                                 <input 
@@ -1502,6 +1614,55 @@ export default function App() {
                                   onChange={(e) => setAutoCameraSpeed(parseFloat(e.target.value))}
                                   className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
                                 />
+                              </div>
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Height (Min / Max)')}</label>
+                                  <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
+                                    {autoCameraMinHeight.toFixed(1)} / {autoCameraMaxHeight.toFixed(1)}
+                                  </span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <input 
+                                    type="range" min="-5" max="10" step="0.5" value={autoCameraMinHeight} 
+                                    onChange={(e) => setAutoCameraMinHeight(parseFloat(e.target.value))}
+                                    className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                                  />
+                                  <input 
+                                    type="range" min="0" max="20" step="0.5" value={autoCameraMaxHeight} 
+                                    onChange={(e) => setAutoCameraMaxHeight(parseFloat(e.target.value))}
+                                    className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Zoom (Min / Max)')}</label>
+                                  <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
+                                    {autoCameraMinDistance.toFixed(1)} / {autoCameraMaxDistance.toFixed(1)}
+                                  </span>
+                                </div>
+                                <div className="flex gap-2">
+                                  <input 
+                                    type="range" min="3" max="20" step="1" value={autoCameraMinDistance} 
+                                    onChange={(e) => setAutoCameraMinDistance(parseFloat(e.target.value))}
+                                    className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                                  />
+                                  <input 
+                                    type="range" min="5" max="50" step="1" value={autoCameraMaxDistance} 
+                                    onChange={(e) => setAutoCameraMaxDistance(parseFloat(e.target.value))}
+                                    className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between pt-2">
+                                <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Reverse Rotation')}</label>
+                                <button 
+                                  onClick={() => setAutoCameraReverse(!autoCameraReverse)}
+                                  className={`w-8 h-4 rounded-full transition-colors relative ${autoCameraReverse ? 'bg-red-500' : (appTheme === 'light' ? 'bg-gray-300' : 'bg-[#1a1a1e] border border-gray-600')}`}
+                                >
+                                  <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${autoCameraReverse ? 'bg-white right-0.5' : 'bg-gray-500 left-0.5'}`} />
+                                </button>
                               </div>
                             </div>
                           )}
@@ -1512,18 +1673,21 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-x-hidden overflow-y-auto dark-scrollbar pb-6">
+              <div className="flex-1 overflow-x-hidden overflow-y-scroll dark-scrollbar pb-6">
               {!isEditing ? (
                 <div className="p-4 border-b border-[#323238]">
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Pose Library</label>
-                    <button 
-                      onClick={() => startEditing()}
-                      className="flex items-center gap-1 text-[10px] font-bold text-[var(--accent)] hover:text-white transition-colors"
-                    >
-                      <Plus className="w-3 h-3" /> NEW
-                    </button>
+                  <div 
+                    className="flex justify-between items-center mb-3 cursor-pointer group"
+                    onClick={() => setIsPoseLibraryOpen(!isPoseLibraryOpen)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold cursor-pointer group-hover:text-gray-300 transition-colors flex items-center gap-1.5"><Library className="w-3.5 h-3.5" />{t('Pose Library')}</label>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {isPoseLibraryOpen ? <ChevronUp className="w-4 h-4 text-gray-500 group-hover:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-gray-300" />}
+                    </div>
                   </div>
+                  {isPoseLibraryOpen && (
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-300 max-h-[220px] overflow-y-auto no-scrollbar pr-1">
                     {poses.map((pose, idx) => {
                       const isActive = poseId === pose.id && !isAutoCycle;
@@ -1534,8 +1698,8 @@ export default function App() {
                           onClick={() => handlePoseChange(pose.id)}
                           className={`text-left p-2  border transition-all flex flex-col justify-between h-[45px] relative overflow-hidden group cursor-pointer ${
                             isActive 
-                            ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-lg z-10' 
-                            : 'bg-[#2A2A30] border-[#323238] hover:border-gray-500 text-gray-400'
+                             ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-lg z-10' 
+                             : 'bg-[#2A2A30] border-[#323238] hover:border-gray-500 text-gray-400'
                           }`}
                         >
                           <div className="flex justify-between items-start w-full relative z-10">
@@ -1543,21 +1707,21 @@ export default function App() {
                             {isCustom && (
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); startEditing(pose); }} 
+                                  onClick={(e) => { e.stopPropagation(); startEditing(pose); }}
                                   className="p-1 hover:bg-white/20  cursor-pointer"
                                 >
                                   <Edit3 className="w-2.5 h-2.5" />
                                 </button>
                                 <button 
                                   onClick={(e) => deletePose(pose.id, e)} 
-                                  className="p-1 hover:bg-red-500/50  cursor-pointer"
+                                  className="p-1 hover:bg-red-500/50  cursor-pointer text-white"
                                 >
                                   <Trash2 className="w-2.5 h-2.5" />
                                 </button>
                               </div>
                             )}
                           </div>
-                          <span className={`text-[10px] font-mono mt-1 ${isActive ? 'text-white/40' : 'text-gray-600'}`}>
+                          <span className={`text-[10px] font-mono mt-1 ${isActive ? 'text-white/40' : (appTheme === 'light' ? 'text-gray-500' : 'text-[#878e9b]')}`}>
                             {String(idx + 1).padStart(2, '0')}
                           </span>
                           {isActive && (
@@ -1569,7 +1733,14 @@ export default function App() {
                         </div>
                       );
                     })}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); startEditing(); }}
+                      className={`flex items-center justify-center gap-1.5 h-[45px] text-[10px] font-bold uppercase tracking-widest border border-dashed transition-colors ${appTheme === 'light' ? 'border-gray-400 text-gray-500 hover:border-[var(--accent)] hover:text-[var(--accent)] bg-white/50' : 'border-[#323238] text-gray-500 hover:border-[var(--accent)] hover:text-[var(--accent)] bg-[#1E1E22] hover:bg-[var(--accent)]/5'}`}
+                    >
+                      <Plus className="w-3.5 h-3.5" /> {t('New Set')}
+                    </button>
                   </div>
+                  )}
                 </div>
               ) : (
                 <div className="p-4 border-b border-[#323238] bg-[var(--accent)]/10">
@@ -1587,7 +1758,7 @@ export default function App() {
 
                   <div className="mb-4 space-y-3">
                     <div>
-                      <label className="text-[9px] text-gray-500 uppercase block mb-1 font-bold">Pose Name</label>
+                      <label className="text-[9px] text-gray-500 uppercase block mb-1 font-bold">{t('Pose Name')}</label>
                       <input 
                         type="text"
                         value={editPoseName}
@@ -1600,7 +1771,7 @@ export default function App() {
                     <div className="flex items-center justify-between p-2  bg-black/20 border border-[#323238]">
                       <div className="flex items-center gap-2">
                         <Layers className={`w-3 h-3 ${isSymmetric ? 'text-[var(--accent)]' : 'text-gray-500'}`} />
-                        <span className="text-[10px] uppercase font-bold text-gray-400">Mirror Symmetry</span>
+                        <span className="text-[10px] uppercase font-bold text-gray-400">{t('Mirror Symmetry')}</span>
                       </div>
                       <button 
                         onClick={() => setIsSymmetric(!isSymmetric)}
@@ -1671,7 +1842,7 @@ export default function App() {
                             type="range" min="-3.14" max="3.14" step="0.1" 
                             value={rawVal}
                             onChange={(e) => updateEditPart(part.id as any, part.axis, parseFloat(e.target.value))}
-                            className={`w-full h-1 bg-[#2A2A30]  appearance-none cursor-pointer ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'}`}
+                            className="w-full h-1 bg-[#2A2A30]  appearance-none cursor-pointer ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'}"
                           />
                         </div>
                       );
@@ -1687,7 +1858,7 @@ export default function App() {
                   onClick={() => setIsColorSettingsOpen(!isColorSettingsOpen)}
                 >
                   <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center gap-2 cursor-pointer">
-                    <Palette className="w-3.5 h-3.5" /> Colors
+                    <Palette className="w-3.5 h-3.5" /> {t('Colors')}
                   </label>
                   {isColorSettingsOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </div>
@@ -1703,7 +1874,7 @@ export default function App() {
                       <div className="p-4 space-y-4">
                         <div className="pt-2">
                           <div className="flex items-center justify-between mb-3">
-                            <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Character Color</label>
+                            <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{t('Character Color')}</label>
                             <button 
                               onClick={() => setCharacterColor('#0F172A')}
                               className="text-[8px] text-gray-500 hover:text-white underline uppercase font-bold transition-colors"
@@ -1721,7 +1892,7 @@ export default function App() {
                                     characterColor === color ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
                                   }`}
                                   style={{ backgroundColor: color }}
-                                  title="Character Color"
+                                  title={t('Character Color')}
                                 >
                                   {characterColor === color && <div className={`w-1.5 h-1.5  bg-white shadow-sm mix-blend-difference`} />}
                                 </button>
@@ -1729,9 +1900,9 @@ export default function App() {
                             </div>
                             
                             <div className="flex items-center gap-3 pt-2 border-t border-[#323238]/50 mt-1">
-                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Custom</span>
+                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{t('Custom')}</span>
                               <div className={`relative w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
-                                !['#0F172A', '#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#4B4069'].includes(characterColor) ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
+                                !['#0F172A', '#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#5C0909'].includes(characterColor) ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
                               }`}>
                                 <input 
                                   type="color" 
@@ -1744,7 +1915,7 @@ export default function App() {
                                     setCharacterColor(savedCustomCharacterColor);
                                   }}
                                   className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
-                                  title="Custom Character Color"
+                                  title={t('Custom Character Color')}
                                 />
                                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
                                   <Plus className="w-3 h-3 text-white opacity-75" />
@@ -1757,7 +1928,7 @@ export default function App() {
 
                         <div className="pt-2 border-t border-[#323238]">
                           <div className="flex items-center justify-between mb-3">
-                            <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Visual Themes</label>
+                            <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{t('Visual Themes')}</label>
                           </div>
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-wrap gap-1.5">
@@ -1780,7 +1951,7 @@ export default function App() {
                             </div>
                             
                             <div className="flex items-center gap-3 pt-2 border-t border-[#323238]/50 mt-1">
-                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Custom</span>
+                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{t('Custom')}</span>
                               <div className={`relative w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
                                 customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
                               }`}>
@@ -1793,7 +1964,7 @@ export default function App() {
                                   }}
                                   onClick={() => setCustomBgColor(savedCustomBgColor)}
                                   className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
-                                  title="Custom Background Color"
+                                  title={t('Custom Background Color')}
                                 />
                                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
                                   <Plus className="w-3 h-3 text-white opacity-75" />
@@ -1814,13 +1985,13 @@ export default function App() {
                     onClick={exportSettings}
                     className={`flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] text-[10px] font-bold transition-colors border border-[#323238] ${appTheme === 'red' ? 'text-white' : 'text-gray-300'}`}
                   >
-                    <Download className="w-3 h-3" /> EXPORT
+                    <Download className="w-3 h-3" /> {t('EXPORT')}
                   </button>
                   <button 
                     onClick={() => fileInputRef.current?.click()}
                     className={`flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] text-[10px] font-bold transition-colors border border-[#323238] ${appTheme === 'red' ? 'text-white' : 'text-gray-300'}`}
                   >
-                    <Upload className="w-3 h-3" /> IMPORT
+                    <Upload className="w-3 h-3" /> {t('IMPORT')}
                   </button>
                 </div>
                 <input 
@@ -1831,8 +2002,8 @@ export default function App() {
                   className="hidden" 
                 />
                 <div className="bg-[var(--accent)]/10 p-4  border border-[var(--accent)]/20">
-                  <p className="text-xs text-[var(--accent)] font-medium">Auto-save Ready</p>
-                  <p className="text-[10px] text-[var(--accent)]/60 uppercase tracking-tighter">Workspace persistence active</p>
+                  <p className="text-xs text-[var(--accent)] font-medium">{t('Auto-save Ready')}</p>
+                  <p className="text-[10px] text-[var(--accent)]/60 uppercase tracking-tighter">{t('Workspace persistence active')}</p>
                 </div>
               </div>
               </div>
@@ -1848,7 +2019,7 @@ export default function App() {
                     >
                       <div className="flex items-center gap-2">
                         <div className={`w-1 h-3  transition-colors ${isEffectSettingOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                        <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isEffectSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>EFFECT SETTING</span>
+                        <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isEffectSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>{t('EFFECT SETTING')}</span>
                       </div>
                       <div className={`w-5 h-5  border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-[#323238]'} ${isEffectSettingOpen ? highlightClasses.border : 'group-hover:border-gray-400'}`}>
                         {isEffectSettingOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
@@ -1858,7 +2029,7 @@ export default function App() {
                     {isEffectSettingOpen && (
                       <div className="flex flex-col gap-3">
                         <div className="flex justify-between items-center mb-1">
-                          <label className="text-[9px] text-gray-500 uppercase font-bold">Effect Style</label>
+                          <label className="text-[9px] text-gray-500 uppercase font-bold">{t('Effect Style')}</label>
                           <span className={`text-[9px] ${highlightClasses.text} font-mono`}>{soundType}</span>
                         </div>
                         <div className="grid grid-cols-5 gap-1.5">
@@ -1883,7 +2054,7 @@ export default function App() {
                         <div className="pt-1">
                           <div className="flex justify-between items-center mb-1">
                             <div className="flex items-center gap-2">
-                              <label className="text-[9px] text-gray-500 uppercase font-bold">SFX Volume</label>
+                              <label className="text-[9px] text-gray-500 uppercase font-bold">{t('SFX Volume')}</label>
                             </div>
                             <span className="text-[9px] text-gray-400 font-mono">{Math.round(sfxVolume * 100)}%</span>
                           </div>
@@ -1904,7 +2075,7 @@ export default function App() {
                     >
                       <div className="flex items-center gap-2">
                         <div className={`w-1 h-3  transition-colors ${isBgmSettingOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                        <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isBgmSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>BGM SETTING</span>
+                        <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isBgmSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>{t('BGM SETTING')}</span>
                       </div>
                       <div className={`w-5 h-5  border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-[#323238]'} ${isBgmSettingOpen ? highlightClasses.border : 'group-hover:border-gray-400'}`}>
                         {isBgmSettingOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
@@ -1962,7 +2133,7 @@ export default function App() {
                                   ? (appTheme === 'light' ? `bg-gray-500 border-gray-500 text-[#ffffff]` : `bg-[#1a1a1e] ${highlightClasses.border} ${highlightClasses.text}`) 
                                   : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] hover:bg-[#323238] text-gray-400 hover:text-white')
                                }`}
-                               title={bgmRepeatMode === 1 ? "Playlist Repeat" : bgmRepeatMode === 2 ? "Track Repeat" : "Repeat Off"}
+                               title={bgmRepeatMode === 1 ? t('Playlist Repeat') : bgmRepeatMode === 2 ? t('Track Repeat') : t('Repeat Off')}
                             >
                                <RefreshCw className="w-4 h-4" />
                                {bgmRepeatMode === 2 && (
@@ -1993,7 +2164,7 @@ export default function App() {
 
                        <div className="flex flex-col gap-1">
                           <div className="flex justify-between items-center">
-                             <span className="text-[8px] `text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-700' : 'text-gray-300'}`">BGM Volume</span>
+                             <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-700' : 'text-gray-300'}`}>{t('BGM Volume')}</span>
                              <span className="text-[8px] text-gray-400 font-mono">{Math.round(bgmVolume * 100)}%</span>
                           </div>
                           <input 
@@ -2018,19 +2189,19 @@ export default function App() {
                         onClick={createPlaylist}
                         className={`flex-1 bg-[#1a1a1e] hover:bg-[#323238] text-[var(--accent)] text-[10px] font-bold uppercase py-1.5 px-3  border ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'} transition-colors flex items-center justify-center gap-1.5`}
                       >
-                        <Plus className="w-3 h-3" /> New Set
+                        <Plus className="w-3 h-3" /> {t('New Set')}
                       </button>
                       <button 
                         onClick={() => setIsPlaylistExpanded(!isPlaylistExpanded)}
                         className={`w-8 flex items-center justify-center  border transition-colors bg-[#1a1a1e] ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'} text-gray-500 hover:text-gray-300`}
-                        title="Toggle Playlist View"
+                        title={t('Toggle Playlist View')}
                       >
                         {isPlaylistExpanded ? <ChevronDown className="w-4 h-4" /> : <List className="w-4 h-4" />}
                       </button>
                       <button 
                         onClick={() => setShowClearConfirm(true)}
                         className={`w-8 flex items-center justify-center  border transition-colors bg-[#1a1a1e] hover:bg-red-500/10 text-gray-500 hover:text-red-400 ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'}`}
-                        title="Delete all tracks"
+                        title={t('Delete all tracks')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -2095,14 +2266,14 @@ export default function App() {
                                <button 
                                  onClick={(e) => { e.stopPropagation(); movePlaylist(p.id, -1); }} 
                                  className="text-gray-500 hover:text-white p-0.5"
-                                 title="Move Up"
+                                 title={t('Move Up')}
                                >
                                  <ChevronUp className="w-2.5 h-2.5" />
                                </button>
                                <button 
                                  onClick={(e) => { e.stopPropagation(); movePlaylist(p.id, 1); }} 
                                  className="text-gray-500 hover:text-white p-0.5"
-                                 title="Move Down"
+                                 title={t('Move Down')}
                                >
                                  <ChevronDown className="w-2.5 h-2.5" />
                                </button>
@@ -2113,7 +2284,7 @@ export default function App() {
                                    setEditingPlaylistName(p.name);
                                  }} 
                                  className="text-gray-500 hover:text-white p-0.5"
-                                 title="Rename"
+                                 title={t('Rename')}
                                >
                                  <Edit3 className="w-2.5 h-2.5" />
                                </button>
@@ -2129,7 +2300,7 @@ export default function App() {
                                    }
                                  }} 
                                  className={`p-0.5  transition-all ${confirmDeleteId === p.id ? 'text-red-500 bg-red-500/20' : 'text-gray-500 hover:text-red-400'}`}
-                                 title={confirmDeleteId === p.id ? "Click to confirm" : "Delete"}
+                                 title={confirmDeleteId === p.id ? t('Click to confirm') : t('Delete')}
                                >
                                  <Trash2 className="w-2.5 h-2.5" />
                                </button>
@@ -2219,7 +2390,7 @@ export default function App() {
                         <button
                           onClick={removeSelectedTracks}
                           className="p-1 hover:text-red-400 text-gray-500 transition-colors border border-[#323238]  bg-[#121214]"
-                          title="Delete Selected"
+                          title={t('Delete Selected')}
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
@@ -2257,28 +2428,28 @@ export default function App() {
                               <button 
                                 onClick={(e) => moveToTop(idx, e)}
                                 className="p-0.5 hover:text-[var(--accent)] transition-colors"
-                                title="Move to Top"
+                                title={t('Move to Top')}
                               >
                                 <ChevronsUp className="w-3 h-3" />
                               </button>
                               <button 
                                 onClick={(e) => moveTrackUp(idx, e)}
                                 className="p-0.5 hover:text-[var(--accent)] transition-colors"
-                                title="Move Up"
+                                title={t('Move Up')}
                               >
                                 <ChevronUp className="w-3 h-3" />
                               </button>
                               <button 
                                 onClick={(e) => moveTrackDown(idx, e)}
                                 className="p-0.5 hover:text-[var(--accent)] transition-colors"
-                                title="Move Down"
+                                title={t('Move Down')}
                               >
                                 <ChevronDown className="w-3 h-3" />
                               </button>
                               <button 
                                 onClick={(e) => moveToBottom(idx, e)}
                                 className="p-0.5 hover:text-[var(--accent)] transition-colors"
-                                title="Move to Bottom"
+                                title={t('Move to Bottom')}
                               >
                                 <ChevronsDown className="w-3 h-3" />
                               </button>
@@ -2318,7 +2489,7 @@ export default function App() {
                       }}
                     >
                       <Upload className="w-4 h-4 mb-2 text-gray-500 group-hover:text-[var(--accent)] transition-colors" />
-                      <p className="text-[9px] uppercase tracking-widest font-bold text-gray-500 group-hover:text-gray-300 transition-colors">Drop Audio Files Here</p>
+                      <p className="text-[9px] uppercase tracking-widest font-bold text-gray-500 group-hover:text-gray-300 transition-colors">{t('Drop Audio Files Here')}</p>
                     </div>
                   </div>
                 </div>
@@ -2374,7 +2545,7 @@ export default function App() {
               <div className={`p-1 border  ${isHUDControlsVisible && hudPanelTab === 'formation' ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
                 <SlidersHorizontal className="w-3.5 h-3.5" />
               </div>
-              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible && hudPanelTab === 'formation' ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>Formation</span>
+              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible && hudPanelTab === 'formation' ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>{t('Formation')}</span>
             </button>
             <button 
               onClick={() => {
@@ -2390,7 +2561,7 @@ export default function App() {
               <div className={`p-1 border  ${isHUDControlsVisible && hudPanelTab === 'shadow' ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
                 <Layers className="w-3.5 h-3.5" />
               </div>
-              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible && hudPanelTab === 'shadow' ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>Shadow</span>
+              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible && hudPanelTab === 'shadow' ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>{t('Shadow')}</span>
             </button>
             <button 
               onClick={() => {
@@ -2406,14 +2577,14 @@ export default function App() {
               <div className={`p-1 border  ${isHUDControlsVisible && hudPanelTab === 'display' ? (appTheme === 'light' ? 'bg-gray-700 border-gray-700 text-[#ffffff]' : 'bg-gray-300 border-gray-300 text-[#121214]') : 'border-[#323238] text-gray-400'}`}>
                 <Monitor className="w-3.5 h-3.5" />
               </div>
-              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible && hudPanelTab === 'display' ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>Display</span>
+              <span className={`text-[10px] uppercase font-bold tracking-widest ${isHUDControlsVisible && hudPanelTab === 'display' ? (appTheme === 'light' ? 'text-gray-700' : 'text-gray-300') : 'text-gray-400'}`}>{t('Display')}</span>
             </button>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 mr-4">
-              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest font-bold">Theme:</span>
-              <div className="flex  border border-[#323238] overflow-hidden bg-[#1E1E22]">
+              <span className="w-12 text-[10px] font-mono text-gray-500 uppercase tracking-widest font-bold">{t('Theme:')}</span>
+              <div className="flex  border border-[#323238] overflow-hidden bg-[#1E1E22] mr-2">
                 {(['colors', 'black', 'red', 'light'] as const).map(th => (
                   <button
                     key={th}
@@ -2426,25 +2597,43 @@ export default function App() {
                   </button>
                 ))}
               </div>
+              <div className="flex border border-[#323238] overflow-hidden bg-[#1E1E22]">
+                <button
+                  onClick={() => setAppLanguage('en')}
+                  className={`px-3 py-1.5 text-[10px] uppercase font-bold transition-colors ${
+                    appLanguage === 'en' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white hover:bg-[#323238]'
+                  }`}
+                >
+                  EN
+                </button>
+                <button
+                  onClick={() => setAppLanguage('ja')}
+                  className={`px-3 py-1.5 text-[10px] uppercase font-bold transition-colors ${
+                    appLanguage === 'ja' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white hover:bg-[#323238]'
+                  }`}
+                >
+                  JP
+                </button>
+              </div>
             </div>
             <button 
               onClick={resetCamera}
-              className="px-3 py-1.5 bg-[#2A2A30] text-[11px]  border border-[#3A3A42] hover:bg-[#323238] transition-colors flex items-center gap-2"
+              className="w-[110px] justify-center px-3 py-1.5 bg-[#2A2A30] text-[11px] border border-[#3A3A42] hover:bg-[#323238] transition-colors flex items-center gap-2"
             >
-              <ZoomIn className="w-3 h-3" />
-              Reset View
+              <ZoomIn className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{t('Reset View')}</span>
             </button>
             <button
               onClick={toggleFullscreen}
               className="p-1.5  hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
-              title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              title={isFullscreen ? t('Exit Fullscreen') : t('Enter Fullscreen')}
             >
               {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
             <button
               onClick={() => setSidebarPosition(prev => prev === 'left' ? 'right' : 'left')}
               className="p-1.5  hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
-              title="Toggle Sidebar Position"
+              title={t('Toggle Sidebar Position')}
             >
               {sidebarPosition === 'right' ? <PanelLeftOpen className="w-5 h-5 scale-x-[-1]" /> : <PanelLeftOpen className="w-5 h-5" />}
             </button>
@@ -2467,7 +2656,7 @@ export default function App() {
                     <input 
                       type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
                       onChange={(e) => setPersonScale(parseFloat(e.target.value))}
-                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
+                      className="w-20 h-1 bg-[#4A4A52] accent-gray-300 appearance-none cursor-pointer rounded-full drop-shadow-md"
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{personScale.toFixed(1)}</span>
                   </div>
@@ -2477,7 +2666,7 @@ export default function App() {
                     <input 
                       type="range" min="1" max="8" value={formationLevel} 
                       onChange={(e) => setFormationLevel(parseInt(e.target.value))}
-                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
+                      className="w-20 h-1 bg-[#4A4A52] accent-gray-300 appearance-none cursor-pointer rounded-full drop-shadow-md"
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{formationLevel}</span>
                   </div>
@@ -2487,7 +2676,7 @@ export default function App() {
                     <input 
                       type="range" min="1" max="5" step="0.5" value={formationSpacing} 
                       onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
-                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
+                      className="w-20 h-1 bg-[#4A4A52] accent-gray-300 appearance-none cursor-pointer rounded-full drop-shadow-md"
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{formationSpacing.toFixed(1)}</span>
                   </div>
@@ -2525,41 +2714,41 @@ export default function App() {
               {hudPanelTab === 'shadow' && (
                 <>
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Shadow Op</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Shadow Op')}</span>
                     <input 
                       type="range" min="0" max="1" step="0.05" value={shadowOpacity} 
                       onChange={(e) => setShadowOpacity(parseFloat(e.target.value))}
-                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
+                      className="w-20 h-1 bg-[#4A4A52] accent-gray-300 appearance-none cursor-pointer rounded-full drop-shadow-md"
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{shadowOpacity.toFixed(2)}</span>
                   </div>
 
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Angle</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Angle')}</span>
                     <input 
                       type="range" min="0" max="6.28" step="0.1" value={shadowAngle} 
                       onChange={(e) => setShadowAngle(parseFloat(e.target.value))}
-                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
+                      className="w-20 h-1 bg-[#4A4A52] accent-gray-300 appearance-none cursor-pointer rounded-full drop-shadow-md"
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{(shadowAngle * (180/Math.PI)).toFixed(0)}°</span>
                   </div>
 
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Length</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Length')}</span>
                     <input 
                       type="range" min="0.5" max="5" step="0.1" value={shadowLength} 
                       onChange={(e) => setShadowLength(parseFloat(e.target.value))}
-                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
+                      className="w-20 h-1 bg-[#4A4A52] accent-gray-300 appearance-none cursor-pointer rounded-full drop-shadow-md"
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{shadowLength.toFixed(1)}</span>
                   </div>
 
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Blur</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Blur')}</span>
                     <input 
                       type="range" min="0" max="25" step="0.1" value={shadowBlur} 
                       onChange={(e) => setShadowBlur(parseFloat(e.target.value))}
-                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
+                      className="w-20 h-1 bg-[#4A4A52] accent-gray-300 appearance-none cursor-pointer rounded-full drop-shadow-md"
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{shadowBlur.toFixed(1)}</span>
                   </div>
@@ -2573,10 +2762,10 @@ export default function App() {
                         setShadowBlur(5.0);
                       }}
                       className="px-3 py-1 bg-[#2A2A30] text-[10px] font-mono font-bold uppercase tracking-widest border border-[#3A3A42] hover:bg-[#323238] transition-colors flex items-center gap-2 drop-shadow-md text-gray-300 hover:text-white"
-                      title="Reset Shadow Settings"
+                      title={t('Reset Shadow Settings')}
                     >
                       <RefreshCw className="w-3 h-3" />
-                      Reset Shadow
+                      {t('Reset Shadow')}
                     </button>
                   </div>
                 </>
@@ -2584,11 +2773,11 @@ export default function App() {
               {hudPanelTab === 'display' && (
                 <>
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>HUD Opacity</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('HUD Opacity')}</span>
                     <input 
                       type="range" min="0.1" max="1" step="0.05" value={hudOpacity} 
                       onChange={(e) => setHudOpacity(parseFloat(e.target.value))}
-                      className={`w-20 h-1 bg-[#4A4A52] ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'} appearance-none cursor-pointer rounded-full drop-shadow-md`}
+                      className="w-20 h-1 bg-[#4A4A52] accent-gray-300 appearance-none cursor-pointer rounded-full drop-shadow-md"
                     />
                     <span className="text-[8px] font-mono font-bold min-w-[20px] text-center bg-[#2A2A30] text-white py-[1.5px] px-[2px] border border-[#3A3A42] leading-none flex items-center justify-center drop-shadow-md">{hudOpacity.toFixed(2)}</span>
                   </div>
@@ -2607,7 +2796,7 @@ export default function App() {
               gl.shadowMap.enabled = true;
             }}
           >
-            <PerspectiveCamera makeDefault position={initialCameraPos} fov={45} />
+            <PerspectiveCamera makeDefault position={[6, 6, 9]} fov={45} />
             <Environment preset="city" />
             <color attach="background" args={[customBgColor || currentTheme.bgColor]} />
               
@@ -2665,21 +2854,17 @@ export default function App() {
               dampingFactor={0.05}
               minDistance={2}
               maxDistance={30}
-              maxPolarAngle={Math.PI / 2 + 0.1}
-              target={initialCameraTarget}
-              onEnd={(e) => {
-                if (orbitRef.current && e?.target?.object) {
-                  const cam = e.target.object;
-                  const tgt = orbitRef.current.target;
-                  localStorage.setItem(`${STORAGE_KEY}_cameraPos`, JSON.stringify([cam.position.x, cam.position.y, cam.position.z]));
-                  localStorage.setItem(`${STORAGE_KEY}_cameraTarget`, JSON.stringify([tgt.x, tgt.y, tgt.z]));
-                }
-              }}
+              maxPolarAngle={Math.PI}
             />
             <CinematicCamera 
               isAutoCamera={isAutoCamera} 
               isSlowRotate={isSlowRotate} 
               autoCameraSpeed={autoCameraSpeed} 
+              autoCameraMinHeight={autoCameraMinHeight}
+              autoCameraMaxHeight={autoCameraMaxHeight}
+              autoCameraMinDistance={autoCameraMinDistance}
+              autoCameraMaxDistance={autoCameraMaxDistance}
+              autoCameraReverse={autoCameraReverse}
               rotateSpeed={rotateSpeed} 
               isEditing={isEditing} 
               orbitRef={orbitRef} 
@@ -2695,7 +2880,5 @@ export default function App() {
     </div>
   );
 }
-
-
 
 

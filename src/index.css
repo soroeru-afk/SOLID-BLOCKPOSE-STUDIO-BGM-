@@ -57,44 +57,6 @@ html[data-theme="black"] .border-\[\#3A3A42\] { border-color: #222222 !important
 html[data-theme="black"] .text-\[\#E1E1E6\] { color: #FFFFFF !important; }
 html[data-theme="black"] .hover\:bg-\[\#323238\]:hover { background-color: #1A1A1A !important; }
 
-@layer utilities {
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-  
-  .dark-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: #000000 transparent;
-  }
-  .dark-scrollbar::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  .dark-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .dark-scrollbar::-webkit-scrollbar-thumb {
-    background: #111111;
-    border: 1px solid #222222;
-    border-radius: 0px;
-  }
-  .dark-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #000000;
-  }
-}
-
-@layer utilities {
-  .text-outline-white {
-    text-shadow: 1px 1px 0 #FFF, -1px -1px 0 #FFF, 1px -1px 0 #FFF, -1px 1px 0 #FFF, 0px 1px 0 #FFF, 1px 0px 0 #FFF, 0px -1px 0 #FFF, -1px 0px 0 #FFF;
-  }
-  .text-outline-black {
-    text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0px 1px 0 #000, 1px 0px 0 #000, 0px -1px 0 #000, -1px 0px 0 #000;
-  }
-}
 
 html[data-theme="red"] body {
   background-color: #1A0A0A !important;
@@ -141,5 +103,45 @@ html[data-theme="red"] .canvas-hud input[type="range"] { accent-color: #d1d5db !
 
 html[data-theme="red"] .bg-\[\#1E1E22\]\/70 { background-color: rgba(31, 16, 16, 0.7) !important; }
 html[data-theme="light"] .bg-\[\#1E1E22\]\/70 { background-color: rgba(255, 255, 255, 0.7) !important; }
+html[data-theme="light"] .dark-scrollbar {
+  scrollbar-color: #d1d5db transparent;
+}
+html[data-theme="light"] .dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border: 1px solid #e5e7eb;
+}
+html[data-theme="light"] .dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
 html[data-theme="black"] .bg-\[\#1E1E22\]\/70 { background-color: rgba(10, 10, 10, 0.7) !important; }
 
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .dark-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #000000 transparent;
+  }
+  .dark-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .dark-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .dark-scrollbar::-webkit-scrollbar-thumb {
+    background: #111111;
+    border: 1px solid #222222;
+    border-radius: 0px;
+  }
+  .dark-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #000000;
+  }
+}

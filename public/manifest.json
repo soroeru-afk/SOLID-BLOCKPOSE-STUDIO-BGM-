@@ -1,32 +1,27 @@
 {
-  "name": "SOLID BLOCKPOSE STUDIO BGM+",
-  "short_name": "SOLID BLOCKPOSE",
-  "description": "BLOCKPOSE STUDIO BGM+",
-  "lang": "ja",
-  "start_url": "./index.html",
-  "scope": "./",
+  "name": "SOLID BLOCKPOSE",
+  "short_name": "BLOCKPOSE",
+  "description": "Studio BGM+ Solid Blockpose Edition",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#121214",
   "theme_color": "#121214",
-  "orientation": "any",
   "icons": [
     {
-      "src": "./icon-192.png?v=20260704",
+      "src": "/icon.svg",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/svg+xml"
     },
     {
-      "src": "./icon-512.png?v=20260704",
+      "src": "/icon.svg",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "type": "image/svg+xml"
     },
     {
-      "src": "./icon.svg?v=20260704",
-      "sizes": "any",
+      "src": "/icon.svg",
+      "sizes": "512x512",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ]
 }

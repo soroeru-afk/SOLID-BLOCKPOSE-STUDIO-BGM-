@@ -1,10 +1,7 @@
 import { useSpring, animated } from '@react-spring/three';
 import { PoseAngles } from '../types';
 
-import { Key } from 'react';
-
 interface BlockPersonProps {
-  key?: Key;
   pose: PoseAngles;
   color: string;
   position?: [number, number, number];
@@ -19,6 +16,11 @@ const Box = ({ size, position, rotation, color }: any) => (
       roughness={0.4} 
       metalness={0.5}
     />
+    {/* Wireframe overlay to emphasize blocky edges */}
+    <mesh position={[0,0,0]}>
+      <boxGeometry args={[size[0] * 1.01, size[1] * 1.01, size[2] * 1.01]} />
+      <meshBasicMaterial color="#000" wireframe opacity={0.1} transparent />
+    </mesh>
   </mesh>
 );
 
@@ -45,24 +47,6 @@ export const BlockPerson = ({ pose, color, position = [0, 0, 0], scale = 1 }: Bl
   const legRURot = useAnimatedPose(pose.leg_r_upper);
   const legRLRot = useAnimatedPose(pose.leg_r_lower);
 
-  
-
-  
-  const getLegDrop = (upperRot, lowerRot) => {
-    const th1 = upperRot ? upperRot[0] : 0;
-    const th2 = lowerRot ? lowerRot[0] : 0;
-    return 0.4 * Math.cos(th1) + 0.4 * Math.cos(th1 + th2);
-  };
-  const dropL = getLegDrop(pose.leg_l_upper, pose.leg_l_lower);
-  const dropR = getLegDrop(pose.leg_r_upper, pose.leg_r_lower);
-  const maxDrop = Math.max(dropL, dropR);
-  const targetHipY = Math.max(maxDrop, 0.1);
-  
-  const { hipAnimY } = useSpring({
-    hipAnimY: targetHipY,
-    config
-  });
-
   const { posAnim } = useSpring({
     posAnim: position,
     config
@@ -71,7 +55,7 @@ export const BlockPerson = ({ pose, color, position = [0, 0, 0], scale = 1 }: Bl
   return (
     <animated.group position={posAnim as any} scale={[scale, scale, scale]}>
       {/* Lower Torso (Hips) */}
-      <animated.group position-y={hipAnimY as any}>
+      <group position={[0, 0.8, 0]}>
         <Box size={[0.5, 0.3, 0.25]} position={[0, 0.15, 0]} color={color} />
         
         {/* Upper Torso */}
@@ -115,7 +99,7 @@ export const BlockPerson = ({ pose, color, position = [0, 0, 0], scale = 1 }: Bl
             <Box size={[0.18, 0.4, 0.18]} position={[0, -0.2, 0]} color={color} />
           </animated.group>
         </animated.group>
-      </animated.group>
+      </group>
     </animated.group>
   );
 };

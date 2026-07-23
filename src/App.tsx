@@ -306,7 +306,7 @@ export default function App() {
     const handleMouseMove = (e: MouseEvent) => {
       e.preventDefault();
       const newWidth = sidebarPosition === 'left' ? e.clientX : window.innerWidth - e.clientX;
-      setSidebarWidth(Math.max(300, Math.min(newWidth, window.innerWidth - 100)));
+      setSidebarWidth(Math.max(300, Math.min(newWidth, 600, window.innerWidth - 100)));
     };
     
     const handleMouseUp = () => {
@@ -1809,14 +1809,18 @@ export default function App() {
                       { id: 'head', name: 'Head Turn', axis: 0 },
                       { id: 'arm_l_upper', name: 'L-Arm Upper', axis: 0 },
                       { id: 'arm_l_lower', name: 'L-Elbow', axis: 0 },
+                      { id: 'arm_l_lower', name: 'L-Elbow', axis: 0 },
                       { id: 'arm_l_upper', name: 'L-Arm Spread', axis: 2 },
                       { id: 'arm_r_upper', name: 'R-Arm Upper', axis: 0 },
+                      { id: 'arm_r_lower', name: 'R-Elbow', axis: 0 },
                       { id: 'arm_r_lower', name: 'R-Elbow', axis: 0 },
                       { id: 'arm_r_upper', name: 'R-Arm Spread', axis: 2 },
                       { id: 'leg_l_upper', name: 'L-Leg Upper', axis: 0 },
                       { id: 'leg_l_lower', name: 'L-Knee', axis: 0 },
+                      { id: 'leg_l_lower', name: 'L-Knee', axis: 0 },
                       { id: 'leg_l_upper', name: 'L-Leg Spread', axis: 2 },
                       { id: 'leg_r_upper', name: 'R-Leg Upper', axis: 0 },
+                      { id: 'leg_r_lower', name: 'R-Knee', axis: 0 },
                       { id: 'leg_r_lower', name: 'R-Knee', axis: 0 },
                       { id: 'leg_r_upper', name: 'R-Leg Spread', axis: 2 }
                     ].map((part: any, pIdx) => {

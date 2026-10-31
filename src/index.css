@@ -190,6 +190,31 @@ html[data-theme="paper"] .hover\:text-white:hover { color: #2B221A !important; }
 html[data-theme="peper"] .hover\:bg-\[\#323238\]:hover,
 html[data-theme="paper"] .hover\:bg-\[\#323238\]:hover { background-color: #FAF8F5 !important; }
 
+/* Force true white text on solid colored backgrounds (e.g. orange buttons, active badges) */
+.force-white-text,
+html[data-theme="peper"] .force-white-text,
+html[data-theme="paper"] .force-white-text,
+html[data-theme="light"] .force-white-text,
+html[data-theme="peper"] .force-white-text *,
+html[data-theme="paper"] .force-white-text *,
+html[data-theme="light"] .force-white-text * {
+  color: #FFFFFF !important;
+}
+
+.force-white-text svg,
+.force-white-text svg line,
+.force-white-text svg path,
+.force-white-text svg rect,
+html[data-theme="peper"] .force-white-text svg,
+html[data-theme="paper"] .force-white-text svg,
+html[data-theme="light"] .force-white-text svg,
+html[data-theme="peper"] .force-white-text svg line,
+html[data-theme="paper"] .force-white-text svg line,
+html[data-theme="light"] .force-white-text svg line {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
 /* --------------------------------------------------------------------------
    1. CANVAS HUD: Light theme style (Thin translucent buttons & clear labels)
    -------------------------------------------------------------------------- */
@@ -592,23 +617,6 @@ html[data-theme="paper"] aside .grid-cols-5 > button.bg-\[\#D95430\] {
   color: #FFFFFF !important;
 }
 
-/* BGM Player transport buttons */
-html[data-theme="peper"] aside .flex.items-center.justify-center.gap-1\.5 > button,
-html[data-theme="paper"] aside .flex.items-center.justify-center.gap-1\.5 > button {
-  background-color: #FFFFFF !important;
-  border-color: #D1C7B4 !important;
-  color: #73634F !important;
-}
-html[data-theme="peper"] aside .flex.items-center.justify-center.gap-1\.5 > button:hover,
-html[data-theme="paper"] aside .flex.items-center.justify-center.gap-1\.5 > button:hover {
-  background-color: #FAF8F5 !important;
-}
-html[data-theme="peper"] aside .flex.items-center.justify-center.gap-1\.5 > button.border-\[\#D95430\],
-html[data-theme="paper"] aside .flex.items-center.justify-center.gap-1\.5 > button.border-\[\#D95430\] {
-  border-color: #D95430 !important;
-  color: #D95430 !important;
-}
-
 /* Progress bar rail in BGM Player */
 html[data-theme="peper"] aside .bg-\[\#2A2A30\],
 html[data-theme="paper"] aside .bg-\[\#2A2A30\],
@@ -619,34 +627,41 @@ html[data-theme="paper"] aside .h-1.overflow-hidden {
   background-color: #BDB09C !important;
 }
 
-/* Playlist header action buttons (+ NEW SET, list toggle, clear) */
-html[data-theme="peper"] aside .flex.gap-2.mb-3 > button,
-html[data-theme="paper"] aside .flex.gap-2.mb-3 > button {
-  background-color: #FFFFFF !important;
-  border-color: #D1C7B4 !important;
+/* Section Title Button: Transparent background without border */
+aside .section-title-button,
+html[data-theme="peper"] aside .section-title-button,
+html[data-theme="paper"] aside .section-title-button,
+html[data-theme="light"] aside .section-title-button,
+html[data-theme="black"] aside .section-title-button,
+html[data-theme="red"] aside .section-title-button,
+html[data-theme="peper"] aside button.section-title-button,
+html[data-theme="paper"] aside button.section-title-button,
+html[data-theme="peper"] aside .section-title-wrapper > button,
+html[data-theme="paper"] aside .section-title-wrapper > button {
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+html[data-theme="peper"] aside .section-title-button span,
+html[data-theme="paper"] aside .section-title-button span {
+  background-color: transparent !important;
+}
+
+/* Track action links: Pure text without backgrounds */
+html[data-theme="peper"] aside .track-action-link,
+html[data-theme="paper"] aside .track-action-link {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   color: #73634F !important;
 }
-/* + NEW SET: Solid orange with white text/icon */
-html[data-theme="peper"] aside .flex.gap-2.mb-3 > button:first-child,
-html[data-theme="paper"] aside .flex.gap-2.mb-3 > button:first-child {
-  background-color: #D95430 !important;
-  border-color: #D95430 !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 1px 2px rgba(217, 84, 48, 0.25) !important;
-}
-html[data-theme="peper"] aside .flex.gap-2.mb-3 > button:first-child svg,
-html[data-theme="paper"] aside .flex.gap-2.mb-3 > button:first-child svg {
-  color: #FFFFFF !important;
-}
-html[data-theme="peper"] aside .flex.gap-2.mb-3 > button:first-child:hover,
-html[data-theme="paper"] aside .flex.gap-2.mb-3 > button:first-child:hover {
-  background-color: #C44522 !important;
-  border-color: #C44522 !important;
-  color: #FFFFFF !important;
-}
-html[data-theme="peper"] aside .flex.gap-2.mb-3 > button:hover,
-html[data-theme="paper"] aside .flex.gap-2.mb-3 > button:hover {
-  background-color: #FAF8F5 !important;
+html[data-theme="peper"] aside .track-action-link:hover,
+html[data-theme="paper"] aside .track-action-link:hover {
+  background-color: transparent !important;
+  color: #2B221A !important;
 }
 
 /* Playlist dropdown & Move select: Normal gray text (not red) */

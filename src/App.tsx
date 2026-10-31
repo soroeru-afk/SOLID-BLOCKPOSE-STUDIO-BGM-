@@ -713,6 +713,98 @@ export default function App() {
   const [isPoseLibraryOpen, setIsPoseLibraryOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isPoseLibraryOpen`) !== 'false');
   const [isEffectSettingOpen, setIsEffectSettingOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isEffectSettingOpen`) !== 'false');
   const [isBgmSettingOpen, setIsBgmSettingOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isBgmSettingOpen`) !== 'false');
+  const [isPlaylistSectionOpen, setIsPlaylistSectionOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isPlaylistSectionOpen`) !== 'false');
+
+  // Section Ordering & DnD
+  type VisualSectionId = 'pose-setting' | 'pose-library' | 'colors';
+  type SoundSectionId = 'effect-setting' | 'bgm-setting' | 'playlists';
+
+  const [visualSectionOrder, setVisualSectionOrder] = useState<VisualSectionId[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_visualSectionOrder`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 3 && (['pose-setting', 'pose-library', 'colors'] as VisualSectionId[]).every(s => parsed.includes(s))) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return ['pose-setting', 'pose-library', 'colors'];
+  });
+
+  const [soundSectionOrder, setSoundSectionOrder] = useState<SoundSectionId[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY}_soundSectionOrder`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length === 3 && (['effect-setting', 'bgm-setting', 'playlists'] as SoundSectionId[]).every(s => parsed.includes(s))) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return ['effect-setting', 'bgm-setting', 'playlists'];
+  });
+
+  const [draggingSection, setDraggingSection] = useState<{ tab: 'visual' | 'sound'; id: string } | null>(null);
+  const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
+
+  const handleSectionDragStart = (e: React.DragEvent, tab: 'visual' | 'sound', id: string) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', JSON.stringify({ tab, id }));
+    setDraggingSection({ tab, id });
+  };
+
+  const handleSectionDragOver = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverSectionId !== targetId) {
+      setDragOverSectionId(targetId);
+    }
+  };
+
+  const handleSectionDragLeave = (e: React.DragEvent, targetId: string) => {
+    if (dragOverSectionId === targetId) {
+      setDragOverSectionId(null);
+    }
+  };
+
+  const handleSectionDrop = (e: React.DragEvent, tab: 'visual' | 'sound', targetId: string) => {
+    e.preventDefault();
+    setDragOverSectionId(null);
+    if (!draggingSection || draggingSection.tab !== tab) return;
+    const sourceId = draggingSection.id;
+    if (sourceId === targetId) return;
+
+    if (tab === 'visual') {
+      setVisualSectionOrder(prev => {
+        const fromIdx = prev.indexOf(sourceId as VisualSectionId);
+        const toIdx = prev.indexOf(targetId as VisualSectionId);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+        const next = [...prev];
+        const [removed] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, removed);
+        localStorage.setItem(`${STORAGE_KEY}_visualSectionOrder`, JSON.stringify(next));
+        return next;
+      });
+    } else {
+      setSoundSectionOrder(prev => {
+        const fromIdx = prev.indexOf(sourceId as SoundSectionId);
+        const toIdx = prev.indexOf(targetId as SoundSectionId);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+        const next = [...prev];
+        const [removed] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, removed);
+        localStorage.setItem(`${STORAGE_KEY}_soundSectionOrder`, JSON.stringify(next));
+        return next;
+      });
+    }
+    setDraggingSection(null);
+  };
+
+  const handleSectionDragEnd = () => {
+    setDraggingSection(null);
+    setDragOverSectionId(null);
+  };
 
   // UI Theme settings
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_accentColor`) || '#80858C');
@@ -828,7 +920,11 @@ export default function App() {
       'Visual Themes': 'ビジュアルテーマ',
       'EFFECT SETTING': 'エフェクト設定',
       'BGM SETTING': 'BGM設定',
+      'PLAYLISTS': 'プレイリスト',
       'POSE SETTING': 'ポーズセッティング',
+      'POSE LIBRARY': 'ポーズライブラリ',
+      'COLORS': 'カラー',
+      'Drag to reorder': 'ドラッグして並べ替え',
       'Custom': 'カスタム',
       'EXPORT': '出力',
       'IMPORT': '入力',
@@ -995,6 +1091,9 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_isPoseLibraryOpen`, isPoseLibraryOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isEffectSettingOpen`, isEffectSettingOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isBgmSettingOpen`, isBgmSettingOpen.toString());
+    localStorage.setItem(`${STORAGE_KEY}_isPlaylistSectionOpen`, isPlaylistSectionOpen.toString());
+    localStorage.setItem(`${STORAGE_KEY}_visualSectionOrder`, JSON.stringify(visualSectionOrder));
+    localStorage.setItem(`${STORAGE_KEY}_soundSectionOrder`, JSON.stringify(soundSectionOrder));
     localStorage.setItem(`${STORAGE_KEY}_accentColor`, accentColor);
     localStorage.setItem(`${STORAGE_KEY}_characterColor`, characterColor);
     localStorage.setItem(`${STORAGE_KEY}_savedCustomCharacterColor`, savedCustomCharacterColor);
@@ -1014,7 +1113,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_shadowAngle`, shadowAngle.toString());
     localStorage.setItem(`${STORAGE_KEY}_shadowBlur`, shadowBlur.toString());
     localStorage.setItem(`${STORAGE_KEY}_shadowLength`, shadowLength.toString());
-  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, autoCameraMinHeight, autoCameraMaxHeight, autoCameraMinDistance, autoCameraMaxDistance, autoCameraReverse, isPoseSettingOpen, isAdvancedOptionsOpen, isPoseLibraryOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, colorScope, themeColors, commonColors, isColorSettingsOpen, isSidebarOpen, sidebarPosition, sidebarWidth, appLanguage, appTheme, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength]);
+  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, autoCameraMinHeight, autoCameraMaxHeight, autoCameraMinDistance, autoCameraMaxDistance, autoCameraReverse, isPoseSettingOpen, isAdvancedOptionsOpen, isPoseLibraryOpen, isEffectSettingOpen, isBgmSettingOpen, isPlaylistSectionOpen, visualSectionOrder, soundSectionOrder, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, colorScope, themeColors, commonColors, isColorSettingsOpen, isSidebarOpen, sidebarPosition, sidebarWidth, appLanguage, appTheme, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength]);
 
   // Sync sound manager state
   useEffect(() => {
@@ -1046,7 +1145,7 @@ export default function App() {
     const data = {
       poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
       soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, autoCameraMinHeight, autoCameraMaxHeight, autoCameraMinDistance, autoCameraMaxDistance, autoCameraReverse, accentColor,
-      characterColor, savedCustomCharacterColor, savedCustomBgColor, colorScope, themeColors, commonColors, isColorSettingsOpen, isPoseSettingOpen, isPoseLibraryOpen, isSidebarOpen, sidebarPosition, sidebarWidth, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
+      characterColor, savedCustomCharacterColor, savedCustomBgColor, colorScope, themeColors, commonColors, isColorSettingsOpen, isPoseSettingOpen, isPoseLibraryOpen, isEffectSettingOpen, isBgmSettingOpen, isPlaylistSectionOpen, visualSectionOrder, soundSectionOrder, isSidebarOpen, sidebarPosition, sidebarWidth, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
       playlists, activePlaylistId, isPlaylistExpanded,
       customColorPresets, activePresetId,
       appTheme, themeDropdownMode,
@@ -1124,6 +1223,11 @@ export default function App() {
         if (data.isColorSettingsOpen !== undefined) setIsColorSettingsOpen(data.isColorSettingsOpen);
         if (data.isPoseSettingOpen !== undefined) setIsPoseSettingOpen(data.isPoseSettingOpen);
         if (data.isPoseLibraryOpen !== undefined) setIsPoseLibraryOpen(data.isPoseLibraryOpen);
+        if (data.isEffectSettingOpen !== undefined) setIsEffectSettingOpen(data.isEffectSettingOpen);
+        if (data.isBgmSettingOpen !== undefined) setIsBgmSettingOpen(data.isBgmSettingOpen);
+        if (data.isPlaylistSectionOpen !== undefined) setIsPlaylistSectionOpen(data.isPlaylistSectionOpen);
+        if (data.visualSectionOrder && Array.isArray(data.visualSectionOrder)) setVisualSectionOrder(data.visualSectionOrder);
+        if (data.soundSectionOrder && Array.isArray(data.soundSectionOrder)) setSoundSectionOrder(data.soundSectionOrder);
         if (data.isSidebarOpen !== undefined) setIsSidebarOpen(data.isSidebarOpen);
         if (data.sidebarPosition) setSidebarPosition(data.sidebarPosition);
         if (data.sidebarWidth) setSidebarWidth(data.sidebarWidth);
@@ -1822,6 +1926,1747 @@ export default function App() {
     accent: appTheme === 'peper' ? 'accent-[#D95430]' : (appTheme === 'light' ? 'accent-[#009FBA]' : 'accent-[#05DFFC]'),
   };
 
+  const renderSectionCard = (
+    tab: 'visual' | 'sound',
+    id: string,
+    title: string,
+    isOpen: boolean,
+    setIsOpen: (val: boolean) => void,
+    badge: React.ReactNode,
+    children: React.ReactNode
+  ) => {
+    const isOver = dragOverSectionId === id;
+    const isDraggingThis = draggingSection?.id === id;
+
+    return (
+      <div
+        key={id}
+        onDragOver={(e) => handleSectionDragOver(e, id)}
+        onDragLeave={(e) => handleSectionDragLeave(e, id)}
+        onDrop={(e) => handleSectionDrop(e, tab, id)}
+        className={`p-3 flex flex-col gap-3 relative transition-all rounded-none ${
+          isOver ? 'ring-2 ring-[var(--accent)] border-[var(--accent)] shadow-lg' : ''
+        } ${isDraggingThis ? 'opacity-40' : ''} ${
+          appTheme === 'light' 
+            ? 'bg-white border border-gray-200 shadow-sm' 
+            : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border border-[#4A4A52]' : 'bg-[#1a1a1e]/40 border border-[#323238]')
+        }`}
+      >
+        <div className={`flex items-center justify-between w-full ${isOpen ? 'border-b pb-2 mb-1' : ''} ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')}`}>
+          <div className="section-title-wrapper flex items-center gap-1.5 min-w-0">
+            <div
+              draggable
+              onDragStart={(e) => handleSectionDragStart(e, tab, id)}
+              onDragEnd={handleSectionDragEnd}
+              className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-gray-500 hover:text-white transition-colors flex-shrink-0"
+              title={t('Drag to reorder')}
+            >
+              <GripVertical className="w-3.5 h-3.5" />
+            </div>
+            <div className={`w-1 h-3 transition-colors flex-shrink-0 ${isOpen ? highlightClasses.bg : 'bg-gray-600'}`} />
+            <button
+              type="button"
+              onClick={() => setIsOpen(!isOpen)}
+              className="section-title-button flex items-center gap-2 text-left min-w-0 cursor-pointer group !bg-transparent !border-none !shadow-none p-0"
+            >
+              <span className={`text-[10px] font-black tracking-widest uppercase transition-colors truncate ${
+                isOpen 
+                  ? (appTheme === 'light' ? 'text-gray-800' : (appTheme === 'peper' ? 'text-[#3A2F24]' : 'text-[#E1E1E6]')) 
+                  : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-600 group-hover:text-gray-800' : 'text-gray-500 group-hover:text-gray-400')
+              }`}>
+                {title}
+              </span>
+              {badge}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className={`w-5 h-5 border flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer ${
+              appTheme === 'light' 
+                ? 'bg-white border-gray-400 hover:border-gray-500' 
+                : (appTheme === 'peper' 
+                  ? 'bg-white border-[#D1C7B4] hover:border-[#8C7B68]' 
+                  : 'bg-[#1a1a1e] border-[#323238] hover:border-gray-400')
+            } ${isOpen ? highlightClasses.border : ''}`}
+          >
+            {isOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
+          </button>
+        </div>
+
+        {isOpen && (
+          <div className="flex flex-col gap-3">
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderPoseSettingCard = () => {
+    return renderSectionCard(
+      'visual',
+      'pose-setting',
+      t('POSE SETTING'),
+      isPoseSettingOpen,
+      setIsPoseSettingOpen,
+      !isPoseSettingOpen && isAutoCycle ? (
+        <span className="text-[8px] font-mono font-bold text-[var(--accent)] bg-[var(--accent)]/10 px-1.5 py-0.5 border border-[var(--accent)]/30 leading-none">
+          AUTO
+        </span>
+      ) : null,
+      (
+        <div className="flex flex-col gap-3">
+          {/* Auto Cycle Row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isAutoCycle ? <Play className={`w-4 h-4 ${highlightClasses.text} opacity-80`} /> : <Pause className="w-4 h-4 text-gray-500" />}
+              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Cycle')}</span>
+            </div>
+            
+            <button 
+              onClick={() => {
+                const nextState = !isAutoCycle;
+                setIsAutoCycle(nextState);
+                
+                if (nextState) {
+                  if (isSoundOn) {
+                    if (soundMode === 'bgm') {
+                      setIsBgmPlaying(true);
+                      setSfxMutedWithSpeed(true);
+                      if (currentBgmId !== null) {
+                        SoundManager.playBGM();
+                      } else if (bgmPlaylist.length > 0) {
+                        playTrackById(bgmPlaylist[0].id, true);
+                      }
+                    } else {
+                      setIsBgmPlaying(false);
+                      SoundManager.pauseBGM();
+                      setSfxMutedWithSpeed(false);
+                    }
+                  }
+                } else {
+                  if (isSoundOn && soundMode === 'bgm') {
+                    setIsBgmPlaying(false);
+                    SoundManager.pauseBGM();
+                  }
+                  setSfxMutedWithSpeed(true);
+                  setIsAutoCamera(false);
+                  setIsAutoFormation(false);
+                  setIsSlowRotate(false);
+                  if (orbitRef.current) {
+                    orbitRef.current.autoRotate = false;
+                  }
+                }
+              }}
+              className={`w-10 h-5 transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+            >
+              <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+            </button>
+          </div>
+          
+          <div className="pt-1">
+            <div className={`flex items-center justify-between mb-3 pb-3 border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
+              <div className="flex gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('SOUND')}</span>
+                  <button 
+                    onClick={toggleSound}
+                    className={`flex items-center justify-center gap-1.5 w-[84px] py-1 border transition-colors ${
+                      isSoundOn 
+                        ? (isAutoCycle ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : (appTheme === 'light' ? 'bg-transparent border-gray-400 text-gray-800' : 'bg-transparent border-gray-300 text-gray-200'))
+                        : 'border-gray-500 bg-[#1a1a1e] text-gray-500'
+                    }`}
+                  >
+                    {isSoundOn ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                    <span className="text-[9px] uppercase font-bold">{isSoundOn ? t('ON') : t('OFF')}</span>
+                  </button>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('MODE')}</span>
+                  <div className="flex items-center h-[26px] w-[96px] bg-[#1a1a1e] border border-[#323238] p-0.5">
+                    <button
+                      onClick={() => changeSoundMode('bgm')}
+                      className={`flex-1 flex items-center justify-center h-full transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'bgm' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                      BGM
+                    </button>
+                    <button
+                      onClick={() => changeSoundMode('sfx')}
+                      className={`flex-1 flex items-center justify-center h-full transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'sfx' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                    >
+                      SFX
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Cycle Interval')}</label>
+              <span className={`text-[9px] font-mono font-bold ${isAutoCycle ? `${highlightClasses.text} ${highlightClasses.bgMuted}` : 'text-gray-500 bg-[#1a1a1e]'} px-1.5 py-0.5 transition-colors`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
+            </div>
+            <input 
+              type="range" 
+              min={!isSfxMuted ? "50" : "0"} 
+              max="100" 
+              step="1" 
+              value={Math.round((Math.log(Math.max(100, Math.min(10000, cycleSpeed)) / 100) / Math.log(10000 / 100)) * 100)} 
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                const rawSpeed = 100 * Math.exp((val / 100) * Math.log(10000 / 100));
+                let finalSpeed = rawSpeed;
+                if (rawSpeed < 1000) finalSpeed = Math.round(rawSpeed / 50) * 50;
+                else finalSpeed = Math.round(rawSpeed / 100) * 100;
+                
+                let minSpeed = 100;
+                if (!isSfxMuted) minSpeed = 1000;
+                setCycleSpeed(Math.max(minSpeed, Math.min(10000, finalSpeed)));
+              }}
+              className={`w-full h-1 appearance-none cursor-pointer mb-4 ${appTheme === 'light' ? 'bg-gray-300 accent-[#009FBA]' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`}`}
+            />
+
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-2">
+                <RefreshCw className={`w-3.5 h-3.5 ${isRandomCycle ? highlightClasses.text : 'text-gray-500'}`} />
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Random Pose')}</span>
+              </div>
+              <button 
+                onClick={() => setIsRandomCycle(!isRandomCycle)}
+                className={`w-10 h-5 transition-colors relative border ${isRandomCycle ? `bg-transparent ${highlightClasses.border}` : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+              >
+                <div className={`absolute top-[1px] w-4 h-4 transition-all ${isRandomCycle ? `${highlightClasses.bg} right-[1px]` : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-2">
+                <Camera className={`w-3.5 h-3.5 ${isSlowRotate ? highlightClasses.text : 'text-gray-500'}`} />
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Turn')}</span>
+              </div>
+              <button 
+                onClick={() => {
+                  const next = !isSlowRotate;
+                  setIsSlowRotate(next);
+                  if (orbitRef.current) {
+                    orbitRef.current.autoRotate = next;
+                    orbitRef.current.autoRotateSpeed = rotateSpeed;
+                  }
+                }}
+                className={`w-10 h-5 transition-colors relative border ${isSlowRotate ? `bg-transparent ${highlightClasses.border}` : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+              >
+                <div className={`absolute top-[1px] w-4 h-4 transition-all ${isSlowRotate ? `${highlightClasses.bg} right-[1px]` : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+              </button>
+            </div>
+
+            {isSlowRotate && (
+              <div className="pt-2 pb-1 space-y-1">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Turn Speed')}</label>
+                  <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} ${appTheme === 'peper' || appTheme === 'light' ? 'bg-white' : 'bg-[#1a1a1e]'} border ${highlightClasses.border} px-1.5 py-0.5 leading-none transition-colors`}>
+                    {rotateSpeed.toFixed(1)}x
+                  </span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0.1" 
+                  max="10" 
+                  step="0.1" 
+                  value={rotateSpeed} 
+                  onChange={(e) => {
+                    const speed = parseFloat(e.target.value);
+                    setRotateSpeed(speed);
+                    if (orbitRef.current) {
+                      orbitRef.current.autoRotateSpeed = speed;
+                    }
+                  }}
+                  className={`w-full h-1 appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-[#009FBA]' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`}`}
+                />
+              </div>
+            )}
+
+            {/* Collapsible Advanced Options Sub-section */}
+            <div className={`mt-3 pt-3 border-t ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'peper' ? 'border-[#D1C7B4]' : 'border-[#323238]/50')}`}>
+              <button 
+                onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
+                className="flex items-center justify-between w-full group py-1 cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-1 h-3 transition-colors ${isAdvancedOptionsOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
+                  <span className={`text-[9px] font-bold tracking-wider uppercase transition-colors ${
+                    isAdvancedOptionsOpen 
+                      ? (appTheme === 'light' ? 'text-gray-800' : (appTheme === 'peper' ? 'text-[#3A2F24]' : 'text-gray-200')) 
+                      : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-600 group-hover:text-gray-800' : 'text-gray-500 group-hover:text-gray-400')
+                  }`}>
+                    {t('Advanced Cycle Options')}
+                  </span>
+                </div>
+                <div className={`w-5 h-5 border flex items-center justify-center transition-colors flex-shrink-0 ${
+                  appTheme === 'light' 
+                    ? 'bg-white border-gray-400 group-hover:border-gray-500' 
+                    : (appTheme === 'peper' 
+                      ? 'bg-white border-[#D1C7B4] group-hover:border-[#8C7B68]' 
+                      : 'bg-[#1a1a1e] border-[#323238] group-hover:border-gray-400')
+                } ${isAdvancedOptionsOpen ? highlightClasses.border : ''}`}>
+                  {isAdvancedOptionsOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
+                </div>
+              </button>
+
+              {isAdvancedOptionsOpen && (
+                <div className="pt-2 flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Zap className={`w-3.5 h-3.5 ${isAutoFormation ? highlightClasses.text : 'text-gray-500'}`} />
+                      <span className={`text-[9px] font-bold uppercase tracking-wider ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-700' : 'text-gray-400'}`}>{t('Auto Format Change')}</span>
+                    </div>
+                    <button 
+                      onClick={() => setIsAutoFormation(!isAutoFormation)}
+                      className={`w-10 h-5 transition-colors relative border ${isAutoFormation ? `bg-transparent ${highlightClasses.border}` : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+                    >
+                      <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoFormation ? `${highlightClasses.bg} right-[1px]` : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Video className={`w-3.5 h-3.5 ${isAutoCamera ? highlightClasses.text : 'text-gray-500'}`} />
+                      <span className={`text-[9px] font-bold uppercase tracking-wider ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-700' : 'text-gray-400'}`}>{t('Cinematic View')}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {isAutoCamera && (
+                        <button 
+                          onClick={() => {
+                            setAutoCameraSpeed(1);
+                            setAutoCameraMinHeight(-2);
+                            setAutoCameraMaxHeight(10);
+                            setAutoCameraMinDistance(6);
+                            setAutoCameraMaxDistance(20);
+                            setAutoCameraReverse(false);
+                          }}
+                          className="text-gray-500 hover:text-white transition-colors"
+                          title={t('Reset Camera')}
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button 
+                        onClick={() => setIsAutoCamera(!isAutoCamera)}
+                        className={`w-10 h-5 transition-colors relative border ${isAutoCamera ? `bg-transparent ${highlightClasses.border}` : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+                      >
+                        <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoCamera ? `${highlightClasses.bg} right-[1px]` : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isAutoCamera && (
+                    <div className="pt-2 pb-2 space-y-4">
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Intensity')}</label>
+                          <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">{autoCameraSpeed.toFixed(1)}x</span>
+                        </div>
+                        <input 
+                          type="range" min="0.1" max="10" step="0.1" value={autoCameraSpeed} 
+                          onChange={(e) => setAutoCameraSpeed(parseFloat(e.target.value))}
+                          className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                        />
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Height (Min / Max)')}</label>
+                          <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
+                            {autoCameraMinHeight.toFixed(1)} / {autoCameraMaxHeight.toFixed(1)}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <input 
+                            type="range" min="-5" max="10" step="0.5" value={autoCameraMinHeight} 
+                            onChange={(e) => setAutoCameraMinHeight(parseFloat(e.target.value))}
+                            className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                          />
+                          <input 
+                            type="range" min="0" max="20" step="0.5" value={autoCameraMaxHeight} 
+                            onChange={(e) => setAutoCameraMaxHeight(parseFloat(e.target.value))}
+                            className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Zoom (Min / Max)')}</label>
+                          <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
+                            {autoCameraMinDistance.toFixed(1)} / {autoCameraMaxDistance.toFixed(1)}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <input 
+                            type="range" min="3" max="20" step="1" value={autoCameraMinDistance} 
+                            onChange={(e) => setAutoCameraMinDistance(parseFloat(e.target.value))}
+                            className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                          />
+                          <input 
+                            type="range" min="5" max="50" step="1" value={autoCameraMaxDistance} 
+                            onChange={(e) => setAutoCameraMaxDistance(parseFloat(e.target.value))}
+                            className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-2">
+                        <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Reverse Rotation')}</label>
+                        <button 
+                          onClick={() => setAutoCameraReverse(!autoCameraReverse)}
+                          className={`w-8 h-4 rounded-full transition-colors relative ${autoCameraReverse ? 'bg-red-500' : (appTheme === 'light' ? 'bg-gray-300' : 'bg-[#1a1a1e] border border-gray-600')}`}
+                        >
+                          <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${autoCameraReverse ? 'bg-white right-0.5' : 'bg-gray-500 left-0.5'}`} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )
+    );
+  };
+
+  const renderPoseLibraryCard = () => {
+    return renderSectionCard(
+      'visual',
+      'pose-library',
+      t('POSE LIBRARY'),
+      isPoseLibraryOpen,
+      setIsPoseLibraryOpen,
+      !isPoseLibraryOpen ? (
+        <span 
+          className="inline-block w-[68px] text-center text-[8px] font-mono font-bold text-gray-400 bg-white/5 px-1.5 py-0.5 border border-white/10 leading-none truncate shrink-0"
+          title={poses.find(p => p.id === poseId)?.name || 'POSE'}
+        >
+          {poses.find(p => p.id === poseId)?.name || 'POSE'}
+        </span>
+      ) : null,
+      (
+        <>
+          {!isEditing ? (
+            <div className="grid grid-cols-2 gap-2 text-xs text-gray-300 max-h-[220px] overflow-y-auto no-scrollbar pr-1">
+              {poses.map((pose, idx) => {
+                const isActive = poseId === pose.id && !isAutoCycle;
+                const isCustom = pose.id.startsWith('custom-');
+                return (
+                  <div
+                    key={pose.id}
+                    onClick={() => handlePoseChange(pose.id)}
+                    className={`text-left p-2 border transition-all flex flex-col justify-between h-[45px] relative overflow-hidden group cursor-pointer ${
+                      isActive 
+                       ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-lg z-10' 
+                       : 'bg-[#2A2A30] border-[#323238] hover:border-gray-500 text-gray-400'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start w-full relative z-10">
+                      <span className={`font-bold text-[9px] truncate uppercase tracking-tighter leading-tight max-w-[70%] ${isActive || appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{pose.name}</span>
+                      {isCustom && (
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); startEditing(pose); }}
+                            className="p-1 hover:bg-white/20 cursor-pointer"
+                          >
+                            <Edit3 className="w-2.5 h-2.5" />
+                          </button>
+                          <button 
+                            onClick={(e) => deletePose(pose.id, e)} 
+                            className="p-1 hover:bg-red-500/50 cursor-pointer text-white"
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <span className={`text-[10px] font-mono mt-1 ${isActive ? 'text-white/40' : (appTheme === 'light' ? 'text-gray-500' : 'text-[#878e9b]')}`}>
+                      {String(idx + 1).padStart(2, '0')}
+                    </span>
+                    {isActive && (
+                      <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 -3xl -mr-2 -mt-2" />
+                    )}
+                    {!isActive && poseId === pose.id && isAutoCycle && (
+                      <div className="absolute inset-0 border border-[var(--accent)]/50 pointer-events-none" />
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                onClick={(e) => { e.stopPropagation(); startEditing(); }}
+                className={`flex items-center justify-center gap-1.5 h-[45px] text-[10px] font-bold uppercase tracking-widest border border-dashed transition-colors ${appTheme === 'light' ? 'border-gray-400 text-gray-500 hover:border-[var(--accent)] hover:text-[var(--accent)] bg-white/50' : 'border-[#323238] text-gray-500 hover:border-[var(--accent)] hover:text-[var(--accent)] bg-[#1E1E22] hover:bg-[var(--accent)]/5'}`}
+              >
+                <Plus className="w-3.5 h-3.5" /> {t('New Set')}
+              </button>
+            </div>
+          ) : (
+            <div className="p-3 bg-[var(--accent)]/10 border border-[#323238]">
+              <div className="flex justify-between items-center mb-3">
+                <label className="text-[10px] uppercase tracking-wider text-[var(--accent)] font-bold flex items-center gap-2">
+                  <SlidersHorizontal className="w-3 h-3" /> {editingPoseId ? 'Edit Pose' : 'New Pose'}
+                </label>
+                <div className="flex gap-2">
+                  <button onClick={() => setIsEditing(false)} className="text-[10px] text-gray-400 hover:text-white">Cancel</button>
+                  <button onClick={saveCustomPose} className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                    <Save className="w-3 h-3" /> SAVE
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-3">
+                <div>
+                  <label className="text-[9px] text-gray-500 uppercase block font-bold mb-1">Pose Name</label>
+                  <input 
+                    type="text" 
+                    value={editPoseName} 
+                    onChange={(e) => setEditPoseName(e.target.value)} 
+                    className="w-full bg-[#121214] border border-[#323238] p-1.5 text-xs text-white uppercase font-bold outline-none focus:border-[var(--accent)]"
+                    placeholder="Enter pose name..."
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-2 bg-black/20 border border-[#323238]">
+                  <div className="flex items-center gap-2">
+                    <Layers className={`w-3 h-3 ${isSymmetric ? 'text-[var(--accent)]' : 'text-gray-500'}`} />
+                    <span className="text-[10px] uppercase font-bold text-gray-400">{t('Mirror Symmetry')}</span>
+                  </div>
+                  <button 
+                    onClick={() => setIsSymmetric(!isSymmetric)}
+                    className={`w-8 h-4 transition-colors relative ${isSymmetric ? 'bg-[var(--accent)]' : 'bg-gray-600'}`}
+                  >
+                    <div className={`absolute top-0.5 w-3 h-3 bg-white transition-all ${isSymmetric ? 'right-0.5' : 'left-0.5'}`} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setEditPose({
+                      head: [0, 0, 0],
+                      torso: [0, 0, 0],
+                      arm_l_upper: [0, 0, 0],
+                      arm_l_lower: [0, 0, 0],
+                      arm_r_upper: [0, 0, 0],
+                      arm_r_lower: [0, 0, 0],
+                      leg_l_upper: [0, 0, 0],
+                      leg_l_lower: [0, 0, 0],
+                      leg_r_upper: [0, 0, 0],
+                      leg_r_lower: [0, 0, 0],
+                    });
+                  }}
+                  className="w-full py-1.5 bg-[#2A2A30] hover:bg-[#323238] border border-[#323238] text-[10px] font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-wider"
+                >
+                  All Reset
+                </button>
+              </div>
+              
+              <div className="space-y-3 max-h-[220px] overflow-y-auto no-scrollbar pr-1">
+                {[
+                  { id: 'torso', name: 'Body Tilt', axis: 0 },
+                  { id: 'torso', name: 'Body Twist', axis: 1 },
+                  { id: 'head', name: 'Head Turn', axis: 0 },
+                  { id: 'arm_l_upper', name: 'L-Arm Upper', axis: 0 },
+                  { id: 'arm_l_lower', name: 'L-Elbow', axis: 0 },
+                  { id: 'arm_l_upper', name: 'L-Arm Spread', axis: 2 },
+                  { id: 'arm_r_upper', name: 'R-Arm Upper', axis: 0 },
+                  { id: 'arm_r_lower', name: 'R-Elbow', axis: 0 },
+                  { id: 'arm_r_upper', name: 'R-Arm Spread', axis: 2 },
+                  { id: 'leg_l_upper', name: 'L-Leg Upper', axis: 0 },
+                  { id: 'leg_l_lower', name: 'L-Knee', axis: 0 },
+                  { id: 'leg_l_upper', name: 'L-Leg Spread', axis: 2 },
+                  { id: 'leg_r_upper', name: 'R-Leg Upper', axis: 0 },
+                  { id: 'leg_r_lower', name: 'R-Knee', axis: 0 },
+                  { id: 'leg_r_upper', name: 'R-Leg Spread', axis: 2 }
+                ].map((part: any, pIdx) => {
+                  const rawVal = editPose[part.id as keyof PoseAngles]?.[part.axis] || 0;
+                  const degVal = Math.round(rawVal * 180 / Math.PI);
+                  return (
+                    <div key={`${part.id}-${part.axis}-${pIdx}`}>
+                      <div className="flex justify-between items-center mb-1">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[9px] text-gray-500 uppercase block font-bold">{part.name}</label>
+                          <span className={`text-[9px] font-mono font-bold px-1 ${degVal === 0 ? 'text-gray-500 bg-gray-500/10' : 'text-[var(--accent)] bg-[var(--accent)]/10'}`}>
+                            {degVal > 0 ? '+' : ''}{degVal}°
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => updateEditPart(part.id as any, part.axis, 0)}
+                          className="text-[8px] text-gray-500 hover:text-[var(--accent)] transition-colors font-bold uppercase"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <input 
+                        type="range" min="-3.14" max="3.14" step="0.1" 
+                        value={rawVal}
+                        onChange={(e) => updateEditPart(part.id as any, part.axis, parseFloat(e.target.value))}
+                        className={`w-full h-1 bg-[#2A2A30] appearance-none cursor-pointer ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )
+    );
+  };
+
+  const renderColorsCard = () => {
+    return renderSectionCard(
+      'visual',
+      'colors',
+      t('COLORS'),
+      isColorSettingsOpen,
+      setIsColorSettingsOpen,
+      !isColorSettingsOpen ? (
+        <div className="flex items-center gap-1.5">
+          <PresetColorBadge chrColor={characterColor} bgColor={customBgColor || '#E5E7EB'} size="sm" />
+          <span className="text-[8px] font-mono text-gray-400 truncate max-w-[80px]">{activePreset.name}</span>
+        </div>
+      ) : null,
+      (
+        <div className="flex flex-col gap-3">
+          {/* Preset & Custom Set Selector */}
+          <div className={`p-2.5 border flex flex-col gap-2 ${
+            appTheme === 'light'
+              ? 'bg-gray-100 border-gray-200 text-gray-800'
+              : (appTheme === 'peper'
+                ? 'bg-[#DDD4C4] border-[#C2B6A2] text-[#3A2F24]'
+                : 'bg-[#1E1E22]/80 border-[#323238]')
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-[9px] font-bold uppercase tracking-widest ${
+                appTheme === 'light' ? 'text-gray-700' : (appTheme === 'peper' ? 'text-[#5F5241]' : 'text-gray-400')
+              }`}>
+                {t('Color Set')}
+              </span>
+              {isModifiedFromPreset && (
+                <span className="text-[8px] font-mono font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 border border-amber-500/30">
+                  {t('MODIFIED')}
+                </span>
+              )}
+            </div>
+
+            {/* Set Dropdown / Select Button */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsSidebarPresetDropdownOpen(prev => !prev)}
+                className={`w-full py-1.5 px-2 flex items-center justify-between text-[10px] font-mono font-bold tracking-wider uppercase transition-colors border ${
+                  appTheme === 'light'
+                    ? 'bg-white hover:bg-gray-50 border-gray-300 text-gray-800'
+                    : (appTheme === 'peper'
+                      ? 'bg-white hover:bg-[#FAF8F5] border-[#C2B6A2] text-[#3A2F24]'
+                      : 'bg-[#121214] hover:bg-[#1a1a1e] border-[#323238] text-white')
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <PresetColorBadge chrColor={characterColor} bgColor={customBgColor || '#E5E7EB'} size="sm" />
+                  <span className="truncate">{activePreset.name}</span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${
+                  appTheme === 'light' ? 'text-gray-600' : (appTheme === 'peper' ? 'text-[#73634F]' : 'text-gray-400')
+                } ${isSidebarPresetDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isSidebarPresetDropdownOpen && (
+                <div className={`absolute left-0 right-0 top-full mt-1 border shadow-2xl z-50 py-1 flex flex-col text-[10px] font-mono max-h-56 overflow-y-auto no-scrollbar ${
+                  appTheme === 'light'
+                    ? 'bg-white border-gray-300 text-gray-800'
+                    : (appTheme === 'peper'
+                      ? 'bg-[#EBE4D5] border-[#C2B6A2] text-[#3A2F24]'
+                      : 'bg-[#1E1E22] border-[#323238] text-gray-300')
+                }`}>
+                  <div className={`px-2.5 py-1 text-[8px] font-bold uppercase tracking-widest border-b ${
+                    appTheme === 'light'
+                      ? 'text-gray-600 bg-gray-100 border-gray-200'
+                      : (appTheme === 'peper'
+                        ? 'text-[#5F5241] bg-[#DDD4C4] border-[#C2B6A2]'
+                        : 'text-gray-400 bg-[#121214] border-[#323238]/60')
+                  }`}>
+                    ── {t('DEFAULT PRESETS')} ──
+                  </div>
+                  {DEFAULT_COLOR_PRESETS.map(preset => {
+                    const isSelected = activePresetId === preset.id && !isModifiedFromPreset;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => applyColorPreset(preset)}
+                        className={`w-full px-2.5 py-1.5 flex items-center justify-between transition-colors text-left cursor-pointer ${
+                          isSelected 
+                            ? 'bg-[var(--accent)] text-white font-bold' 
+                            : (appTheme === 'light'
+                              ? 'text-gray-700 hover:text-black hover:bg-gray-100'
+                              : (appTheme === 'peper'
+                                ? 'text-[#5F5241] hover:text-[#2B221A] hover:bg-[#DDD4C4]'
+                                : 'text-gray-300 hover:text-white hover:bg-[#323238]'))
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <PresetColorBadge chrColor={preset.characterColor} bgColor={preset.bgColor} size="sm" />
+                          <span>{preset.name}</span>
+                        </div>
+                        {isSelected && <Check className="w-3 h-3" />}
+                      </button>
+                    );
+                  })}
+
+                  <div className={`px-2.5 py-1 mt-1 text-[8px] font-bold uppercase tracking-widest border-t border-b flex items-center justify-between ${
+                    appTheme === 'light'
+                      ? 'text-gray-600 bg-gray-100 border-gray-200'
+                      : (appTheme === 'peper'
+                        ? 'text-[#5F5241] bg-[#DDD4C4] border-[#C2B6A2]'
+                        : 'text-gray-400 bg-[#121214] border-[#323238]/60')
+                  }`}>
+                    <span>── {t('CUSTOM SETS')} ──</span>
+                    <span className="text-[7px] text-gray-500 font-normal">({customColorPresets.length})</span>
+                  </div>
+
+                  {customColorPresets.length === 0 ? (
+                    <div className="px-2.5 py-2 text-[9px] text-gray-500 text-center italic">
+                      {t('No custom sets registered')}
+                    </div>
+                  ) : (
+                    customColorPresets.map(preset => {
+                      const isSelected = activePresetId === preset.id && !isModifiedFromPreset;
+                      return (
+                        <div
+                          key={preset.id}
+                          className={`w-full px-2.5 py-1.5 flex items-center justify-between transition-colors text-left group ${
+                            isSelected 
+                              ? 'bg-[var(--accent)] text-white font-bold' 
+                              : (appTheme === 'light'
+                                ? 'text-gray-700 hover:text-black hover:bg-gray-100'
+                                : (appTheme === 'peper'
+                                  ? 'text-[#5F5241] hover:text-[#2B221A] hover:bg-[#DDD4C4]'
+                                  : 'text-gray-300 hover:text-white hover:bg-[#323238]'))
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => applyColorPreset(preset)}
+                            className="flex items-center gap-2 flex-1 min-w-0 text-left cursor-pointer"
+                          >
+                            <PresetColorBadge chrColor={preset.characterColor} bgColor={preset.bgColor} size="sm" />
+                            <span className="truncate">{preset.name}</span>
+                          </button>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteCustomPreset(preset.id, e)}
+                              title={t('Delete custom preset')}
+                              className="p-0.5 text-gray-400 hover:text-red-400 transition-colors"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Preview Details: Character color + Background color */}
+            <div className="grid grid-cols-2 gap-1.5 text-[9px] font-mono">
+              <div className={`p-1.5 border flex items-center gap-1.5 ${
+                appTheme === 'light'
+                  ? 'bg-white border-gray-300'
+                  : (appTheme === 'peper'
+                    ? 'bg-white border-[#C2B6A2]'
+                    : 'bg-[#121214] border-[#323238]')
+              }`}>
+                <span className="w-3 h-3 border border-[#444] inline-block flex-shrink-0" style={{ backgroundColor: characterColor }} />
+                <div className="flex flex-col min-w-0">
+                  <span className={`text-[7px] uppercase leading-none ${
+                    appTheme === 'light' ? 'text-gray-500' : (appTheme === 'peper' ? 'text-[#8F7F6C]' : 'text-gray-500')
+                  }`}>CHR</span>
+                  <span className={`uppercase truncate leading-none mt-0.5 font-bold ${
+                    appTheme === 'light' ? 'text-gray-800' : (appTheme === 'peper' ? 'text-[#3A2F24]' : 'text-gray-200')
+                  }`}>{characterColor}</span>
+                </div>
+              </div>
+              <div className={`p-1.5 border flex items-center gap-1.5 ${
+                appTheme === 'light'
+                  ? 'bg-white border-gray-300'
+                  : (appTheme === 'peper'
+                    ? 'bg-white border-[#C2B6A2]'
+                    : 'bg-[#121214] border-[#323238]')
+              }`}>
+                <span className="w-3 h-3 border border-[#444] inline-block flex-shrink-0" style={{ backgroundColor: customBgColor || '#E5E7EB' }} />
+                <div className="flex flex-col min-w-0">
+                  <span className={`text-[7px] uppercase leading-none ${
+                    appTheme === 'light' ? 'text-gray-500' : (appTheme === 'peper' ? 'text-[#8F7F6C]' : 'text-gray-500')
+                  }`}>BG</span>
+                  <span className={`uppercase truncate leading-none mt-0.5 font-bold ${
+                    appTheme === 'light' ? 'text-gray-800' : (appTheme === 'peper' ? 'text-[#3A2F24]' : 'text-gray-200')
+                  }`}>{customBgColor || '#E5E7EB'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Custom Registration & Overwrite Actions */}
+            <div className={`flex flex-col gap-1.5 pt-1 border-t ${
+              appTheme === 'light'
+                ? 'border-gray-200'
+                : (appTheme === 'peper'
+                  ? 'border-[#C2B6A2]'
+                  : 'border-[#323238]/60')
+            }`}>
+              {isRegisteringPreset ? (
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={newPresetNameInput}
+                    onChange={(e) => setNewPresetNameInput(e.target.value)}
+                    placeholder={`CUSTOM ${String(customColorPresets.length + 1).padStart(2, '0')}`}
+                    className={`flex-1 border px-2 py-1 text-[9px] font-mono uppercase outline-none focus:border-[var(--accent)] ${
+                      appTheme === 'light'
+                        ? 'bg-white border-gray-300 text-gray-800'
+                        : (appTheme === 'peper'
+                          ? 'bg-white border-[#C2B6A2] text-[#3A2F24]'
+                          : 'bg-[#121214] border-[#323238] text-white')
+                    }`}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRegisterCustomPreset(newPresetNameInput);
+                      if (e.key === 'Escape') setIsRegisteringPreset(false);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRegisterCustomPreset(newPresetNameInput)}
+                    className="px-2 py-1 bg-[var(--accent)] text-white text-[9px] font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    {t('Save')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsRegisteringPreset(false)}
+                    className={`px-2 py-1 text-[9px] uppercase transition-colors cursor-pointer ${
+                      appTheme === 'light'
+                        ? 'bg-gray-200 text-gray-700 hover:text-black'
+                        : (appTheme === 'peper'
+                          ? 'bg-[#EBE4D5] text-[#5F5241] hover:text-[#2B221A]'
+                          : 'bg-[#25252B] text-gray-400 hover:text-white')
+                    }`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsRegisteringPreset(true)}
+                    className={`flex-1 py-1.5 px-2 border flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                      appTheme === 'light'
+                        ? 'bg-white hover:bg-gray-50 hover:text-[var(--accent)] text-gray-800 border-gray-300'
+                        : (appTheme === 'peper'
+                          ? 'bg-white hover:bg-[#FAF8F5] hover:text-[var(--accent)] text-[#3A2F24] border-[#C2B6A2]'
+                          : 'bg-[#25252B] hover:bg-[#323238] hover:text-[var(--accent)] text-gray-200 border-[#3A3A42]')
+                    }`}
+                    title={t('Register New Custom Set')}
+                  >
+                    <Plus className="w-3 h-3 text-[var(--accent)]" />
+                    {t('REGISTER NEW CUSTOM')}
+                  </button>
+                  {!activePresetId.startsWith('default-') && (
+                    <button
+                      type="button"
+                      onClick={handleUpdateCustomPreset}
+                      className={`px-2.5 py-1.5 border text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                        appTheme === 'light'
+                          ? 'bg-white hover:bg-gray-50 text-gray-800 border-gray-300'
+                          : (appTheme === 'peper'
+                            ? 'bg-white hover:bg-[#FAF8F5] text-[#3A2F24] border-[#C2B6A2]'
+                            : 'bg-[#25252B] hover:bg-[#323238] text-gray-200 border-[#3A3A42]')
+                      }`}
+                      title={t('Overwrite Custom Set')}
+                    >
+                      {t('OVERWRITE')}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Scope Selector: PER THEME vs COMMON */}
+          <div className={`p-2.5 border flex flex-col gap-2 ${
+            appTheme === 'light'
+              ? 'bg-gray-100 border-gray-200'
+              : (appTheme === 'peper'
+                ? 'bg-[#DDD4C4] border-[#C2B6A2]'
+                : 'bg-[#1E1E22]/60 border-[#323238]')
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-[9px] font-bold uppercase tracking-widest ${
+                appTheme === 'light'
+                  ? 'text-gray-800'
+                  : (appTheme === 'peper'
+                    ? 'text-[#5F5241]'
+                    : 'text-gray-400')
+              }`}>
+                {t('Color Scope')}
+              </span>
+              <span className={`text-[9px] font-mono font-bold flex items-center gap-1.5 ${
+                appTheme === 'light'
+                  ? 'text-gray-900'
+                  : (appTheme === 'peper'
+                    ? 'text-[#D95430]'
+                    : 'text-[var(--accent)]')
+              }`}>
+                {colorScope === 'theme' ? (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: currentThemeObj.dotColor }} />
+                    {currentThemeObj.label}
+                  </>
+                ) : (
+                  t('ALL THEMES')
+                )}
+              </span>
+            </div>
+            
+            <div className={`flex border overflow-hidden text-[9px] font-bold tracking-wider ${
+              appTheme === 'light'
+                ? 'border-gray-300'
+                : (appTheme === 'peper'
+                  ? 'border-[#C2B6A2]'
+                  : 'border-[#323238]')
+            }`}>
+              <button
+                type="button"
+                onClick={() => handleToggleColorScope('theme')}
+                className={`flex-1 py-1.5 px-2 transition-colors uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                  colorScope === 'theme'
+                    ? 'bg-[var(--accent)] text-white'
+                    : (appTheme === 'light'
+                      ? 'bg-white text-gray-700 hover:text-black hover:bg-gray-50'
+                      : (appTheme === 'peper'
+                        ? 'bg-white text-[#73634F] hover:text-[#3A2F24] hover:bg-[#FAF8F5]'
+                        : 'bg-[#121214] text-gray-500 hover:text-gray-300'))
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeObj.dotColor }} />
+                {t('Per Theme')}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleColorScope('common')}
+                className={`flex-1 py-1.5 px-2 transition-colors uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
+                  colorScope === 'common'
+                    ? 'bg-[var(--accent)] text-white'
+                    : (appTheme === 'light'
+                      ? 'bg-white text-gray-700 hover:text-black hover:bg-gray-50'
+                      : (appTheme === 'peper'
+                        ? 'bg-white text-[#73634F] hover:text-[#3A2F24] hover:bg-[#FAF8F5]'
+                        : 'bg-[#121214] text-gray-500 hover:text-gray-300'))
+                }`}
+              >
+                {t('Common')}
+              </button>
+            </div>
+
+            {colorScope === 'theme' && (
+              <div className={`flex justify-between items-center pt-1 border-t ${
+                appTheme === 'light'
+                  ? 'border-gray-300'
+                  : (appTheme === 'peper'
+                    ? 'border-[#C2B6A2]'
+                    : 'border-[#323238]/40')
+              }`}>
+                <span className={`text-[8px] ${
+                  appTheme === 'light'
+                    ? 'text-gray-700'
+                    : (appTheme === 'peper'
+                      ? 'text-[#5F5241]'
+                      : 'text-gray-500')
+                }`}>
+                  {t('Saved for')} <strong className={appTheme === 'light' ? 'text-gray-900 font-bold' : (appTheme === 'peper' ? 'text-[#D95430] font-bold' : 'text-[var(--accent)]')}>{currentThemeObj.label}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={copyCurrentColorsToAllThemes}
+                  className={`text-[8px] uppercase font-bold underline transition-colors cursor-pointer ${
+                    appTheme === 'light'
+                      ? 'text-gray-800 hover:text-black'
+                      : (appTheme === 'peper'
+                        ? 'text-[#73634F] hover:text-[#D95430]'
+                        : 'text-gray-400 hover:text-[var(--accent)]')
+                  }`}
+                  title={t('Apply to all themes')}
+                >
+                  {isCopiedToAll ? t('Copied!') : t('Copy to All Themes')}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Character Color */}
+          <div className="pt-1">
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{t('Character Color')}</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const accentHex = currentThemeObj.dotColor;
+                    updateColorSetting({
+                      characterColor: accentHex,
+                      savedCustomCharacterColor: accentHex
+                    });
+                  }}
+                  className="px-1.5 py-0.5 border border-[#323238] bg-[#1E1E22] hover:border-[var(--accent)] text-[8px] font-mono font-bold flex items-center gap-1 text-[var(--accent)] transition-colors shadow-sm cursor-pointer"
+                  title={t('Apply Theme Accent')}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeObj.dotColor }} />
+                  {t('THEME ACCENT')}
+                </button>
+              </div>
+              <button 
+                onClick={() => updateColorSetting({ characterColor: DEFAULT_THEME_COLORS[appTheme].characterColor })}
+                className="text-[8px] text-gray-500 hover:text-white underline uppercase font-bold transition-colors cursor-pointer"
+              >
+                RESET
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-1.5">
+                {['#D95430', '#26262B', '#050505', '#7A2020', '#52525B', '#475569', '#355E42', '#7A5026'].map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => updateColorSetting({ characterColor: color })}
+                    className={`w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
+                      characterColor === color ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
+                    }`}
+                    style={{ backgroundColor: color }}
+                  >
+                    {characterColor === color && <div className="w-1 h-1 bg-white shadow-sm" />}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-3 pt-2 border-t border-[#323238]/50 mt-1">
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{t('Custom')}</span>
+                <div className={`relative w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
+                  savedCustomCharacterColor && characterColor === savedCustomCharacterColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
+                }`}>
+                  <input 
+                    type="color" 
+                    value={savedCustomCharacterColor}
+                    onChange={(e) => {
+                      updateColorSetting({
+                        savedCustomCharacterColor: e.target.value,
+                        characterColor: e.target.value
+                      });
+                    }}
+                    className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
+                    title={t('Custom Character Color')}
+                  />
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
+                    <Plus className="w-3 h-3 text-white opacity-75" />
+                  </div>
+                  {savedCustomCharacterColor && characterColor === savedCustomCharacterColor && <div className="w-1.5 h-1.5 bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Visual Themes */}
+          <div className="pt-2 border-t border-[#323238]">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{t('Visual Themes')}</label>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap gap-1.5">
+                {THEMES.map((theme) => (
+                  <button
+                    key={theme.id}
+                    onClick={() => {
+                      updateColorSetting({
+                        themeId: theme.id,
+                        customBgColor: null
+                      });
+                    }}
+                    className={`w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
+                      themeId === theme.id && !customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
+                    }`}
+                    style={{ backgroundColor: theme.bodyColor }}
+                    title={theme.name}
+                  >
+                    {themeId === theme.id && !customBgColor && <div className="w-1 h-1 bg-white shadow-sm" />}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-3 pt-2 border-t border-[#323238]/50 mt-1">
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{t('Custom')}</span>
+                <div className={`relative w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
+                  customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
+                }`}>
+                  <input 
+                    type="color" 
+                    value={savedCustomBgColor}
+                    onChange={(e) => {
+                      updateColorSetting({
+                        savedCustomBgColor: e.target.value,
+                        customBgColor: e.target.value
+                      });
+                    }}
+                    onClick={() => updateColorSetting({ customBgColor: savedCustomBgColor })}
+                    className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
+                    title={t('Custom Background Color')}
+                  />
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
+                    <Plus className="w-3 h-3 text-white opacity-75" />
+                  </div>
+                  {customBgColor && <div className="w-1.5 h-1.5 bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    );
+  };
+
+  const renderEffectSettingCard = () => {
+    return renderSectionCard(
+      'sound',
+      'effect-setting',
+      t('EFFECT SETTING'),
+      isEffectSettingOpen,
+      setIsEffectSettingOpen,
+      !isEffectSettingOpen ? (
+        <span className="text-[8px] font-mono font-bold text-[var(--accent)] bg-[var(--accent)]/10 px-1.5 py-0.5 border border-[var(--accent)]/30 leading-none">
+          {soundType.slice(0, 3).toUpperCase()}
+        </span>
+      ) : null,
+      (
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-center mb-1">
+            <label className="text-[9px] text-gray-500 uppercase font-bold">{t('Effect Style')}</label>
+            <span className={`text-[9px] ${highlightClasses.text} font-mono`}>{soundType}</span>
+          </div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {(['mechanical', 'retro', 'ping', 'wood', 'pop'] as SoundEffectType[]).map((type) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setSoundType(type);
+                  SoundManager.playPoseChange(type, sfxVolume);
+                }}
+                className={`h-6 border transition-all text-[8px] font-bold uppercase ${
+                  soundType === type 
+                  ? `${highlightClasses.bg} ${highlightClasses.border} ${appTheme === 'light' ? 'text-white' : 'text-[#121214]'}` 
+                  : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 text-gray-600 hover:bg-gray-300 hover:border-gray-300' : 'bg-[#2A2A30] border-[#323238] text-gray-500 hover:border-[#424248] hover:text-gray-300')
+                }`}
+              >
+                {type.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+
+          <div className="pt-1">
+            <div className="flex justify-between items-center mb-1">
+              <div className="flex items-center gap-2">
+                <label className="text-[9px] text-gray-500 uppercase font-bold">{t('SFX Volume')}</label>
+              </div>
+              <span className="text-[9px] text-gray-400 font-mono">{Math.round(sfxVolume * 100)}%</span>
+            </div>
+            <input 
+              type="range" min="0" max="1" step="0.01" value={sfxVolume} 
+              onChange={(e) => setSfxVolume(parseFloat(e.target.value))}
+              className={`w-full h-1 appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`}`}
+            />
+          </div>
+        </div>
+      )
+    );
+  };
+
+  const renderBgmSettingCard = () => {
+    return renderSectionCard(
+      'sound',
+      'bgm-setting',
+      t('BGM SETTING'),
+      isBgmSettingOpen,
+      setIsBgmSettingOpen,
+      !isBgmSettingOpen && isBgmPlaying ? (
+        <span className="text-[8px] font-mono font-bold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 border border-emerald-400/30 leading-none">
+          PLAYING
+        </span>
+      ) : null,
+      (
+        <div className="flex flex-col gap-3">
+          {/* Active Track Title */}
+          <div className="flex items-center justify-between min-h-[16px] px-0.5">
+            <span className={`text-[10px] font-mono uppercase tracking-wider font-bold truncate max-w-[200px] ${currentBgmId ? (appTheme === 'light' ? 'text-gray-800' : 'text-white') : 'text-gray-500 italic'}`}>
+              {currentBgmId ? allTracks.find(t => t.id === currentBgmId)?.name || 'Unknown Track' : 'NO TRACK READY'}
+            </span>
+            {isBgmLoading && (
+              <span className="text-[8px] font-mono text-[var(--accent)] animate-pulse uppercase tracking-widest">{t('Loading...')}</span>
+            )}
+          </div>
+
+          {/* Transport Controls */}
+          <div className="flex items-center justify-center gap-1.5 py-1">
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={playPreviousTrack}
+                disabled={!currentBgmId || bgmPlaylist.length === 0}
+                className={`w-8 h-8 border transition-all flex items-center justify-center cursor-pointer ${
+                  appTheme === 'peper' 
+                    ? 'bg-white border-[#8C7B68] hover:border-[#5F5241] text-[#44372B] hover:bg-[#FAF8F5]' 
+                    : (appTheme === 'light' 
+                      ? 'bg-white border-gray-400 hover:border-gray-600 text-gray-800 hover:bg-gray-50' 
+                      : 'bg-[#1a1a1e] border-[#4A4A52] hover:border-gray-300 hover:bg-[#323238] text-white')
+                }`}
+                title={t('Previous Track')}
+              >
+                <SkipBack className="w-3.5 h-3.5" />
+              </button>
+
+              <button 
+                onClick={toggleBgmFromPlayer}
+                disabled={!currentBgmId && bgmPlaylist.length === 0}
+                className={`w-10 h-8 border transition-all flex items-center justify-center cursor-pointer ${
+                  appTheme === 'peper' 
+                    ? (isBgmPlaying 
+                        ? 'bg-[#D95430] border-[#D95430] text-white force-white-text shadow-sm' 
+                        : 'bg-white border-[#8C7B68] hover:border-[#5F5241] text-[#44372B] hover:bg-[#FAF8F5]')
+                    : (appTheme === 'light' 
+                      ? (isBgmPlaying 
+                          ? 'bg-gray-800 border-gray-800 text-white force-white-text' 
+                          : 'bg-white border-gray-400 hover:border-gray-600 text-gray-800 hover:bg-gray-50')
+                      : (isBgmPlaying 
+                          ? `${highlightClasses.bg} ${highlightClasses.border} text-[#121214]` 
+                          : 'bg-[#1a1a1e] border-[#4A4A52] hover:border-gray-300 hover:bg-[#323238] text-white'))
+                }`}
+                title={isBgmPlaying ? t('Pause') : t('Play')}
+              >
+                {isBgmPlaying ? <Pause className="w-4 h-4 text-white force-white-text" /> : <Play className="w-4 h-4 ml-0.5" />}
+              </button>
+
+              <button 
+                onClick={stopBgm}
+                disabled={!currentBgmId && !isBgmPlaying}
+                className={`w-8 h-8 border transition-all flex items-center justify-center cursor-pointer ${
+                  appTheme === 'peper' 
+                    ? 'bg-white border-[#8C7B68] hover:border-[#5F5241] text-[#44372B] hover:bg-[#FAF8F5]' 
+                    : (appTheme === 'light' 
+                      ? 'bg-white border-gray-400 hover:border-gray-600 text-gray-800 hover:bg-gray-50' 
+                      : 'bg-[#1a1a1e] border-[#4A4A52] hover:border-gray-300 hover:bg-[#323238] text-white')
+                }`}
+                title={t('Stop')}
+              >
+                <Square className={`w-3.5 h-3.5 fill-current ${appTheme === 'peper' ? 'text-[#44372B]' : (appTheme === 'light' ? 'text-gray-800' : 'text-white')}`} />
+              </button>
+
+              <button 
+                onClick={playNextTrack}
+                disabled={!currentBgmId || bgmPlaylist.length === 0}
+                className={`w-8 h-8 border transition-all flex items-center justify-center cursor-pointer ${
+                  appTheme === 'peper' 
+                    ? 'bg-white border-[#8C7B68] hover:border-[#5F5241] text-[#44372B] hover:bg-[#FAF8F5]' 
+                    : (appTheme === 'light' 
+                      ? 'bg-white border-gray-400 hover:border-gray-600 text-gray-800 hover:bg-gray-50' 
+                      : 'bg-[#1a1a1e] border-[#4A4A52] hover:border-gray-300 hover:bg-[#323238] text-white')
+                }`}
+                title={t('Next Track')}
+              >
+                <SkipForward className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={() => setBgmRepeatMode(prev => prev === 0 ? 1 : prev === 1 ? 2 : 0)}
+                className={`w-8 h-8 border transition-all flex items-center justify-center relative cursor-pointer ${
+                  bgmRepeatMode !== 0 
+                    ? (appTheme === 'peper' 
+                        ? 'bg-white border-2 border-[#D95430] text-[#D95430] shadow-sm' 
+                        : (appTheme === 'light' 
+                          ? 'bg-white border-2 border-gray-800 text-gray-900 shadow-sm' 
+                          : `bg-[#1a1a1e] ${highlightClasses.border} ${highlightClasses.text}`)) 
+                    : (appTheme === 'peper' 
+                        ? 'bg-white border-[#8C7B68] hover:border-[#5F5241] text-[#44372B] hover:bg-[#FAF8F5]' 
+                        : (appTheme === 'light' 
+                          ? 'bg-white border-gray-400 hover:border-gray-600 text-gray-800 hover:bg-gray-50' 
+                          : 'bg-[#1a1a1e] border-[#4A4A52] hover:border-gray-300 hover:bg-[#323238] text-white'))
+                }`}
+                title={bgmRepeatMode === 1 ? t('Playlist Repeat') : bgmRepeatMode === 2 ? t('Track Repeat') : t('Repeat Off')}
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                {bgmRepeatMode === 2 && (
+                  <span className={`absolute -top-1.5 -right-1.5 text-[8px] font-bold flex items-center justify-center w-3.5 h-3.5 pt-[0.5px] shadow-sm select-none ${
+                    appTheme === 'peper' 
+                      ? 'bg-[#D95430] text-white force-white-text border border-white/40' 
+                      : (appTheme === 'light' 
+                        ? 'bg-gray-800 text-white force-white-text border border-white/40' 
+                        : `${highlightClasses.bg} text-[#121214]`)
+                  }`}>1</span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="flex flex-col gap-1 relative group cursor-pointer mb-1" onClick={(e) => {
+            if (!currentBgmId) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            SoundManager.seekBgm(pos * SoundManager.getBgmDuration());
+          }}>
+            <div className="flex justify-between items-center px-0.5 pointer-events-none mb-1">
+              <span className="text-[10px] text-gray-400 font-mono tracking-wider">{bgmTimeStr.split(' / ')[0]}</span>
+              <span className="text-[10px] text-gray-500 font-mono tracking-wider">{bgmTimeStr.split(' / ')[1]}</span>
+            </div>
+            <div className={`w-full h-1 overflow-hidden relative pointer-events-none transition-all ${appTheme === 'light' ? 'bg-gray-300' : 'bg-[#2A2A30]'}`}>
+              <div 
+                className={`h-full ${appTheme === 'light' ? 'bg-gray-500' : highlightClasses.bg} transition-all ease-linear`}
+                style={{ width: `${Math.max(0, Math.min(100, bgmProgress * 100))}%`, transitionDuration: isBgmPlaying ? '500ms' : '0ms' }}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between items-center">
+              <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-700' : 'text-gray-300'}`}>{t('BGM Volume')}</span>
+              <span className="text-[8px] text-gray-400 font-mono">{Math.round(bgmVolume * 100)}%</span>
+            </div>
+            <input 
+              type="range" min="0" max="1" step="0.01" value={bgmVolume} 
+              onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
+              className={`w-full h-1 appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`}`}
+            />
+          </div>
+        </div>
+      )
+    );
+  };
+
+  const renderPlaylistsCard = () => {
+    return renderSectionCard(
+      'sound',
+      'playlists',
+      t('PLAYLISTS'),
+      isPlaylistSectionOpen,
+      setIsPlaylistSectionOpen,
+      !isPlaylistSectionOpen ? (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[8px] font-mono font-bold text-gray-400 bg-white/5 px-1.5 py-0.5 border border-white/10 leading-none truncate max-w-[100px]">
+            {activePlaylist.name}
+          </span>
+          <span className="text-[8px] font-mono text-gray-500">
+            ({activePlaylist.trackIds.length})
+          </span>
+        </div>
+      ) : null,
+      (
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-2">
+            <button 
+              onClick={createPlaylist}
+              className={`flex-1 py-1.5 px-3 border transition-colors flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase cursor-pointer ${
+                appTheme === 'peper'
+                  ? 'bg-[#D95430] hover:bg-[#C24422] text-white force-white-text border-[#D95430] shadow-sm'
+                  : (appTheme === 'light'
+                    ? 'bg-white hover:bg-gray-50 text-gray-800 border-gray-300'
+                    : `bg-[#1a1a1e] hover:bg-[#323238] text-[var(--accent)] ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'}`)
+              }`}
+            >
+              <Plus className={`w-3 h-3 ${appTheme === 'peper' ? 'text-white force-white-text' : ''}`} /> {t('New Set')}
+            </button>
+            <button 
+              onClick={() => setIsPlaylistExpanded(!isPlaylistExpanded)}
+              className={`w-8 flex items-center justify-center border transition-colors cursor-pointer ${
+                appTheme === 'peper'
+                  ? 'bg-white hover:bg-[#FAF8F5] border-[#8C7B68] text-[#44372B]'
+                  : (appTheme === 'light'
+                    ? 'bg-white hover:bg-gray-50 border-gray-400 text-gray-700'
+                    : `bg-[#1a1a1e] hover:bg-[#323238] ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'} text-gray-400 hover:text-white`)
+              }`}
+              title={t('Toggle Playlist View')}
+            >
+              {isPlaylistExpanded ? <ChevronDown className="w-4 h-4" /> : <List className="w-4 h-4" />}
+            </button>
+            <button 
+              onClick={() => setShowClearConfirm(true)}
+              className={`w-8 flex items-center justify-center border transition-colors cursor-pointer ${
+                appTheme === 'peper'
+                  ? 'bg-white hover:bg-red-50 border-[#8C7B68] text-red-500 hover:border-red-400'
+                  : (appTheme === 'light'
+                    ? 'bg-white hover:bg-red-50 border-gray-400 text-gray-600 hover:text-red-500'
+                    : `bg-[#1a1a1e] hover:bg-red-500/10 text-gray-400 hover:text-red-400 ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'}`)
+              }`}
+              title={t('Delete all tracks')}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex justify-between items-center px-1">
+            <label className="text-[9px] text-gray-500 uppercase font-bold tracking-widest">
+              Total DB Tracks:
+            </label>
+            <span className="text-[10px] text-gray-400 font-bold">{allTracks.length}</span>
+          </div>
+
+          <div className="border-t border-[#323238] pt-2">
+            {isPlaylistExpanded ? (
+              <div className="space-y-1 mb-2">
+                {playlists.map(p => (
+                  <div 
+                    key={p.id} 
+                    className={`flex items-center justify-between p-2 border transition-colors cursor-pointer group ${
+                      activePlaylistId === p.id 
+                      ? `${highlightClasses.bgMuted} ${highlightClasses.border} ${highlightClasses.text}` 
+                      : 'bg-[#121214] border-[#323238] hover:border-gray-500 text-white'
+                    }`}
+                    onClick={() => {
+                      if (editingPlaylistId !== p.id) {
+                        setActivePlaylistId(p.id);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {editingPlaylistId === p.id ? (
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editingPlaylistName}
+                          onChange={(e) => setEditingPlaylistName(e.target.value)}
+                          onBlur={() => {
+                            if (editingPlaylistName.trim()) renamePlaylist(p.id, editingPlaylistName.trim());
+                            setEditingPlaylistId(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              if (editingPlaylistName.trim()) renamePlaylist(p.id, editingPlaylistName.trim());
+                              setEditingPlaylistId(null);
+                            } else if (e.key === 'Escape') {
+                              setEditingPlaylistId(null);
+                            }
+                          }}
+                          className="bg-black/50 text-white text-[10px] uppercase font-bold w-full px-1 py-0.5 outline-none border border-[var(--accent)]"
+                        />
+                      ) : (
+                        <>
+                          <span className={`text-[10px] uppercase font-bold truncate ${activePlaylistId === p.id ? highlightClasses.text : 'text-gray-400'}`}>
+                            {p.name}
+                          </span>
+                          <span className={`text-[9px] ${activePlaylistId === p.id ? highlightClasses.text : 'text-gray-600'}`}>({p.trackIds.length})</span>
+                        </>
+                      )}
+                    </div>
+                    <div className={`flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity ${activePlaylistId === p.id ? 'opacity-100' : ''}`}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); movePlaylist(p.id, -1); }} 
+                        className="text-gray-500 hover:text-white p-0.5"
+                        title={t('Move Up')}
+                      >
+                        <ChevronUp className="w-2.5 h-2.5" />
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); movePlaylist(p.id, 1); }} 
+                        className="text-gray-500 hover:text-white p-0.5"
+                        title={t('Move Down')}
+                      >
+                        <ChevronDown className="w-2.5 h-2.5" />
+                      </button>
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          setEditingPlaylistId(p.id);
+                          setEditingPlaylistName(p.name);
+                        }} 
+                        className="text-gray-500 hover:text-white p-0.5"
+                        title={t('Rename')}
+                      >
+                        <Edit3 className="w-2.5 h-2.5" />
+                      </button>
+                      <button 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (confirmDeleteId === p.id) {
+                            deletePlaylist(p.id);
+                            setConfirmDeleteId(null);
+                          } else {
+                            setConfirmDeleteId(p.id);
+                            setTimeout(() => setConfirmDeleteId(null), 3000);
+                          }
+                        }} 
+                        className={`p-0.5 transition-all ${confirmDeleteId === p.id ? 'text-red-500 bg-red-500/20' : 'text-gray-500 hover:text-red-400'}`}
+                        title={confirmDeleteId === p.id ? t('Click to confirm') : t('Delete')}
+                      >
+                        <Trash2 className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mb-2 relative">
+                <select 
+                  value={activePlaylistId} 
+                  onChange={e => setActivePlaylistId(e.target.value)}
+                  className="w-full bg-[#121214] hover:border-gray-500 transition-colors text-[var(--accent)] text-[10px] font-bold uppercase p-2 border border-[#323238] outline-none cursor-pointer appearance-none"
+                >
+                  {playlists.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.trackIds.length})</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--accent)] pointer-events-none" />
+              </div>
+            )}
+
+            <div className="flex justify-between items-center mb-1 mt-3 px-1">
+              <label className="text-[9px] text-[#777] uppercase font-bold tracking-widest">
+                TRACKS
+              </label>
+              <div className="flex gap-2">
+                <button 
+                  onClick={loadSamples}
+                  disabled={isSamplesLoading}
+                  className={`track-action-link text-[8px] font-bold uppercase underline cursor-pointer flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed bg-transparent border-none p-0 ${
+                    appTheme === 'peper'
+                      ? 'text-[#73634F] hover:text-[#2B221A]'
+                      : (appTheme === 'light'
+                        ? 'text-gray-700 hover:text-black'
+                        : 'text-gray-300 hover:text-white')
+                  }`}
+                >
+                  <Music className="w-2.5 h-2.5" /> {isSamplesLoading ? 'Loading...' : 'Add Samples'}
+                </button>
+                <label className={`track-action-link text-[8px] font-bold uppercase underline cursor-pointer flex items-center gap-1 bg-transparent border-none p-0 ${
+                  appTheme === 'peper'
+                    ? 'text-[#73634F] hover:text-[#2B221A]'
+                    : (appTheme === 'light'
+                      ? 'text-gray-700 hover:text-black'
+                      : 'text-gray-300 hover:text-white')
+                }`}>
+                  <Plus className="w-2.5 h-2.5" /> Add Files
+                  <input 
+                    type="file" 
+                    ref={bgmInputRef}
+                    onChange={handleBgmUpload} 
+                    accept="audio/*" 
+                    className="hidden" 
+                    multiple
+                  />
+                </label>
+              </div>
+            </div>
+            
+            <div className={`mt-1 mb-2 px-1 flex items-center justify-between border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'} pb-2`}>
+              <div className="flex items-center gap-2 cursor-pointer group" onClick={() => {
+                const activePlaylist = playlists.find(p => p.id === activePlaylistId);
+                if (!activePlaylist) return;
+                const allActiveTrackIds = activePlaylist.trackIds;
+                if (allActiveTrackIds.length === 0) return;
+                
+                const isAllSelected = allActiveTrackIds.every(id => selectedTrackIds.has(id));
+                if (isAllSelected) {
+                  setSelectedTrackIds(new Set());
+                } else {
+                  setSelectedTrackIds(new Set(allActiveTrackIds));
+                }
+              }}>
+                <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
+                  playlists.find(p => p.id === activePlaylistId)?.trackIds.length && playlists.find(p => p.id === activePlaylistId)?.trackIds.every(id => selectedTrackIds.has(id))
+                    ? 'bg-[#323238] border-gray-500' 
+                    : 'bg-transparent border-gray-500 group-hover:border-gray-400'
+                }`}>
+                  {playlists.find(p => p.id === activePlaylistId)?.trackIds.length > 0 && playlists.find(p => p.id === activePlaylistId)?.trackIds.every(id => selectedTrackIds.has(id)) && <Check className="w-2.5 h-2.5 text-white" />}
+                </div>
+                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-gray-400 transition-colors select-none">
+                  {selectedTrackIds.size > 0 ? `${selectedTrackIds.size} Selected` : '0 Selected'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {playlists.length > 1 && (
+                  <select 
+                    onChange={(e) => moveSelectedTracksToPlaylist(e.target.value)}
+                    value=""
+                    className="bg-[#121214] w-28 text-[9px] font-bold uppercase text-[var(--accent)] border border-[#323238] px-1.5 py-0.5 outline-none cursor-pointer hover:border-gray-500 transition-colors appearance-none"
+                  >
+                    <option value="" disabled>Move to...</option>
+                    {playlists.filter(p => p.id !== activePlaylistId).map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  onClick={removeSelectedTracks}
+                  className="p-1 hover:text-red-400 text-gray-500 transition-colors border border-[#323238] bg-[#121214]"
+                  title={t('Delete Selected')}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="mt-2 max-h-56 overflow-y-auto dark-scrollbar pr-1">
+              <div className="space-y-1">
+                {bgmPlaylist.length > 0 ? bgmPlaylist.map((track, idx) => (
+                  <div 
+                    key={`${track.id}-${idx}`} 
+                    onClick={() => playTrackById(track.id)}
+                    className="group flex items-center justify-between p-2 border bg-[#121214] border-[#323238] hover:border-gray-500 transition-all cursor-pointer select-none"
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+                      <div 
+                        className="flex items-center justify-center p-1 -ml-1 cursor-pointer flex-shrink-0"
+                        onClick={(e) => toggleTrackSelection(track.id, e)}
+                      >
+                        <div className={`w-3 h-3 border flex items-center justify-center transition-colors ${
+                          selectedTrackIds.has(track.id) 
+                          ? 'bg-[#323238] border-gray-500' 
+                          : 'border-gray-500'
+                        }`}>
+                          {selectedTrackIds.has(track.id) && <Check className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] truncate ${
+                        currentBgmId === track.id ? `${highlightClasses.text} font-bold` : (selectedTrackIds.has(track.id) ? highlightClasses.text : 'text-white')
+                      }`}>
+                        {track.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 ml-2">
+                      <button 
+                        onClick={(e) => moveToTop(idx, e)}
+                        className="p-0.5 hover:text-[var(--accent)] transition-colors"
+                        title={t('Move to Top')}
+                      >
+                        <ChevronsUp className="w-3 h-3" />
+                      </button>
+                      <button 
+                        onClick={(e) => moveTrackUp(idx, e)}
+                        className="p-0.5 hover:text-[var(--accent)] transition-colors"
+                        title={t('Move Up')}
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </button>
+                      <button 
+                        onClick={(e) => moveTrackDown(idx, e)}
+                        className="p-0.5 hover:text-[var(--accent)] transition-colors"
+                        title={t('Move Down')}
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                      <button 
+                        onClick={(e) => moveToBottom(idx, e)}
+                        className="p-0.5 hover:text-[var(--accent)] transition-colors"
+                        title={t('Move to Bottom')}
+                      >
+                        <ChevronsDown className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="flex flex-col items-center justify-center p-4 text-center opacity-50 border border-transparent border-dashed h-12">
+                    <p className="text-[9px] uppercase tracking-widest font-bold">No tracks in this playlist</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div 
+              className="mt-3 border-2 border-dashed border-[#323238] transition-colors relative flex flex-col items-center justify-center p-4 text-center group hover:border-[var(--accent)] cursor-pointer"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/5');
+                e.currentTarget.classList.remove('border-[#323238]');
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/5');
+                e.currentTarget.classList.add('border-[#323238]');
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/5');
+                e.currentTarget.classList.add('border-[#323238]');
+                
+                const files = Array.from(e.dataTransfer.files).filter((f: any) => f.type.startsWith('audio/'));
+                if (files.length > 0) {
+                  handleBgmUpload({ target: { files } } as any);
+                }
+              }}
+              onClick={() => {
+                bgmInputRef.current?.click();
+              }}
+            >
+              <Upload className="w-4 h-4 mb-2 text-gray-500 group-hover:text-[var(--accent)] transition-colors" />
+              <p className="text-[9px] uppercase tracking-widest font-bold text-gray-500 group-hover:text-gray-300 transition-colors">{t('Drop Audio Files Here')}</p>
+            </div>
+          </div>
+        </div>
+      )
+    );
+  };
+
+  const renderVisualTab = () => (
+    <div className="flex-1 flex flex-col animate-in fade-in duration-300 min-h-0">
+      <div className="flex-1 overflow-x-hidden overflow-y-scroll dark-scrollbar p-4 space-y-4">
+        {visualSectionOrder.map((sectionId) => {
+          if (sectionId === 'pose-setting') return renderPoseSettingCard();
+          if (sectionId === 'pose-library') return renderPoseLibraryCard();
+          if (sectionId === 'colors') return renderColorsCard();
+          return null;
+        })}
+
+        {/* Export/Import & Persistence Footer */}
+        <div className="pt-2 space-y-3">
+          <div className="grid grid-cols-2 gap-2">
+            <button 
+              onClick={exportSettings}
+              className={`flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] text-[10px] font-bold transition-colors border border-[#323238] ${appTheme === 'red' ? 'text-white' : 'text-gray-300'}`}
+            >
+              <Download className="w-3 h-3" /> {t('EXPORT')}
+            </button>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className={`flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] text-[10px] font-bold transition-colors border border-[#323238] ${appTheme === 'red' ? 'text-white' : 'text-gray-300'}`}
+            >
+              <Upload className="w-3 h-3" /> {t('IMPORT')}
+            </button>
+          </div>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={importSettings} 
+            accept=".json" 
+            className="hidden" 
+          />
+          <div className="bg-[var(--accent)]/10 p-4 border border-[var(--accent)]/20">
+            <p className="text-xs text-[var(--accent)] font-medium">{t('Auto-save Ready')}</p>
+            <p className="text-[10px] text-[var(--accent)]/60 uppercase tracking-tighter">{t('Workspace persistence active')}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSoundTab = () => (
+    <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-left-2 duration-300 min-h-0">
+      <div className="flex-1 overflow-x-hidden overflow-y-scroll dark-scrollbar p-4 space-y-4">
+        {soundSectionOrder.map((sectionId) => {
+          if (sectionId === 'effect-setting') return renderEffectSettingCard();
+          if (sectionId === 'bgm-setting') return renderBgmSettingCard();
+          if (sectionId === 'playlists') return renderPlaylistsCard();
+          return null;
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <div 
       className={`flex h-screen w-full overflow-hidden bg-[#121214] text-[#E1E1E6] font-sans ${sidebarPosition === 'right' ? 'flex-row-reverse' : 'flex-row'}`}
@@ -1885,1411 +3730,7 @@ export default function App() {
             </button>
           </div>
 
-          {activeTab === 'visual' ? (
-            <div className="flex-1 flex flex-col animate-in fade-in duration-300 min-h-0">
-              {/* Pose Setting Section (Collapsible like Sound tab) */}
-              <div className="flex-shrink-0 p-4 border-b border-[#323238] bg-[var(--accent)]/5">
-                <div className={`p-3 flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border border-[#4A4A52]' : 'bg-[#1a1a1e]/40 border border-[#323238]')}`}>
-                  <button 
-                    onClick={() => setIsPoseSettingOpen(!isPoseSettingOpen)}
-                    className={`flex items-center justify-between w-full ${isPoseSettingOpen ? 'border-b pb-2 mb-1' : ''} ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} group cursor-pointer`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-1 h-3 transition-colors ${isPoseSettingOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                      <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isPoseSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>
-                        {t('POSE SETTING')}
-                      </span>
-                      {!isPoseSettingOpen && isAutoCycle && (
-                        <span className="text-[8px] font-mono font-bold text-[var(--accent)] bg-[var(--accent)]/10 px-1.5 py-0.5 border border-[var(--accent)]/30 leading-none">
-                          AUTO
-                        </span>
-                      )}
-                    </div>
-                    <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-[#323238]'} ${isPoseSettingOpen ? highlightClasses.border : 'group-hover:border-gray-400'}`}>
-                      {isPoseSettingOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
-                    </div>
-                  </button>
-
-                  {isPoseSettingOpen && (
-                    <div className="flex flex-col gap-3">
-                      {/* Auto Cycle Row */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {isAutoCycle ? <Play className={`w-4 h-4 ${highlightClasses.text} opacity-80`} /> : <Pause className="w-4 h-4 text-gray-500" />}
-                          <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Cycle')}</span>
-                        </div>
-                        
-                        <button 
-                          onClick={() => {
-                            const nextState = !isAutoCycle;
-                            setIsAutoCycle(nextState);
-                            
-                            if (nextState) {
-                              if (isSoundOn) {
-                                if (soundMode === 'bgm') {
-                                  setIsBgmPlaying(true);
-                                  setSfxMutedWithSpeed(true);
-                                  if (currentBgmId !== null) {
-                                    SoundManager.playBGM();
-                                  } else if (bgmPlaylist.length > 0) {
-                                    playTrackById(bgmPlaylist[0].id, true);
-                                  }
-                                } else {
-                                  setIsBgmPlaying(false);
-                                  SoundManager.pauseBGM();
-                                  setSfxMutedWithSpeed(false);
-                                }
-                              }
-                            } else {
-                              if (isSoundOn && soundMode === 'bgm') {
-                                setIsBgmPlaying(false);
-                                SoundManager.pauseBGM();
-                              }
-                              setSfxMutedWithSpeed(true);
-                              setIsAutoCamera(false);
-                              setIsAutoFormation(false);
-                              setIsSlowRotate(false);
-                              if (orbitRef.current) {
-                                orbitRef.current.autoRotate = false;
-                              }
-                            }
-                          }}
-                          className={`w-10 h-5 transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
-                        >
-                          <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
-                        </button>
-                      </div>
-                      
-                      <div className="pt-1">
-                        <div className={`flex items-center justify-between mb-3 pb-3 border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
-                          <div className="flex gap-4">
-                            <div className="flex flex-col gap-1.5">
-                              <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('SOUND')}</span>
-                              <button 
-                                onClick={toggleSound}
-                                className={`flex items-center justify-center gap-1.5 w-[84px] py-1 border transition-colors ${
-                                  isSoundOn 
-                                    ? (isAutoCycle ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : (appTheme === 'light' ? 'bg-transparent border-gray-400 text-gray-800' : 'bg-transparent border-gray-300 text-gray-200'))
-                                    : 'border-gray-500 bg-[#1a1a1e] text-gray-500'
-                                }`}
-                              >
-                                {isSoundOn ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
-                                <span className="text-[9px] uppercase font-bold">{isSoundOn ? t('ON') : t('OFF')}</span>
-                              </button>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                              <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('MODE')}</span>
-                              <div className="flex items-center h-[26px] w-[96px] bg-[#1a1a1e] border border-[#323238] p-0.5">
-                                <button
-                                  onClick={() => changeSoundMode('bgm')}
-                                  className={`flex-1 flex items-center justify-center h-full transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'bgm' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                                >
-                                  BGM
-                                </button>
-                                <button
-                                  onClick={() => changeSoundMode('sfx')}
-                                  className={`flex-1 flex items-center justify-center h-full transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'sfx' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                                >
-                                  SFX
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between items-center mb-2">
-                          <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Cycle Interval')}</label>
-                          <span className={`text-[9px] font-mono font-bold ${isAutoCycle ? `${highlightClasses.text} ${highlightClasses.bgMuted}` : 'text-gray-500 bg-[#1a1a1e]'} px-1.5 py-0.5 transition-colors`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min={!isSfxMuted ? "50" : "0"} 
-                          max="100" 
-                          step="1" 
-                          value={Math.round((Math.log(Math.max(100, Math.min(10000, cycleSpeed)) / 100) / Math.log(10000 / 100)) * 100)} 
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            const rawSpeed = 100 * Math.exp((val / 100) * Math.log(10000 / 100));
-                            let finalSpeed = rawSpeed;
-                            if (rawSpeed < 1000) finalSpeed = Math.round(rawSpeed / 50) * 50;
-                            else finalSpeed = Math.round(rawSpeed / 100) * 100;
-                            
-                            let minSpeed = 100;
-                            if (!isSfxMuted) minSpeed = 1000;
-                            setCycleSpeed(Math.max(minSpeed, Math.min(10000, finalSpeed)));
-                          }}
-                          className={`w-full h-1 bg-gray-700 appearance-none cursor-pointer ${isAutoCycle ? highlightClasses.accent : 'accent-gray-500'} transition-colors`}
-                        />
-
-                        <div className={`flex items-center justify-between pt-3 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
-                          <div className="flex items-center gap-2">
-                            <RefreshCw className={`w-4 h-4 ${isRandomCycle ? highlightClasses.text : 'text-gray-500'}`} />
-                            <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Random Pose')}</span>
-                          </div>
-                          <button 
-                            onClick={() => setIsRandomCycle(!isRandomCycle)}
-                            className={`w-10 h-5 transition-colors relative border ${isRandomCycle ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
-                          >
-                            <div className={`absolute top-[1px] w-4 h-4 transition-all ${isRandomCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
-                          </button>
-                        </div>
-
-                        <div className={`pt-3 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Camera className={`w-4 h-4 ${isSlowRotate ? highlightClasses.text : 'text-gray-500'}`} />
-                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Turn')}</span>
-                            </div>
-                            <button 
-                              onClick={() => setIsSlowRotate(!isSlowRotate)}
-                              className={`w-10 h-5 transition-colors relative border ${isSlowRotate ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
-                            >
-                              <div className={`absolute top-[1px] w-4 h-4 transition-all ${isSlowRotate ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
-                            </button>
-                          </div>
-                          
-                          {isSlowRotate && (
-                            <div className="pt-3 pb-1">
-                              <div className="flex justify-between items-center mb-2">
-                                <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Turn Speed')}</label>
-                                <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} `}>{rotateSpeed.toFixed(1)}x</span>
-                              </div>
-                              <input 
-                                type="range" min="0.1" max="10" step="0.1" value={rotateSpeed} 
-                                onChange={(e) => setRotateSpeed(parseFloat(e.target.value))}
-                                className={`w-full h-1 bg-gray-700 appearance-none cursor-pointer ${highlightClasses.accent}`}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className={`pt-3 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
-                          <button 
-                            onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
-                            className="flex items-center justify-between w-full mb-3 group"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className={`w-1 h-3 transition-colors ${isAdvancedOptionsOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                              <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : (appTheme === 'light' ? 'text-gray-500 group-hover:text-gray-600' : (appTheme === 'red' ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'))}`}>{t('Advanced Cycle Options')}</span>
-                            </div>
-                            <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-gray-500'} ${isAdvancedOptionsOpen ? highlightClasses.border : (appTheme === 'light' ? 'group-hover:border-gray-400' : 'group-hover:border-gray-500')}`}>
-                              {isAdvancedOptionsOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
-                            </div>
-                          </button>
-                          
-                          {isAdvancedOptionsOpen && (
-                            <div className={`-mx-2 px-2 py-3 border space-y-4 ${appTheme === 'light' ? 'bg-gray-100/50 border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border-[#4A4A52]' : 'bg-[#1a1a1e]/60 border-[#323238]')}`}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Zap className={`w-4 h-4 ${isAutoFormation ? 'text-amber-400' : 'text-gray-500'}`} />
-                                  <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Format Change')}</span>
-                                </div>
-                              <button 
-                                onClick={() => setIsAutoFormation(!isAutoFormation)}
-                                className={`w-10 h-5 transition-colors relative border ${isAutoFormation ? 'bg-transparent border-amber-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
-                              >
-                                <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoFormation ? 'bg-amber-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
-                              </button>
-                            </div>
-                            
-                            {isAutoFormation && (
-                              <div className={`flex items-center justify-between pt-1 border-t ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} mt-2`}>
-                                <div className="flex items-center gap-2">
-                                  <Zap className={`w-4 h-4 ${isRandomFormation ? 'text-amber-400' : 'text-gray-500'}`} />
-                                  <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Random Format Change</span>
-                                </div>
-                                <button 
-                                  onClick={() => setIsRandomFormation(!isRandomFormation)}
-                                  className={`w-10 h-5 transition-colors relative border ${isRandomFormation ? 'bg-transparent border-amber-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
-                                >
-                                  <div className={`absolute top-[1px] w-4 h-4 transition-all ${isRandomFormation ? 'bg-amber-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
-                                </button>
-                              </div>
-                            )}
-
-                            <div className={`pt-2 border-t ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} space-y-4`}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Video className={`w-4 h-4 ${isAutoCamera ? 'text-red-400' : 'text-gray-500'}`} />
-                                  <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Cinematic View')}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                  {isAutoCamera && (
-                                    <button 
-                                      onClick={() => {
-                                        setAutoCameraSpeed(1);
-                                        setAutoCameraMinHeight(-2);
-                                        setAutoCameraMaxHeight(10);
-                                        setAutoCameraMinDistance(6);
-                                        setAutoCameraMaxDistance(20);
-                                        setAutoCameraReverse(false);
-                                      }}
-                                      className="text-gray-500 hover:text-white transition-colors"
-                                      title={t('Reset Camera')}
-                                    >
-                                      <RefreshCw className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                  <button 
-                                    onClick={() => setIsAutoCamera(!isAutoCamera)}
-                                    className={`w-10 h-5 transition-colors relative border ${isAutoCamera ? 'bg-transparent border-red-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
-                                  >
-                                    <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoCamera ? 'bg-red-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {isAutoCamera && (
-                                <div className="pt-2 pb-2 space-y-4">
-                                  <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                      <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Intensity')}</label>
-                                      <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">{autoCameraSpeed.toFixed(1)}x</span>
-                                    </div>
-                                    <input 
-                                      type="range" min="0.1" max="10" step="0.1" value={autoCameraSpeed} 
-                                      onChange={(e) => setAutoCameraSpeed(parseFloat(e.target.value))}
-                                      className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                    />
-                                  </div>
-                                  <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                      <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Height (Min / Max)')}</label>
-                                      <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
-                                        {autoCameraMinHeight.toFixed(1)} / {autoCameraMaxHeight.toFixed(1)}
-                                      </span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <input 
-                                        type="range" min="-5" max="10" step="0.5" value={autoCameraMinHeight} 
-                                        onChange={(e) => setAutoCameraMinHeight(parseFloat(e.target.value))}
-                                        className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                      />
-                                      <input 
-                                        type="range" min="0" max="20" step="0.5" value={autoCameraMaxHeight} 
-                                        onChange={(e) => setAutoCameraMaxHeight(parseFloat(e.target.value))}
-                                        className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                      />
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                      <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Zoom (Min / Max)')}</label>
-                                      <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
-                                        {autoCameraMinDistance.toFixed(1)} / {autoCameraMaxDistance.toFixed(1)}
-                                      </span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <input 
-                                        type="range" min="3" max="20" step="1" value={autoCameraMinDistance} 
-                                        onChange={(e) => setAutoCameraMinDistance(parseFloat(e.target.value))}
-                                        className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                      />
-                                      <input 
-                                        type="range" min="5" max="50" step="1" value={autoCameraMaxDistance} 
-                                        onChange={(e) => setAutoCameraMaxDistance(parseFloat(e.target.value))}
-                                        className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center justify-between pt-2">
-                                    <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Reverse Rotation')}</label>
-                                    <button 
-                                      onClick={() => setAutoCameraReverse(!autoCameraReverse)}
-                                      className={`w-8 h-4 rounded-full transition-colors relative ${autoCameraReverse ? 'bg-red-500' : (appTheme === 'light' ? 'bg-gray-300' : 'bg-[#1a1a1e] border border-gray-600')}`}
-                                    >
-                                      <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${autoCameraReverse ? 'bg-white right-0.5' : 'bg-gray-500 left-0.5'}`} />
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-x-hidden overflow-y-scroll dark-scrollbar pb-6">
-              {!isEditing ? (
-                <div className="p-4 border-b border-[#323238]">
-                  <div 
-                    className="flex justify-between items-center mb-3 cursor-pointer group"
-                    onClick={() => setIsPoseLibraryOpen(!isPoseLibraryOpen)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold cursor-pointer group-hover:text-gray-300 transition-colors flex items-center gap-1.5"><Library className="w-3.5 h-3.5" />{t('Pose Library')}</label>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {isPoseLibraryOpen ? <ChevronUp className="w-4 h-4 text-gray-500 group-hover:text-gray-300" /> : <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-gray-300" />}
-                    </div>
-                  </div>
-                  {isPoseLibraryOpen && (
-                  <div className="grid grid-cols-2 gap-2 text-xs text-gray-300 max-h-[220px] overflow-y-auto no-scrollbar pr-1">
-                    {poses.map((pose, idx) => {
-                      const isActive = poseId === pose.id && !isAutoCycle;
-                      const isCustom = pose.id.startsWith('custom-');
-                      return (
-                        <div
-                          key={pose.id}
-                          onClick={() => handlePoseChange(pose.id)}
-                          className={`text-left p-2  border transition-all flex flex-col justify-between h-[45px] relative overflow-hidden group cursor-pointer ${
-                            isActive 
-                             ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-lg z-10' 
-                             : 'bg-[#2A2A30] border-[#323238] hover:border-gray-500 text-gray-400'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start w-full relative z-10">
-                            <span className={`font-bold text-[9px] truncate uppercase tracking-tighter leading-tight max-w-[70%] ${isActive || appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{pose.name}</span>
-                            {isCustom && (
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); startEditing(pose); }}
-                                  className="p-1 hover:bg-white/20  cursor-pointer"
-                                >
-                                  <Edit3 className="w-2.5 h-2.5" />
-                                </button>
-                                <button 
-                                  onClick={(e) => deletePose(pose.id, e)} 
-                                  className="p-1 hover:bg-red-500/50  cursor-pointer text-white"
-                                >
-                                  <Trash2 className="w-2.5 h-2.5" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                          <span className={`text-[10px] font-mono mt-1 ${isActive ? 'text-white/40' : (appTheme === 'light' ? 'text-gray-500' : 'text-[#878e9b]')}`}>
-                            {String(idx + 1).padStart(2, '0')}
-                          </span>
-                          {isActive && (
-                            <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 -3xl -mr-2 -mt-2" />
-                          )}
-                          {!isActive && poseId === pose.id && isAutoCycle && (
-                            <div className="absolute inset-0 border border-[var(--accent)]/50  pointer-events-none" />
-                          )}
-                        </div>
-                      );
-                    })}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); startEditing(); }}
-                      className={`flex items-center justify-center gap-1.5 h-[45px] text-[10px] font-bold uppercase tracking-widest border border-dashed transition-colors ${appTheme === 'light' ? 'border-gray-400 text-gray-500 hover:border-[var(--accent)] hover:text-[var(--accent)] bg-white/50' : 'border-[#323238] text-gray-500 hover:border-[var(--accent)] hover:text-[var(--accent)] bg-[#1E1E22] hover:bg-[var(--accent)]/5'}`}
-                    >
-                      <Plus className="w-3.5 h-3.5" /> {t('New Set')}
-                    </button>
-                  </div>
-                  )}
-                </div>
-              ) : (
-                <div className="p-4 border-b border-[#323238] bg-[var(--accent)]/10">
-                  <div className="flex justify-between items-center mb-4">
-                    <label className="text-[10px] uppercase tracking-wider text-[var(--accent)] font-bold flex items-center gap-2">
-                      <SlidersHorizontal className="w-3 h-3" /> {editingPoseId ? 'Edit Pose' : 'New Pose'}
-                    </label>
-                    <div className="flex gap-2">
-                      <button onClick={() => setIsEditing(false)} className="text-[10px] text-gray-400 hover:text-white">Cancel</button>
-                      <button onClick={saveCustomPose} className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
-                        <Save className="w-3 h-3" /> SAVE
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mb-4 space-y-3">
-                    <div>
-                      <label className="text-[9px] text-gray-500 uppercase block mb-1 font-bold">{t('Pose Name')}</label>
-                      <input 
-                        type="text"
-                        value={editPoseName}
-                        onChange={(e) => setEditPoseName(e.target.value)}
-                        placeholder="Pose name..."
-                        className="w-full bg-[#121214] border border-[#323238]  p-2 text-xs focus:border-[var(--accent)] outline-none"
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-2  bg-black/20 border border-[#323238]">
-                      <div className="flex items-center gap-2">
-                        <Layers className={`w-3 h-3 ${isSymmetric ? 'text-[var(--accent)]' : 'text-gray-500'}`} />
-                        <span className="text-[10px] uppercase font-bold text-gray-400">{t('Mirror Symmetry')}</span>
-                      </div>
-                      <button 
-                        onClick={() => setIsSymmetric(!isSymmetric)}
-                        className={`w-8 h-4  transition-colors relative ${isSymmetric ? 'bg-[var(--accent)]' : 'bg-gray-600'}`}
-                      >
-                        <div className={`absolute top-0.5 w-3 h-3 bg-white  transition-all ${isSymmetric ? 'right-0.5' : 'left-0.5'}`} />
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setEditPose({
-                          head: [0, 0, 0],
-                          torso: [0, 0, 0],
-                          arm_l_upper: [0, 0, 0],
-                          arm_l_lower: [0, 0, 0],
-                          arm_r_upper: [0, 0, 0],
-                          arm_r_lower: [0, 0, 0],
-                          leg_l_upper: [0, 0, 0],
-                          leg_l_lower: [0, 0, 0],
-                          leg_r_upper: [0, 0, 0],
-                          leg_r_lower: [0, 0, 0],
-                        });
-                      }}
-                      className="w-full py-2 bg-[#2A2A30] hover:bg-[#323238]  border border-[#323238] text-[10px] font-bold text-gray-400 hover:text-white transition-colors uppercase tracking-wider"
-                    >
-                      All Reset
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-4 max-h-[300px] overflow-y-auto no-scrollbar pr-2">
-                    {[
-                      { id: 'torso', name: 'Body Tilt', axis: 0 },
-                      { id: 'torso', name: 'Body Twist', axis: 1 },
-                      { id: 'head', name: 'Head Turn', axis: 0 },
-                      { id: 'arm_l_upper', name: 'L-Arm Upper', axis: 0 },
-                      { id: 'arm_l_lower', name: 'L-Elbow', axis: 0 },
-                      { id: 'arm_l_upper', name: 'L-Arm Spread', axis: 2 },
-                      { id: 'arm_r_upper', name: 'R-Arm Upper', axis: 0 },
-                      { id: 'arm_r_lower', name: 'R-Elbow', axis: 0 },
-                      { id: 'arm_r_upper', name: 'R-Arm Spread', axis: 2 },
-                      { id: 'leg_l_upper', name: 'L-Leg Upper', axis: 0 },
-                      { id: 'leg_l_lower', name: 'L-Knee', axis: 0 },
-                      { id: 'leg_l_upper', name: 'L-Leg Spread', axis: 2 },
-                      { id: 'leg_r_upper', name: 'R-Leg Upper', axis: 0 },
-                      { id: 'leg_r_lower', name: 'R-Knee', axis: 0 },
-                      { id: 'leg_r_upper', name: 'R-Leg Spread', axis: 2 }
-                    ].map((part: any, pIdx) => {
-                      const rawVal = editPose[part.id as keyof PoseAngles]?.[part.axis] || 0;
-                      const degVal = Math.round(rawVal * 180 / Math.PI);
-                      return (
-                        <div key={`${part.id}-${part.axis}-${pIdx}`}>
-                          <div className="flex justify-between items-center mb-1">
-                            <div className="flex items-center gap-2">
-                              <label className="text-[9px] text-gray-500 uppercase block font-bold">{part.name}</label>
-                              <span className={`text-[9px] font-mono font-bold px-1  ${degVal === 0 ? 'text-gray-500 bg-gray-500/10' : 'text-[var(--accent)] bg-[var(--accent)]/10'}`}>
-                                {degVal > 0 ? '+' : ''}{degVal}°
-                              </span>
-                            </div>
-                            <button 
-                              onClick={() => updateEditPart(part.id as any, part.axis, 0)}
-                              className="text-[8px] text-gray-500 hover:text-[var(--accent)] transition-colors font-bold uppercase"
-                            >
-                              Reset
-                            </button>
-                          </div>
-                          <input 
-                            type="range" min="-3.14" max="3.14" step="0.1" 
-                            value={rawVal}
-                            onChange={(e) => updateEditPart(part.id as any, part.axis, parseFloat(e.target.value))}
-                            className="w-full h-1 bg-[#2A2A30]  appearance-none cursor-pointer ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'}"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Theme & Layout Settings */}
-              <div className="border-b border-[#323238]">
-                <div 
-                  className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
-                  onClick={() => setIsColorSettingsOpen(!isColorSettingsOpen)}
-                >
-                  <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center gap-2 cursor-pointer">
-                    <Palette className="w-3.5 h-3.5" /> {t('Colors')}
-                  </label>
-                  {isColorSettingsOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-                </div>
-
-                <AnimatePresence>
-                  {isColorSettingsOpen && (
-                    <motion.div 
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden bg-[#121214] border-t border-[#323238]"
-                    >
-                      <div className="p-4 space-y-4">
-                        {/* Preset & Custom Set Selector */}
-                        <div className="p-2.5 border border-[#323238] bg-[#1E1E22]/80 flex flex-col gap-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">
-                              {t('Color Set')}
-                            </span>
-                            {isModifiedFromPreset && (
-                              <span className="text-[8px] font-mono font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 border border-amber-400/30">
-                                {t('MODIFIED')}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Set Dropdown / Select Button */}
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={() => setIsSidebarPresetDropdownOpen(prev => !prev)}
-                              className="w-full py-1.5 px-2 bg-[#121214] hover:bg-[#1a1a1e] border border-[#323238] flex items-center justify-between text-[10px] font-mono font-bold tracking-wider uppercase transition-colors"
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <PresetColorBadge chrColor={characterColor} bgColor={customBgColor || '#E5E7EB'} size="sm" />
-                                <span className="truncate">{activePreset.name}</span>
-                              </div>
-                              <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isSidebarPresetDropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {isSidebarPresetDropdownOpen && (
-                              <div className="absolute left-0 right-0 top-full mt-1 border border-[#323238] bg-[#1E1E22] shadow-2xl z-50 py-1 flex flex-col text-[10px] font-mono max-h-56 overflow-y-auto no-scrollbar">
-                                <div className="px-2.5 py-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#121214] border-b border-[#323238]/60">
-                                  ── {t('DEFAULT PRESETS')} ──
-                                </div>
-                                {DEFAULT_COLOR_PRESETS.map(preset => {
-                                  const isSelected = activePresetId === preset.id && !isModifiedFromPreset;
-                                  return (
-                                    <button
-                                      key={preset.id}
-                                      type="button"
-                                      onClick={() => applyColorPreset(preset)}
-                                      className={`w-full px-2.5 py-1.5 flex items-center justify-between transition-colors text-left cursor-pointer ${
-                                        isSelected ? 'bg-[var(--accent)] text-white font-bold' : 'text-gray-300 hover:text-white hover:bg-[#323238]'
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <PresetColorBadge chrColor={preset.characterColor} bgColor={preset.bgColor} size="sm" />
-                                        <span>{preset.name}</span>
-                                      </div>
-                                      {isSelected && <Check className="w-3 h-3" />}
-                                    </button>
-                                  );
-                                })}
-
-                                <div className="px-2.5 py-1 mt-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#121214] border-t border-b border-[#323238]/60 flex items-center justify-between">
-                                  <span>── {t('CUSTOM SETS')} ──</span>
-                                  <span className="text-[7px] text-gray-500 font-normal">({customColorPresets.length})</span>
-                                </div>
-
-                                {customColorPresets.length === 0 ? (
-                                  <div className="px-2.5 py-2 text-[9px] text-gray-500 text-center italic">
-                                    {t('No custom sets registered')}
-                                  </div>
-                                ) : (
-                                  customColorPresets.map(preset => {
-                                    const isSelected = activePresetId === preset.id && !isModifiedFromPreset;
-                                    return (
-                                      <div
-                                        key={preset.id}
-                                        className={`w-full px-2.5 py-1.5 flex items-center justify-between transition-colors cursor-pointer group ${
-                                          isSelected ? 'bg-[var(--accent)] text-white font-bold' : 'text-gray-300 hover:text-white hover:bg-[#323238]'
-                                        }`}
-                                        onClick={() => applyColorPreset(preset)}
-                                      >
-                                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                                          <PresetColorBadge chrColor={preset.characterColor} bgColor={preset.bgColor} size="sm" />
-                                          <span className="truncate">{preset.name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 flex-shrink-0">
-                                          {isSelected && <Check className="w-3 h-3" />}
-                                          <button
-                                            type="button"
-                                            onClick={(e) => handleDeleteCustomPreset(preset.id, e)}
-                                            className="p-0.5 text-gray-400 hover:text-red-400 transition-colors"
-                                          >
-                                            <Trash2 className="w-3 h-3" />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    );
-                                  })
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Preview Details: Character color + Background color */}
-                          <div className="grid grid-cols-2 gap-1.5 text-[9px] font-mono">
-                            <div className="p-1.5 bg-[#121214] border border-[#323238] flex items-center gap-1.5">
-                              <span className="w-3 h-3 border border-[#444] inline-block flex-shrink-0" style={{ backgroundColor: characterColor }} />
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-[7px] text-gray-500 uppercase leading-none">CHR</span>
-                                <span className="text-gray-200 uppercase truncate leading-none mt-0.5">{characterColor}</span>
-                              </div>
-                            </div>
-                            <div className="p-1.5 bg-[#121214] border border-[#323238] flex items-center gap-1.5">
-                              <span className="w-3 h-3 border border-[#444] inline-block flex-shrink-0" style={{ backgroundColor: customBgColor || '#E5E7EB' }} />
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-[7px] text-gray-500 uppercase leading-none">BG</span>
-                                <span className="text-gray-200 uppercase truncate leading-none mt-0.5">{customBgColor || '#E5E7EB'}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Custom Registration & Overwrite Actions */}
-                          <div className="flex flex-col gap-1.5 pt-1 border-t border-[#323238]/60">
-                            {isRegisteringPreset ? (
-                              <div className="flex gap-1.5">
-                                <input
-                                  type="text"
-                                  value={newPresetNameInput}
-                                  onChange={(e) => setNewPresetNameInput(e.target.value)}
-                                  placeholder={`CUSTOM ${String(customColorPresets.length + 1).padStart(2, '0')}`}
-                                  className="flex-1 bg-[#121214] border border-[#323238] px-2 py-1 text-[9px] font-mono uppercase text-white outline-none focus:border-[var(--accent)]"
-                                  autoFocus
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleRegisterCustomPreset(newPresetNameInput);
-                                    if (e.key === 'Escape') setIsRegisteringPreset(false);
-                                  }}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleRegisterCustomPreset(newPresetNameInput)}
-                                  className="px-2 py-1 bg-[var(--accent)] text-white text-[9px] font-bold uppercase transition-colors"
-                                >
-                                  {t('Save')}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setIsRegisteringPreset(false)}
-                                  className="px-2 py-1 bg-[#25252B] text-gray-400 hover:text-white text-[9px] uppercase transition-colors"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setIsRegisteringPreset(true)}
-                                  className="flex-1 py-1.5 px-2 bg-[#25252B] hover:bg-[#323238] hover:text-[var(--accent)] text-gray-200 border border-[#3A3A42] flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                                  title={t('Register New Custom Set')}
-                                >
-                                  <Plus className="w-3 h-3 text-[var(--accent)]" />
-                                  {t('REGISTER NEW CUSTOM')}
-                                </button>
-                                {!activePresetId.startsWith('default-') && (
-                                  <button
-                                    type="button"
-                                    onClick={handleUpdateCustomPreset}
-                                    className="px-2.5 py-1.5 bg-[#25252B] hover:bg-[#323238] text-gray-200 border border-[#3A3A42] text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                                    title={t('Overwrite Custom Set')}
-                                  >
-                                    {t('OVERWRITE')}
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Scope Selector: PER THEME vs COMMON */}
-                        <div className="p-2.5 border border-[#323238] bg-[#1E1E22]/60 flex flex-col gap-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">
-                              {t('Color Scope')}
-                            </span>
-                            <span className="text-[9px] font-mono font-bold text-[var(--accent)] flex items-center gap-1.5">
-                              {colorScope === 'theme' ? (
-                                <>
-                                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: currentThemeObj.dotColor }} />
-                                  {currentThemeObj.label}
-                                </>
-                              ) : (
-                                t('ALL THEMES')
-                              )}
-                            </span>
-                          </div>
-                          
-                          <div className="flex border border-[#323238] overflow-hidden text-[9px] font-bold tracking-wider">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleColorScope('theme')}
-                              className={`flex-1 py-1.5 px-2 transition-colors uppercase flex items-center justify-center gap-1.5 ${
-                                colorScope === 'theme'
-                                  ? 'bg-[var(--accent)] text-white'
-                                  : 'bg-[#121214] text-gray-500 hover:text-gray-300'
-                              }`}
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeObj.dotColor }} />
-                              {t('Per Theme')}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleColorScope('common')}
-                              className={`flex-1 py-1.5 px-2 transition-colors uppercase flex items-center justify-center gap-1.5 ${
-                                colorScope === 'common'
-                                  ? 'bg-[var(--accent)] text-white'
-                                  : 'bg-[#121214] text-gray-500 hover:text-gray-300'
-                              }`}
-                            >
-                              {t('Common')}
-                            </button>
-                          </div>
-
-                          {colorScope === 'theme' && (
-                            <div className="flex justify-between items-center pt-1 border-t border-[#323238]/40">
-                              <span className="text-[8px] text-gray-500">
-                                {t('Saved for')} <strong className="text-[var(--accent)]">{currentThemeObj.label}</strong>
-                              </span>
-                              <button
-                                type="button"
-                                onClick={copyCurrentColorsToAllThemes}
-                                className="text-[8px] uppercase font-bold text-gray-400 hover:text-[var(--accent)] underline transition-colors cursor-pointer"
-                                title={t('Apply to all themes')}
-                              >
-                                {isCopiedToAll ? t('Copied!') : t('Copy to All Themes')}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Character Color */}
-                        <div className="pt-1">
-                          <div className="flex items-center justify-between mb-2.5">
-                            <div className="flex items-center gap-2">
-                              <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{t('Character Color')}</label>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const accentHex = currentThemeObj.dotColor;
-                                  updateColorSetting({
-                                    characterColor: accentHex,
-                                    savedCustomCharacterColor: accentHex
-                                  });
-                                }}
-                                className="px-1.5 py-0.5 border border-[#323238] bg-[#1E1E22] hover:border-[var(--accent)] text-[8px] font-mono font-bold flex items-center gap-1 text-[var(--accent)] transition-colors shadow-sm cursor-pointer"
-                                title={t('Apply Theme Accent')}
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeObj.dotColor }} />
-                                {t('THEME ACCENT')}
-                              </button>
-                            </div>
-                            <button 
-                              onClick={() => updateColorSetting({ characterColor: DEFAULT_THEME_COLORS[appTheme].characterColor })}
-                              className="text-[8px] text-gray-500 hover:text-white underline uppercase font-bold transition-colors cursor-pointer"
-                            >
-                              RESET
-                            </button>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <div className="flex flex-wrap gap-1.5">
-                              {['#D95430', '#26262B', '#050505', '#7A2020', '#52525B', '#475569', '#355E42', '#7A5026'].map((color) => (
-                                <button
-                                  key={color}
-                                  onClick={() => updateColorSetting({ characterColor: color })}
-                                  className={`w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
-                                    characterColor === color ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
-                                  }`}
-                                  style={{ backgroundColor: color }}
-                                  title={color}
-                                >
-                                  {characterColor === color && <div className={`w-1.5 h-1.5 bg-white shadow-sm mix-blend-difference`} />}
-                                </button>
-                              ))}
-                            </div>
-                            
-                            <div className="flex items-center gap-3 pt-2 border-t border-[#323238]/50 mt-1">
-                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{t('Custom')}</span>
-                              <div className={`relative w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
-                                !['#0F172A', '#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#5C0909'].includes(characterColor) ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
-                              }`}>
-                                <input 
-                                  type="color" 
-                                  value={savedCustomCharacterColor}
-                                  onChange={(e) => {
-                                    updateColorSetting({
-                                      savedCustomCharacterColor: e.target.value,
-                                      characterColor: e.target.value
-                                    });
-                                  }}
-                                  onClick={() => {
-                                    updateColorSetting({ characterColor: savedCustomCharacterColor });
-                                  }}
-                                  className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
-                                  title={t('Custom Character Color')}
-                                />
-                                <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
-                                  <Plus className="w-3 h-3 text-white opacity-75" />
-                                </div>
-                                {!['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#5C0909', '#0F172A'].includes(characterColor) && <div className="w-1.5 h-1.5 bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Visual Themes / Background */}
-                        <div className="pt-2 border-t border-[#323238]">
-                          <div className="flex items-center justify-between mb-3">
-                            <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{t('Visual Themes')}</label>
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <div className="flex flex-wrap gap-1.5">
-                              {THEMES.map((theme) => (
-                                <button
-                                  key={theme.id}
-                                  onClick={() => {
-                                    updateColorSetting({
-                                      themeId: theme.id,
-                                      customBgColor: null
-                                    });
-                                  }}
-                                  className={`w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
-                                    themeId === theme.id && !customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
-                                  }`}
-                                  style={{ backgroundColor: theme.bodyColor }}
-                                  title={theme.name}
-                                >
-                                  {themeId === theme.id && !customBgColor && <div className="w-1 h-1 bg-white shadow-sm" />}
-                                </button>
-                              ))}
-                            </div>
-                            
-                            <div className="flex items-center gap-3 pt-2 border-t border-[#323238]/50 mt-1">
-                              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{t('Custom')}</span>
-                              <div className={`relative w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
-                                customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
-                              }`}>
-                                <input 
-                                  type="color" 
-                                  value={savedCustomBgColor}
-                                  onChange={(e) => {
-                                    updateColorSetting({
-                                      savedCustomBgColor: e.target.value,
-                                      customBgColor: e.target.value
-                                    });
-                                  }}
-                                  onClick={() => updateColorSetting({ customBgColor: savedCustomBgColor })}
-                                  className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
-                                  title={t('Custom Background Color')}
-                                />
-                                <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
-                                  <Plus className="w-3 h-3 text-white opacity-75" />
-                                </div>
-                                {customBgColor && <div className="w-1.5 h-1.5 bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-              <div className="mt-auto p-6 space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={exportSettings}
-                    className={`flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] text-[10px] font-bold transition-colors border border-[#323238] ${appTheme === 'red' ? 'text-white' : 'text-gray-300'}`}
-                  >
-                    <Download className="w-3 h-3" /> {t('EXPORT')}
-                  </button>
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`flex items-center justify-center gap-2 p-2 bg-[#2A2A30] hover:bg-[#323238] text-[10px] font-bold transition-colors border border-[#323238] ${appTheme === 'red' ? 'text-white' : 'text-gray-300'}`}
-                  >
-                    <Upload className="w-3 h-3" /> {t('IMPORT')}
-                  </button>
-                </div>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={importSettings} 
-                  accept=".json" 
-                  className="hidden" 
-                />
-                <div className="bg-[var(--accent)]/10 p-4  border border-[var(--accent)]/20">
-                  <p className="text-xs text-[var(--accent)] font-medium">{t('Auto-save Ready')}</p>
-                  <p className="text-[10px] text-[var(--accent)]/60 uppercase tracking-tighter">{t('Workspace persistence active')}</p>
-                </div>
-              </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col animate-in fade-in slide-in-from-left-2 duration-300 overflow-hidden min-h-0">
-              <div className="p-4 space-y-4 border-b border-[#323238] bg-[var(--accent)]/5 flex-shrink-0">
-                <div className="space-y-4">
-                  <div className={`p-3  flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border border-[#4A4A52]' : 'bg-[#1a1a1e]/40 border border-[#323238]')}`}>
-                    <button 
-                      onClick={() => setIsEffectSettingOpen(!isEffectSettingOpen)}
-                      className={`flex items-center justify-between w-full ${isEffectSettingOpen ? 'border-b pb-2 mb-1' : ''} ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} group`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-1 h-3  transition-colors ${isEffectSettingOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                        <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isEffectSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>{t('EFFECT SETTING')}</span>
-                      </div>
-                      <div className={`w-5 h-5  border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-[#323238]'} ${isEffectSettingOpen ? highlightClasses.border : 'group-hover:border-gray-400'}`}>
-                        {isEffectSettingOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
-                      </div>
-                    </button>
-                    
-                    {isEffectSettingOpen && (
-                      <div className="flex flex-col gap-3">
-                        <div className="flex justify-between items-center mb-1">
-                          <label className="text-[9px] text-gray-500 uppercase font-bold">{t('Effect Style')}</label>
-                          <span className={`text-[9px] ${highlightClasses.text} font-mono`}>{soundType}</span>
-                        </div>
-                        <div className="grid grid-cols-5 gap-1.5">
-                          {(['mechanical', 'retro', 'ping', 'wood', 'pop'] as SoundEffectType[]).map((type) => (
-                            <button
-                              key={type}
-                              onClick={() => {
-                                setSoundType(type);
-                                SoundManager.playPoseChange(type, sfxVolume);
-                              }}
-                              className={`h-6  border transition-all text-[8px] font-bold uppercase ${
-                                soundType === type 
-                                ? `${highlightClasses.bg} ${highlightClasses.border} ${appTheme === 'light' ? 'text-white' : 'text-[#121214]'}` 
-                                : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 text-gray-600 hover:bg-gray-300 hover:border-gray-300' : 'bg-[#2A2A30] border-[#323238] text-gray-500 hover:border-[#424248] hover:text-gray-300')
-                              }`}
-                            >
-                              {type.slice(0, 3)}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="pt-1">
-                          <div className="flex justify-between items-center mb-1">
-                            <div className="flex items-center gap-2">
-                              <label className="text-[9px] text-gray-500 uppercase font-bold">{t('SFX Volume')}</label>
-                            </div>
-                            <span className="text-[9px] text-gray-400 font-mono">{Math.round(sfxVolume * 100)}%</span>
-                          </div>
-                          <input 
-                            type="range" min="0" max="1" step="0.01" value={sfxVolume} 
-                            onChange={(e) => setSfxVolume(parseFloat(e.target.value))}
-                            className={`w-full h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`}`}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={`p-3  flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border border-[#4A4A52]' : 'bg-[#1a1a1e]/40 border border-[#323238]')}`}>
-                    <button 
-                      onClick={() => setIsBgmSettingOpen(!isBgmSettingOpen)}
-                      className={`flex items-center justify-between w-full ${isBgmSettingOpen ? 'border-b pb-2 mb-1' : ''} ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} group`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-1 h-3  transition-colors ${isBgmSettingOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                        <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isBgmSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>{t('BGM SETTING')}</span>
-                      </div>
-                      <div className={`w-5 h-5  border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-[#323238]'} ${isBgmSettingOpen ? highlightClasses.border : 'group-hover:border-gray-400'}`}>
-                        {isBgmSettingOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
-                      </div>
-                    </button>
-                    
-                    {isBgmSettingOpen && (
-                      <div className="flex flex-col gap-3">
-                       {/* Controls */}
-                       <div className="flex flex-col gap-2 mb-0">
-                         <div className="flex-1 overflow-hidden px-1 text-center">
-                           <p className={`text-[11px] font-bold truncate tracking-wider ${appTheme === 'light' ? 'text-gray-800' : 'text-white'}`}>
-                             {currentBgmId !== null ? (bgmPlaylist.find(t => t.id === currentBgmId)?.name || 'NO TRACK READY') : 'NO TRACK READY'}
-                           </p>
-                         </div>
-                         
-                         <div className="flex items-center justify-center gap-1.5">
-                            <button 
-                              onClick={playPreviousTrack}
-                              className={`w-10 h-8  border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
-                              disabled={bgmPlaylist.length === 0}
-                            >
-                               <SkipBack className="w-4 h-4 mr-0.5" />
-                            </button>
-                            <button 
-                              onClick={toggleBgmFromPlayer}
-                              className={`w-12 h-8  border transition-all shadow-sm flex items-center justify-center ${
-                                isBgmPlaying 
-                                  ? (appTheme === 'light' ? `bg-gray-500 border-gray-500 text-[#ffffff]` : `bg-[#1a1a1e] ${highlightClasses.border} ${highlightClasses.text}`) 
-                                  : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] text-white hover:bg-[#323238]')
-                              }`}
-                              disabled={bgmPlaylist.length === 0}
-                            >
-                              {isBgmPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-                            </button>
-                            <button 
-                              onClick={stopBgm}
-                              className={`w-10 h-8  border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
-                              disabled={bgmPlaylist.length === 0 || currentBgmId === null}
-                            >
-                              <Square className="w-3.5 h-3.5 fill-current" />
-                            </button>
-                            <button 
-                              onClick={playNextTrack}
-                              className={`w-10 h-8  border flex items-center justify-center transition-all shadow-sm ${appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] hover:bg-[#323238] text-white'}`}
-                              disabled={bgmPlaylist.length === 0}
-                            >
-                               <SkipForward className="w-4 h-4 ml-0.5" />
-                            </button>
-
-                            <button
-                               onClick={() => setBgmRepeatMode(prev => prev === 0 ? 1 : prev === 1 ? 2 : 0)}
-                               className={`w-10 h-8  border transition-all shadow-sm flex items-center justify-center relative ${
-                                 bgmRepeatMode !== 0 
-                                  ? (appTheme === 'light' ? `bg-gray-500 border-gray-500 text-[#ffffff]` : `bg-[#1a1a1e] ${highlightClasses.border} ${highlightClasses.text}`) 
-                                  : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 hover:bg-gray-300 text-gray-600' : 'border-gray-500 bg-[#1a1a1e] hover:bg-[#323238] text-gray-400 hover:text-white')
-                               }`}
-                               title={bgmRepeatMode === 1 ? t('Playlist Repeat') : bgmRepeatMode === 2 ? t('Track Repeat') : t('Repeat Off')}
-                            >
-                               <RefreshCw className="w-4 h-4" />
-                               {bgmRepeatMode === 2 && (
-                                 <span className={`absolute -top-1.5 -right-1.5 text-[8px] font-bold flex items-center justify-center  ${highlightClasses.bg} text-[#121214] w-3.5 h-3.5 pt-[1px]`}>1</span>
-                               )}
-                            </button>
-                         </div>
-                       </div>
-
-                       {/* Progress Bar */}
-                       <div className="flex flex-col gap-1 relative group cursor-pointer mb-1" onClick={(e) => {
-                          if (!currentBgmId) return;
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-                          SoundManager.seekBgm(pos * SoundManager.getBgmDuration());
-                       }}>
-                          <div className="flex justify-between items-center px-0.5 pointer-events-none mb-1">
-                             <span className="text-[10px] text-gray-400 font-mono tracking-wider">{bgmTimeStr.split(' / ')[0]}</span>
-                             <span className="text-[10px] text-gray-500 font-mono tracking-wider">{bgmTimeStr.split(' / ')[1]}</span>
-                          </div>
-                          <div className={`w-full h-1  overflow-hidden relative pointer-events-none transition-all ${appTheme === 'light' ? 'bg-gray-300' : 'bg-[#2A2A30]'}`}>
-                             <div 
-                                className={`h-full ${appTheme === 'light' ? 'bg-gray-500' : highlightClasses.bg} transition-all ease-linear`}
-                                style={{ width: `${Math.max(0, Math.min(100, bgmProgress * 100))}%`, transitionDuration: isBgmPlaying ? '500ms' : '0ms' }}
-                             />
-                          </div>
-                       </div>
-
-                       <div className="flex flex-col gap-1">
-                          <div className="flex justify-between items-center">
-                             <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-700' : 'text-gray-300'}`}>{t('BGM Volume')}</span>
-                             <span className="text-[8px] text-gray-400 font-mono">{Math.round(bgmVolume * 100)}%</span>
-                          </div>
-                          <input 
-                            type="range" min="0" max="1" step="0.01" value={bgmVolume} 
-                            onChange={(e) => setBgmVolume(parseFloat(e.target.value))}
-                            className={`w-full h-1  appearance-none cursor-pointer ${appTheme === 'light' ? 'bg-gray-300 accent-gray-500' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`}`}
-                          />
-                       </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-1 flex flex-col p-4 pt-4 min-h-0 overflow-hidden">
-                <div className="flex-shrink-0">
-                  <label className="text-[9px] text-white uppercase font-bold flex items-center gap-1.5 mb-2">
-                      <Music2 className="w-3 h-3" /> PLAYLISTS
-                    </label>
-                    <div className="flex gap-2 mb-3">
-                      <button 
-                        onClick={createPlaylist}
-                        className={`flex-1 bg-[#1a1a1e] hover:bg-[#323238] text-[var(--accent)] text-[10px] font-bold uppercase py-1.5 px-3  border ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'} transition-colors flex items-center justify-center gap-1.5`}
-                      >
-                        <Plus className="w-3 h-3" /> {t('New Set')}
-                      </button>
-                      <button 
-                        onClick={() => setIsPlaylistExpanded(!isPlaylistExpanded)}
-                        className={`w-8 flex items-center justify-center  border transition-colors bg-[#1a1a1e] ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'} text-gray-500 hover:text-gray-300`}
-                        title={t('Toggle Playlist View')}
-                      >
-                        {isPlaylistExpanded ? <ChevronDown className="w-4 h-4" /> : <List className="w-4 h-4" />}
-                      </button>
-                      <button 
-                        onClick={() => setShowClearConfirm(true)}
-                        className={`w-8 flex items-center justify-center  border transition-colors bg-[#1a1a1e] hover:bg-red-500/10 text-gray-500 hover:text-red-400 ${appTheme === 'black' ? 'border-[#4A4A52]' : 'border-[#323238]'}`}
-                        title={t('Delete all tracks')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="flex justify-between items-center mb-2 px-1">
-                      <label className="text-[9px] text-gray-600 uppercase font-bold tracking-widest">
-                        Total DB Tracks:
-                      </label>
-                      <span className="text-[10px] text-gray-400 font-bold">{allTracks.length}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto dark-scrollbar -mx-4 px-4 pb-4 pt-3 border-t border-[#323238] min-h-0">
-                    {isPlaylistExpanded ? (
-                      <div className="space-y-1 mb-2">
-                        {playlists.map(p => (
-                          <div 
-                            key={p.id} 
-                            className={`flex items-center justify-between p-2  border transition-colors cursor-pointer group ${
-                              activePlaylistId === p.id 
-                              ? `${highlightClasses.bgMuted} ${highlightClasses.border} ${highlightClasses.text}` 
-                              : 'bg-[#121214] border-[#323238] hover:border-gray-500 text-white'
-                            }`}
-                            onClick={() => {
-                              if (editingPlaylistId !== p.id) {
-                                setActivePlaylistId(p.id);
-                              }
-                            }}
-                          >
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              {editingPlaylistId === p.id ? (
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  value={editingPlaylistName}
-                                  onChange={(e) => setEditingPlaylistName(e.target.value)}
-                                  onBlur={() => {
-                                    if (editingPlaylistName.trim()) renamePlaylist(p.id, editingPlaylistName.trim());
-                                    setEditingPlaylistId(null);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      if (editingPlaylistName.trim()) renamePlaylist(p.id, editingPlaylistName.trim());
-                                      setEditingPlaylistId(null);
-                                    } else if (e.key === 'Escape') {
-                                      setEditingPlaylistId(null);
-                                    }
-                                  }}
-                                  className="bg-black/50 text-white text-[10px] uppercase font-bold w-full px-1 py-0.5 outline-none border border-[var(--accent)] "
-                                />
-                              ) : (
-                                <>
-                                  <span className={`text-[10px] uppercase font-bold truncate ${activePlaylistId === p.id ? highlightClasses.text : 'text-gray-400'}`}>
-                                    {p.name}
-                                  </span>
-                                  <span className={`text-[9px] ${activePlaylistId === p.id ? highlightClasses.text : 'text-gray-600'}`}>({p.trackIds.length})</span>
-                                </>
-                              )}
-                            </div>
-                            <div className={`flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity ${activePlaylistId === p.id ? 'opacity-100' : ''}`}>
-                               <button 
-                                 onClick={(e) => { e.stopPropagation(); movePlaylist(p.id, -1); }} 
-                                 className="text-gray-500 hover:text-white p-0.5"
-                                 title={t('Move Up')}
-                               >
-                                 <ChevronUp className="w-2.5 h-2.5" />
-                               </button>
-                               <button 
-                                 onClick={(e) => { e.stopPropagation(); movePlaylist(p.id, 1); }} 
-                                 className="text-gray-500 hover:text-white p-0.5"
-                                 title={t('Move Down')}
-                               >
-                                 <ChevronDown className="w-2.5 h-2.5" />
-                               </button>
-                               <button 
-                                 onClick={(e) => { 
-                                   e.stopPropagation(); 
-                                   setEditingPlaylistId(p.id);
-                                   setEditingPlaylistName(p.name);
-                                 }} 
-                                 className="text-gray-500 hover:text-white p-0.5"
-                                 title={t('Rename')}
-                               >
-                                 <Edit3 className="w-2.5 h-2.5" />
-                               </button>
-                               <button 
-                                 onClick={(e) => { 
-                                   e.stopPropagation(); 
-                                   if (confirmDeleteId === p.id) {
-                                     deletePlaylist(p.id);
-                                     setConfirmDeleteId(null);
-                                   } else {
-                                     setConfirmDeleteId(p.id);
-                                     setTimeout(() => setConfirmDeleteId(null), 3000);
-                                   }
-                                 }} 
-                                 className={`p-0.5  transition-all ${confirmDeleteId === p.id ? 'text-red-500 bg-red-500/20' : 'text-gray-500 hover:text-red-400'}`}
-                                 title={confirmDeleteId === p.id ? t('Click to confirm') : t('Delete')}
-                               >
-                                 <Trash2 className="w-2.5 h-2.5" />
-                               </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="mb-2 relative">
-                        <select 
-                          value={activePlaylistId} 
-                          onChange={e => setActivePlaylistId(e.target.value)}
-                          className="w-full bg-[#121214] hover:border-gray-500 transition-colors text-[var(--accent)] text-[10px] font-bold uppercase p-2 border border-[#323238]  outline-none cursor-pointer appearance-none"
-                        >
-                          {playlists.map(p => (
-                            <option key={p.id} value={p.id}>{p.name} ({p.trackIds.length})</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--accent)] pointer-events-none" />
-                      </div>
-                    )}
-
-                    <div className="flex justify-between items-center mb-1 mt-3 px-1">
-                      <label className="text-[9px] text-[#777] uppercase font-bold tracking-widest">
-                        TRACKS
-                      </label>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={loadSamples}
-                          disabled={isSamplesLoading}
-                          className="text-[8px] text-[var(--accent)] hover:text-white font-bold uppercase underline cursor-pointer flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Music className="w-2.5 h-2.5" /> {isSamplesLoading ? 'Loading...' : 'Add Samples'}
-                        </button>
-                        <label className="text-[8px] text-[var(--accent)] hover:text-white font-bold uppercase underline cursor-pointer flex items-center gap-1">
-                          <Plus className="w-2.5 h-2.5" /> Add Files
-                          <input 
-                            type="file" 
-                            ref={bgmInputRef}
-                            onChange={handleBgmUpload} 
-                            accept="audio/*" 
-                            className="hidden" 
-                            multiple
-                          />
-                        </label>
-                      </div>
-                    </div>
-                    
-                    <div className={`mt-1 mb-2 px-1 flex items-center justify-between border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'} pb-2`}>
-                      <div className="flex items-center gap-2 cursor-pointer group" onClick={() => {
-                        const activePlaylist = playlists.find(p => p.id === activePlaylistId);
-                        if (!activePlaylist) return;
-                        const allActiveTrackIds = activePlaylist.trackIds;
-                        if (allActiveTrackIds.length === 0) return;
-                        
-                        const isAllSelected = allActiveTrackIds.every(id => selectedTrackIds.has(id));
-                        if (isAllSelected) {
-                          setSelectedTrackIds(new Set());
-                        } else {
-                          setSelectedTrackIds(new Set(allActiveTrackIds));
-                        }
-                      }}>
-                        <div className={`w-3 h-3 flex items-center justify-center border transition-colors ${
-                          playlists.find(p => p.id === activePlaylistId)?.trackIds.length && playlists.find(p => p.id === activePlaylistId)?.trackIds.every(id => selectedTrackIds.has(id))
-                            ? 'bg-[#323238] border-gray-500' 
-                            : 'bg-transparent border-gray-500 group-hover:border-gray-400'
-                        }`}>
-                          {playlists.find(p => p.id === activePlaylistId)?.trackIds.length > 0 && playlists.find(p => p.id === activePlaylistId)?.trackIds.every(id => selectedTrackIds.has(id)) && <Check className="w-2.5 h-2.5 text-white" />}
-                        </div>
-                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest group-hover:text-gray-400 transition-colors select-none">
-                          {selectedTrackIds.size > 0 ? `${selectedTrackIds.size} Selected` : '0 Selected'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {playlists.length > 1 && (
-                          <select 
-                            onChange={(e) => moveSelectedTracksToPlaylist(e.target.value)}
-                            value=""
-                            className="bg-[#121214] w-28 text-[9px] font-bold uppercase text-[var(--accent)] border border-[#323238]  px-1.5 py-0.5 outline-none cursor-pointer hover:border-gray-500 transition-colors appearance-none"
-                          >
-                            <option value="" disabled>Move to...</option>
-                            {playlists.filter(p => p.id !== activePlaylistId).map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                        )}
-                        <button
-                          onClick={removeSelectedTracks}
-                          className="p-1 hover:text-red-400 text-gray-500 transition-colors border border-[#323238]  bg-[#121214]"
-                          title={t('Delete Selected')}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-2">
-                      <div className="space-y-1">
-                        {bgmPlaylist.length > 0 ? bgmPlaylist.map((track, idx) => (
-                          <div 
-                            key={`${track.id}-${idx}`} 
-                            onClick={() => playTrackById(track.id)}
-                            className="group flex items-center justify-between p-2  border bg-[#121214] border-[#323238] hover:border-gray-500 transition-all cursor-pointer select-none"
-                          >
-                            <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
-                              <div 
-                                className="flex items-center justify-center p-1 -ml-1 cursor-pointer flex-shrink-0"
-                                onClick={(e) => toggleTrackSelection(track.id, e)}
-                              >
-                                <div className={`w-3 h-3 border flex items-center justify-center transition-colors ${
-                                  selectedTrackIds.has(track.id) 
-                                  ? 'bg-[#323238] border-gray-500' 
-                                  : 'border-gray-500'
-                                }`}>
-                                  {selectedTrackIds.has(track.id) && <Check className="w-2.5 h-2.5 text-white" />}
-                                </div>
-                              </div>
-                              <span className={`text-[10px] truncate ${
-                                currentBgmId === track.id ? `${highlightClasses.text} font-bold` : (selectedTrackIds.has(track.id) ? highlightClasses.text : 'text-white')
-                              }`}>
-                                {track.name}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 ml-2">
-                              <button 
-                                onClick={(e) => moveToTop(idx, e)}
-                                className="p-0.5 hover:text-[var(--accent)] transition-colors"
-                                title={t('Move to Top')}
-                              >
-                                <ChevronsUp className="w-3 h-3" />
-                              </button>
-                              <button 
-                                onClick={(e) => moveTrackUp(idx, e)}
-                                className="p-0.5 hover:text-[var(--accent)] transition-colors"
-                                title={t('Move Up')}
-                              >
-                                <ChevronUp className="w-3 h-3" />
-                              </button>
-                              <button 
-                                onClick={(e) => moveTrackDown(idx, e)}
-                                className="p-0.5 hover:text-[var(--accent)] transition-colors"
-                                title={t('Move Down')}
-                              >
-                                <ChevronDown className="w-3 h-3" />
-                              </button>
-                              <button 
-                                onClick={(e) => moveToBottom(idx, e)}
-                                className="p-0.5 hover:text-[var(--accent)] transition-colors"
-                                title={t('Move to Bottom')}
-                              >
-                                <ChevronsDown className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                        )) : (
-                          <div className="flex flex-col items-center justify-center p-4 text-center opacity-50 border border-transparent border-dashed h-12">
-                            <p className="text-[9px] uppercase tracking-widest font-bold">No tracks in this playlist</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div 
-                      className="mt-3 border-2 border-dashed border-[#323238]  transition-colors relative flex flex-col items-center justify-center p-4 text-center group hover:border-[var(--accent)] cursor-pointer"
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/5');
-                        e.currentTarget.classList.remove('border-[#323238]');
-                      }}
-                      onDragLeave={(e) => {
-                        e.currentTarget.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/5');
-                        e.currentTarget.classList.add('border-[#323238]');
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/5');
-                        e.currentTarget.classList.add('border-[#323238]');
-                        
-                        const files = Array.from(e.dataTransfer.files).filter((f: any) => f.type.startsWith('audio/'));
-                        if (files.length > 0) {
-                          handleBgmUpload({ target: { files } } as any);
-                        }
-                      }}
-                      onClick={() => {
-                        bgmInputRef.current?.click();
-                      }}
-                    >
-                      <Upload className="w-4 h-4 mb-2 text-gray-500 group-hover:text-[var(--accent)] transition-colors" />
-                      <p className="text-[9px] uppercase tracking-widest font-bold text-gray-500 group-hover:text-gray-300 transition-colors">{t('Drop Audio Files Here')}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+          {activeTab === "visual" ? renderVisualTab() : renderSoundTab()}
           </div>
 
             </div>
@@ -3397,16 +3838,36 @@ export default function App() {
                 </button>
 
                 {isThemeDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-68 border border-[#323238] bg-[#1E1E22] shadow-2xl z-[100] py-1 flex flex-col text-[10px] font-mono">
+                  <div className={`absolute right-0 top-full mt-1 w-68 border shadow-2xl z-[100] py-1 flex flex-col text-[10px] font-mono ${
+                    appTheme === 'peper'
+                      ? 'border-[#D1C7B4] bg-[#EBE4D5]'
+                      : (appTheme === 'light'
+                        ? 'border-gray-300 bg-white shadow-xl'
+                        : 'border-[#323238] bg-[#1E1E22]')
+                  }`}>
                     {/* Mode Selector Tabs */}
-                    <div className="grid grid-cols-2 p-1 bg-[#121214] border-b border-[#323238] gap-1">
+                    <div className={`grid grid-cols-2 p-1 border-b gap-1 ${
+                      appTheme === 'peper'
+                        ? 'bg-[#DDD4C4] border-[#C2B6A2]'
+                        : (appTheme === 'light'
+                          ? 'bg-gray-100 border-gray-200'
+                          : 'bg-[#121214] border-[#323238]')
+                    }`}>
                       <button
                         type="button"
                         onClick={() => switchThemeDropdownMode('ui-only')}
                         className={`py-1 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                           themeDropdownMode === 'ui-only' 
-                            ? 'bg-[#2A2A30] text-white border border-[#444]' 
-                            : 'text-gray-400 hover:text-white'
+                            ? (appTheme === 'peper'
+                                ? 'bg-white text-[#3A2F24] border border-[#C2B6A2] shadow-sm'
+                                : (appTheme === 'light'
+                                  ? 'bg-white text-gray-800 border border-gray-300 shadow-sm'
+                                  : 'bg-[#2A2A30] text-white border border-[#444]'))
+                            : (appTheme === 'peper'
+                                ? 'text-[#73634F] hover:text-[#3A2F24]'
+                                : (appTheme === 'light'
+                                  ? 'text-gray-500 hover:text-gray-900'
+                                  : 'text-gray-400 hover:text-white'))
                         }`}
                       >
                         {t('UI Theme Only')}
@@ -3416,8 +3877,16 @@ export default function App() {
                         onClick={() => switchThemeDropdownMode('preset')}
                         className={`py-1 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
                           themeDropdownMode === 'preset' 
-                            ? 'bg-[#2A2A30] text-white border border-[#444]' 
-                            : 'text-gray-400 hover:text-white'
+                            ? (appTheme === 'peper'
+                                ? 'bg-white text-[#3A2F24] border border-[#C2B6A2] shadow-sm'
+                                : (appTheme === 'light'
+                                  ? 'bg-white text-gray-800 border border-gray-300 shadow-sm'
+                                  : 'bg-[#2A2A30] text-white border border-[#444]'))
+                            : (appTheme === 'peper'
+                                ? 'text-[#73634F] hover:text-[#3A2F24]'
+                                : (appTheme === 'light'
+                                  ? 'text-gray-500 hover:text-gray-900'
+                                  : 'text-gray-400 hover:text-white'))
                         }`}
                       >
                         {t('Full Preset Set')}
@@ -3427,9 +3896,21 @@ export default function App() {
                     {themeDropdownMode === 'ui-only' ? (
                       <>
                         {/* UI Themes List: Scene unchanged */}
-                        <div className="px-3 py-1.5 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#17171A] border-b border-[#323238]/60 flex items-center justify-between">
+                        <div className={`px-3 py-1.5 text-[8px] font-bold uppercase tracking-widest border-b flex items-center justify-between ${
+                          appTheme === 'peper'
+                            ? 'bg-[#DDD4C4] border-[#C2B6A2] text-[#44372B]'
+                            : (appTheme === 'light'
+                              ? 'bg-gray-100 border-gray-200 text-gray-700'
+                              : 'bg-[#17171A] border-[#323238]/60 text-gray-400')
+                        }`}>
                           <span>── {t('UI THEMES')} ──</span>
-                          <span className="text-[7px] text-[var(--accent)] font-mono">{t('SCENE INTACT')}</span>
+                          <span className={`text-[7px] font-mono ${
+                            appTheme === 'peper'
+                              ? 'text-[#D95430] font-bold'
+                              : (appTheme === 'light'
+                                ? 'text-gray-600 font-bold'
+                                : 'text-[var(--accent)]')
+                          }`}>{t('SCENE INTACT')}</span>
                         </div>
 
                         {APP_THEMES.map(th => {
@@ -3441,29 +3922,49 @@ export default function App() {
                               onClick={() => handleSelectUIThemeOnly(th.id)}
                               className={`w-full px-3 py-2 flex items-center justify-between transition-colors text-left cursor-pointer ${
                                 isSelected 
-                                  ? 'bg-[var(--accent)] text-white font-bold' 
-                                  : 'text-gray-300 hover:text-white hover:bg-[#323238]'
+                                  ? (appTheme === 'peper'
+                                      ? 'bg-[#D95430] text-white force-white-text font-bold'
+                                      : (appTheme === 'light'
+                                        ? 'bg-gray-200 text-gray-900 font-bold'
+                                        : 'bg-[var(--accent)] text-white font-bold'))
+                                  : (appTheme === 'peper'
+                                      ? 'text-[#44372B] hover:text-[#2B221A] hover:bg-[#DDD4C4]'
+                                      : (appTheme === 'light'
+                                        ? 'text-gray-700 hover:text-black hover:bg-gray-100'
+                                        : 'text-gray-300 hover:text-white hover:bg-[#323238]'))
                               }`}
                             >
                               <div className="flex items-center gap-2.5">
-                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-white/20" style={{ backgroundColor: th.dotColor }} />
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-black/20" style={{ backgroundColor: th.dotColor }} />
                                 <span className="font-bold tracking-wider">{th.label}</span>
                               </div>
-                              {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
+                              {isSelected && <Check className={`w-3.5 h-3.5 flex-shrink-0 ${appTheme === 'peper' ? 'text-white force-white-text' : ''}`} />}
                             </button>
                           );
                         })}
 
-                        <div className="px-3 py-1.5 text-[8px] text-gray-400 bg-[#141416] border-t border-[#323238]">
+                        <div className={`px-3 py-1.5 text-[8px] border-t ${
+                          appTheme === 'peper'
+                            ? 'bg-[#DDD4C4] border-[#C2B6A2] text-[#5F5241]'
+                            : (appTheme === 'light'
+                              ? 'bg-gray-100 border-gray-200 text-gray-600'
+                              : 'bg-[#141416] border-[#323238] text-gray-400')
+                        }`}>
                           ※ {t('Character and background colors will remain unchanged.')}
                         </div>
                       </>
                     ) : (
                       <>
                         {/* Full Preset Sets List */}
-                        <div className="px-3 py-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#121214] border-b border-[#323238]/60 flex items-center justify-between">
+                        <div className={`px-3 py-1 text-[8px] font-bold uppercase tracking-widest border-b flex items-center justify-between ${
+                          appTheme === 'peper'
+                            ? 'bg-[#DDD4C4] border-[#C2B6A2] text-[#44372B]'
+                            : (appTheme === 'light'
+                              ? 'bg-gray-100 border-gray-200 text-gray-700'
+                              : 'bg-[#121214] border-[#323238]/60 text-gray-400')
+                        }`}>
                           <span>── {t('DEFAULT PRESETS')} ──</span>
-                          <span className="text-[7px] text-gray-500 font-normal">5</span>
+                          <span className={`text-[7px] font-normal ${appTheme === 'peper' || appTheme === 'light' ? 'text-gray-500' : 'text-gray-500'}`}>5</span>
                         </div>
 
                         {DEFAULT_COLOR_PRESETS.map(preset => {
@@ -3475,8 +3976,16 @@ export default function App() {
                               onClick={() => applyColorPreset(preset)}
                               className={`w-full px-3 py-1.5 flex items-center justify-between transition-colors text-left cursor-pointer ${
                                 isSelected 
-                                  ? 'bg-[var(--accent)] text-white font-bold' 
-                                  : 'text-gray-300 hover:text-white hover:bg-[#323238]'
+                                  ? (appTheme === 'peper'
+                                      ? 'bg-[#D95430] text-white force-white-text font-bold'
+                                      : (appTheme === 'light'
+                                        ? 'bg-gray-200 text-gray-900 font-bold'
+                                        : 'bg-[var(--accent)] text-white font-bold'))
+                                  : (appTheme === 'peper'
+                                      ? 'text-[#44372B] hover:text-[#2B221A] hover:bg-[#DDD4C4]'
+                                      : (appTheme === 'light'
+                                        ? 'text-gray-700 hover:text-black hover:bg-gray-100'
+                                        : 'text-gray-300 hover:text-white hover:bg-[#323238]'))
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
@@ -3484,23 +3993,35 @@ export default function App() {
                                 <span className="font-bold tracking-wider">{preset.name}</span>
                               </div>
                               <div className="flex items-center gap-1.5">
-                                <span className={`text-[8px] font-mono ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                                <span className={`text-[8px] font-mono ${
+                                  isSelected 
+                                    ? (appTheme === 'peper' ? 'text-white/90 force-white-text' : (appTheme === 'light' ? 'text-gray-700' : 'text-white/80')) 
+                                    : (appTheme === 'peper' || appTheme === 'light' ? 'text-gray-500' : 'text-gray-500')
+                                }`}>
                                   {preset.characterColor.toUpperCase()}
                                 </span>
-                                {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
+                                {isSelected && <Check className={`w-3.5 h-3.5 flex-shrink-0 ${appTheme === 'peper' ? 'text-white force-white-text' : ''}`} />}
                               </div>
                             </button>
                           );
                         })}
 
                         {/* Custom Presets Section */}
-                        <div className="px-3 py-1 mt-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#121214] border-t border-b border-[#323238]/60 flex items-center justify-between">
+                        <div className={`px-3 py-1 mt-1 text-[8px] font-bold uppercase tracking-widest border-t border-b flex items-center justify-between ${
+                          appTheme === 'peper'
+                            ? 'bg-[#DDD4C4] border-[#C2B6A2] text-[#44372B]'
+                            : (appTheme === 'light'
+                              ? 'bg-gray-100 border-gray-200 text-gray-700'
+                              : 'bg-[#121214] border-[#323238]/60 text-gray-400')
+                        }`}>
                           <span>── {t('CUSTOM SETS')} ──</span>
                           <span className="text-[7px] text-gray-500 font-normal">({customColorPresets.length})</span>
                         </div>
 
                         {customColorPresets.length === 0 ? (
-                          <div className="px-3 py-2 text-[9px] text-gray-500 text-center italic">
+                          <div className={`px-3 py-2 text-[9px] text-center italic ${
+                            appTheme === 'peper' || appTheme === 'light' ? 'text-gray-500' : 'text-gray-500'
+                          }`}>
                             {t('No custom sets registered')}
                           </div>
                         ) : (
@@ -3511,8 +4032,16 @@ export default function App() {
                                 key={preset.id}
                                 className={`w-full px-3 py-1.5 flex items-center justify-between transition-colors cursor-pointer group ${
                                   isSelected 
-                                    ? 'bg-[var(--accent)] text-white font-bold' 
-                                    : 'text-gray-300 hover:text-white hover:bg-[#323238]'
+                                    ? (appTheme === 'peper'
+                                        ? 'bg-[#D95430] text-white force-white-text font-bold'
+                                        : (appTheme === 'light'
+                                          ? 'bg-gray-200 text-gray-900 font-bold'
+                                          : 'bg-[var(--accent)] text-white font-bold'))
+                                    : (appTheme === 'peper'
+                                        ? 'text-[#44372B] hover:text-[#2B221A] hover:bg-[#DDD4C4]'
+                                        : (appTheme === 'light'
+                                          ? 'text-gray-700 hover:text-black hover:bg-gray-100'
+                                          : 'text-gray-300 hover:text-white hover:bg-[#323238]'))
                                 }`}
                                 onClick={() => applyColorPreset(preset)}
                               >
@@ -3521,11 +4050,13 @@ export default function App() {
                                   <span className="truncate tracking-wider">{preset.name}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                                  {isSelected && <Check className="w-3.5 h-3.5" />}
+                                  {isSelected && <Check className={`w-3.5 h-3.5 ${appTheme === 'peper' ? 'text-white force-white-text' : ''}`} />}
                                   <button
                                     type="button"
                                     onClick={(e) => handleDeleteCustomPreset(preset.id, e)}
-                                    className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                                    className={`p-1 transition-colors ${
+                                      appTheme === 'peper' || appTheme === 'light' ? 'text-gray-400 hover:text-red-500' : 'text-gray-400 hover:text-red-400'
+                                    }`}
                                     title={t('Delete Preset')}
                                   >
                                     <Trash2 className="w-3 h-3" />
@@ -3537,13 +4068,25 @@ export default function App() {
                         )}
 
                         {/* Save Current as Custom Set Action */}
-                        <div className="p-1.5 pt-2 border-t border-[#323238] bg-[#17171A]">
+                        <div className={`p-1.5 pt-2 border-t ${
+                          appTheme === 'peper'
+                            ? 'bg-[#DDD4C4] border-[#C2B6A2]'
+                            : (appTheme === 'light'
+                              ? 'bg-gray-100 border-gray-200'
+                              : 'bg-[#17171A] border-[#323238]')
+                        }`}>
                           <button
                             type="button"
                             onClick={() => handleRegisterCustomPreset()}
-                            className="w-full py-1.5 px-2 bg-[#25252B] hover:bg-[#323238] hover:text-[var(--accent)] text-gray-200 border border-[#3A3A42] flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                            className={`w-full py-1.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                              appTheme === 'peper'
+                                ? 'bg-white hover:bg-[#FAF8F5] text-[#3A2F24] border border-[#C2B6A2] shadow-sm'
+                                : (appTheme === 'light'
+                                  ? 'bg-white hover:bg-gray-50 text-gray-800 border border-gray-300 shadow-sm'
+                                  : 'bg-[#25252B] hover:bg-[#323238] hover:text-[var(--accent)] text-gray-200 border border-[#3A3A42]')
+                            }`}
                           >
-                            <Plus className="w-3 h-3 text-[var(--accent)]" />
+                            <Plus className={`w-3 h-3 ${appTheme === 'peper' ? 'text-[#D95430]' : (appTheme === 'light' ? 'text-gray-700' : 'text-[var(--accent)]')}`} />
                             {t('Save Current as Custom Set')}
                           </button>
                         </div>

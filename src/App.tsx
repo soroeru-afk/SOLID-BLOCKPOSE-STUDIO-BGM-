@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, Reorder, useDragControls } from 'motion/react';
 import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Center, PerspectiveCamera, ContactShadows, Environment } from '@react-three/drei';
 import { BlockPerson } from './components/BlockPerson';
 import { POSES as INITIAL_POSES, THEMES } from './constants';
-import { ThemeId, PosePreset, PoseAngles } from './types';
+import { ThemeId, PosePreset, PoseAngles, AppTheme, ColorScope, ThemeColorSetting, ColorPreset } from './types';
 import { 
   User, Palette, Library, Settings2, ZoomIn, RefreshCw, Layers, 
   Play, Pause, Plus, Minus, Save, Trash2, Edit3, SlidersHorizontal,
@@ -13,12 +13,130 @@ import {
   Camera, Video, Square, GripVertical, ChevronsUp, ChevronsDown,
   PanelLeftClose, PanelLeftOpen, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   LayoutGrid, Circle, Triangle, Target, Tornado, List, FolderPlus,
-  SkipBack, SkipForward, Zap, Maximize, Minimize, Check, Monitor
+  SkipBack, SkipForward, Zap, Maximize, Minimize, Check, Monitor, Sparkles
 } from 'lucide-react';
 import { SoundManager, SoundEffectType } from './lib/sound';
 import { AudioDB, StoredTrack } from './lib/audioDb';
 
 const STORAGE_KEY = 'voxelpose_pro_settings';
+
+export const THEME_ACCENTS: Record<AppTheme, { name: string; color: string }> = {
+  peper: { name: 'PEPER ORANGE', color: '#D95430' },
+  colors: { name: 'DARK GRAY', color: '#26262B' },
+  black: { name: 'PITCH BLACK', color: '#050505' },
+  red: { name: 'DARK RED', color: '#7A2020' },
+  light: { name: 'STUDIO GRAY', color: '#52525B' },
+};
+
+export const DEFAULT_COLOR_PRESETS: ColorPreset[] = [
+  {
+    id: 'default-peper',
+    name: 'PEPER',
+    isDefault: true,
+    appTheme: 'peper',
+    characterColor: '#D95430',
+    bgColor: '#F2EFE6',
+    themeId: 'light-gray',
+  },
+  {
+    id: 'default-colors',
+    name: 'DARK',
+    isDefault: true,
+    appTheme: 'colors',
+    characterColor: '#26262B',
+    bgColor: '#D8D8DC',
+    themeId: 'light-gray',
+  },
+  {
+    id: 'default-black',
+    name: 'BLACK',
+    isDefault: true,
+    appTheme: 'black',
+    characterColor: '#050505',
+    bgColor: '#2E2E33',
+    themeId: 'monolith',
+  },
+  {
+    id: 'default-red',
+    name: 'RED',
+    isDefault: true,
+    appTheme: 'red',
+    characterColor: '#7A2020',
+    bgColor: '#2B2B30',
+    themeId: 'red',
+  },
+  {
+    id: 'default-light',
+    name: 'LIGHT',
+    isDefault: true,
+    appTheme: 'light',
+    characterColor: '#52525B',
+    bgColor: '#F4F4F6',
+    themeId: 'studio',
+  },
+];
+
+export const DEFAULT_THEME_COLORS: Record<AppTheme, ThemeColorSetting> = {
+  peper: {
+    characterColor: '#D95430',
+    savedCustomCharacterColor: '#D95430',
+    themeId: 'light-gray',
+    customBgColor: '#F2EFE6',
+    savedCustomBgColor: '#F2EFE6',
+  },
+  colors: {
+    characterColor: '#26262B',
+    savedCustomCharacterColor: '#26262B',
+    themeId: 'light-gray',
+    customBgColor: '#D8D8DC',
+    savedCustomBgColor: '#D8D8DC',
+  },
+  black: {
+    characterColor: '#050505',
+    savedCustomCharacterColor: '#050505',
+    themeId: 'monolith',
+    customBgColor: '#2E2E33',
+    savedCustomBgColor: '#2E2E33',
+  },
+  red: {
+    characterColor: '#7A2020',
+    savedCustomCharacterColor: '#7A2020',
+    themeId: 'red',
+    customBgColor: '#2B2B30',
+    savedCustomBgColor: '#2B2B30',
+  },
+  light: {
+    characterColor: '#52525B',
+    savedCustomCharacterColor: '#52525B',
+    themeId: 'studio',
+    customBgColor: '#F4F4F6',
+    savedCustomBgColor: '#F4F4F6',
+  },
+};
+
+export const PresetColorBadge = ({ 
+  chrColor, 
+  bgColor, 
+  size = 'sm' 
+}: { 
+  chrColor: string; 
+  bgColor: string; 
+  size?: 'sm' | 'md' | 'lg' 
+}) => {
+  const dims = size === 'lg' ? 'w-6 h-6' : size === 'md' ? 'w-5 h-5' : 'w-4 h-4';
+  return (
+    <div 
+      className={`relative ${dims} border border-[#555] rounded-none overflow-hidden flex-shrink-0 shadow-sm`} 
+      style={{ backgroundColor: bgColor }} 
+      title={`Character: ${chrColor} | Background: ${bgColor}`}
+    >
+      <div 
+        className="absolute inset-y-0 left-0 w-1/2 border-r border-black/30" 
+        style={{ backgroundColor: chrColor }} 
+      />
+    </div>
+  );
+};
 
 const originalWarn = console.warn;
 console.warn = (...args) => {
@@ -113,13 +231,117 @@ const CinematicCamera = ({ isAutoCamera, isSlowRotate, autoCameraSpeed, autoCame
 };
 
 export default function App() {
+  const [appTheme, setAppTheme] = useState<AppTheme>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_appTheme`);
+    if (saved === 'peper' || saved === 'paper') return 'peper';
+    if (saved === 'colors' || saved === 'black' || saved === 'light' || saved === 'red') return saved as AppTheme;
+    return 'peper';
+  });
+
+  const [colorScope, setColorScope] = useState<ColorScope>(() => {
+    return (localStorage.getItem(`${STORAGE_KEY}_colorScope`) as ColorScope) || 'theme';
+  });
+
+  const [themeColors, setThemeColors] = useState<Record<AppTheme, ThemeColorSetting>>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_themeColors`);
+    if (saved) {
+      try {
+        return { ...DEFAULT_THEME_COLORS, ...JSON.parse(saved) };
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    const initial = { ...DEFAULT_THEME_COLORS };
+    const existingChar = localStorage.getItem(`${STORAGE_KEY}_characterColor`);
+    const existingSavedCustomChar = localStorage.getItem(`${STORAGE_KEY}_savedCustomCharacterColor`);
+    const existingThemeId = localStorage.getItem(`${STORAGE_KEY}_themeId`) as ThemeId;
+    const existingBg = localStorage.getItem(`${STORAGE_KEY}_customBgColor`);
+    const existingSavedBg = localStorage.getItem(`${STORAGE_KEY}_savedCustomBgColor`);
+    const currentAppTheme = (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as AppTheme) || 'peper';
+    if (existingChar) {
+      initial[currentAppTheme] = {
+        characterColor: existingChar,
+        savedCustomCharacterColor: existingSavedCustomChar || existingChar,
+        themeId: existingThemeId || initial[currentAppTheme].themeId,
+        customBgColor: existingBg || null,
+        savedCustomBgColor: existingSavedBg || initial[currentAppTheme].savedCustomBgColor,
+      };
+    }
+    return initial;
+  });
+
+  const [commonColors, setCommonColors] = useState<ThemeColorSetting>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_commonColors`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return {
+      characterColor: '#0F172A',
+      savedCustomCharacterColor: '#ffffff',
+      themeId: 'light-gray',
+      customBgColor: null,
+      savedCustomBgColor: '#121214',
+    };
+  });
+
+  const [isCopiedToAll, setIsCopiedToAll] = useState(false);
+
+  const APP_THEMES = useMemo<{ id: AppTheme; label: string; dotColor: string }[]>(() => [
+    { id: 'peper', label: 'PEPER', dotColor: '#D95430' },
+    { id: 'colors', label: 'DARK', dotColor: '#26262B' },
+    { id: 'black', label: 'BLACK', dotColor: '#050505' },
+    { id: 'red', label: 'RED', dotColor: '#7A2020' },
+    { id: 'light', label: 'LIGHT', dotColor: '#52525B' },
+  ], []);
+
+  const currentThemeObj = useMemo(() => {
+    return APP_THEMES.find(t => t.id === appTheme) || APP_THEMES[0];
+  }, [APP_THEMES, appTheme]);
+
+  // Custom Color Presets (Character + Background combined presets)
+  const [customColorPresets, setCustomColorPresets] = useState<ColorPreset[]>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_customColorPresets`);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [];
+  });
+
+  const [activePresetId, setActivePresetId] = useState<string>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_activePresetId`);
+    if (saved) return saved;
+    const currentAppTheme = localStorage.getItem(`${STORAGE_KEY}_appTheme`);
+    if (currentAppTheme === 'colors') return 'default-colors';
+    if (currentAppTheme === 'black') return 'default-black';
+    if (currentAppTheme === 'red') return 'default-red';
+    if (currentAppTheme === 'light') return 'default-light';
+    return 'default-peper';
+  });
+
+  const [isRegisteringPreset, setIsRegisteringPreset] = useState(false);
+  const [newPresetNameInput, setNewPresetNameInput] = useState('');
+  const [isSidebarPresetDropdownOpen, setIsSidebarPresetDropdownOpen] = useState(false);
+
   // State Initialization from LocalStorage
   const [poses, setPoses] = useState<PosePreset[]>(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_poses`);
     return saved ? JSON.parse(saved) : INITIAL_POSES;
   });
   const [poseId, setPoseId] = useState(() => localStorage.getItem(`${STORAGE_KEY}_poseId`) || INITIAL_POSES[0].id);
-  const [themeId, setThemeId] = useState<ThemeId>(() => (localStorage.getItem(`${STORAGE_KEY}_themeId`) as ThemeId) || 'light-gray');
+
+  const initialActiveColorConfig = useMemo(() => {
+    return colorScope === 'theme' ? (themeColors[appTheme] || DEFAULT_THEME_COLORS[appTheme]) : commonColors;
+  }, [colorScope, appTheme, themeColors, commonColors]);
+
+  const [themeId, setThemeId] = useState<ThemeId>(() => (localStorage.getItem(`${STORAGE_KEY}_themeId`) as ThemeId) || initialActiveColorConfig.themeId);
   const [formationLevel, setFormationLevel] = useState(() => {
     const saved = localStorage.getItem(`${STORAGE_KEY}_formationLevel`);
     if (saved) return Math.min(8, parseInt(saved));
@@ -137,6 +359,209 @@ export default function App() {
   const [isAutoCycle, setIsAutoCycle] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isAutoCycle`) === 'true');
   const [cycleSpeed, setCycleSpeed] = useState(() => parseInt(localStorage.getItem(`${STORAGE_KEY}_cycleSpeed`) || '3000'));
   const [customBgColor, setCustomBgColor] = useState<string | null>(() => localStorage.getItem(`${STORAGE_KEY}_customBgColor`));
+  const [characterColor, setCharacterColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_characterColor`) || initialActiveColorConfig.characterColor);
+  const [savedCustomCharacterColor, setSavedCustomCharacterColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_savedCustomCharacterColor`) || initialActiveColorConfig.savedCustomCharacterColor);
+  const [savedCustomBgColor, setSavedCustomBgColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_savedCustomBgColor`) || initialActiveColorConfig.savedCustomBgColor);
+
+  const allPresets = useMemo(() => {
+    return [...DEFAULT_COLOR_PRESETS, ...customColorPresets];
+  }, [customColorPresets]);
+
+  const activePreset = useMemo(() => {
+    return allPresets.find(p => p.id === activePresetId) || DEFAULT_COLOR_PRESETS[0];
+  }, [allPresets, activePresetId]);
+
+  const isModifiedFromPreset = useMemo(() => {
+    if (!activePreset) return false;
+    const currentBg = (customBgColor || '#E5E7EB').toLowerCase();
+    const presetBg = activePreset.bgColor.toLowerCase();
+    const currentChr = characterColor.toLowerCase();
+    const presetChr = activePreset.characterColor.toLowerCase();
+    return currentChr !== presetChr || currentBg !== presetBg;
+  }, [activePreset, characterColor, customBgColor]);
+
+  const applyColorPreset = useCallback((preset: ColorPreset) => {
+    setAppTheme(preset.appTheme);
+    setCharacterColor(preset.characterColor);
+    setCustomBgColor(preset.bgColor);
+    setSavedCustomBgColor(preset.bgColor);
+    setSavedCustomCharacterColor(preset.characterColor);
+    if (preset.themeId) setThemeId(preset.themeId);
+    setActivePresetId(preset.id);
+
+    localStorage.setItem(`${STORAGE_KEY}_activePresetId`, preset.id);
+    localStorage.setItem(`${STORAGE_KEY}_appTheme`, preset.appTheme);
+    localStorage.setItem(`${STORAGE_KEY}_characterColor`, preset.characterColor);
+    localStorage.setItem(`${STORAGE_KEY}_customBgColor`, preset.bgColor);
+    localStorage.setItem(`${STORAGE_KEY}_savedCustomBgColor`, preset.bgColor);
+    localStorage.setItem(`${STORAGE_KEY}_savedCustomCharacterColor`, preset.characterColor);
+    if (preset.themeId) localStorage.setItem(`${STORAGE_KEY}_themeId`, preset.themeId);
+
+    setThemeColors(prev => ({
+      ...prev,
+      [preset.appTheme]: {
+        characterColor: preset.characterColor,
+        savedCustomCharacterColor: preset.characterColor,
+        themeId: preset.themeId || prev[preset.appTheme]?.themeId || 'light-gray',
+        customBgColor: preset.bgColor,
+        savedCustomBgColor: preset.bgColor,
+      }
+    }));
+
+    setIsThemeDropdownOpen(false);
+    setIsSidebarPresetDropdownOpen(false);
+  }, []);
+
+  const handleRegisterCustomPreset = useCallback((nameInput?: string) => {
+    const currentBg = customBgColor || '#E5E7EB';
+    const count = customColorPresets.length + 1;
+    const name = (nameInput && nameInput.trim()) ? nameInput.trim() : `CUSTOM ${String(count).padStart(2, '0')}`;
+    const newPreset: ColorPreset = {
+      id: `custom_${Date.now()}`,
+      name,
+      isDefault: false,
+      appTheme,
+      characterColor,
+      bgColor: currentBg,
+      themeId,
+    };
+    const updated = [...customColorPresets, newPreset];
+    setCustomColorPresets(updated);
+    setActivePresetId(newPreset.id);
+    localStorage.setItem(`${STORAGE_KEY}_customColorPresets`, JSON.stringify(updated));
+    localStorage.setItem(`${STORAGE_KEY}_activePresetId`, newPreset.id);
+    setIsRegisteringPreset(false);
+    setNewPresetNameInput('');
+    setIsThemeDropdownOpen(false);
+    setIsSidebarPresetDropdownOpen(false);
+  }, [customBgColor, customColorPresets, appTheme, characterColor, themeId]);
+
+  const handleUpdateCustomPreset = useCallback(() => {
+    if (!activePresetId || activePresetId.startsWith('default-')) return;
+    const currentBg = customBgColor || '#E5E7EB';
+    const updated = customColorPresets.map(p => {
+      if (p.id === activePresetId) {
+        return {
+          ...p,
+          characterColor,
+          bgColor: currentBg,
+          themeId,
+          appTheme,
+        };
+      }
+      return p;
+    });
+    setCustomColorPresets(updated);
+    localStorage.setItem(`${STORAGE_KEY}_customColorPresets`, JSON.stringify(updated));
+  }, [activePresetId, customBgColor, customColorPresets, characterColor, themeId, appTheme]);
+
+  const handleDeleteCustomPreset = useCallback((id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const updated = customColorPresets.filter(p => p.id !== id);
+    setCustomColorPresets(updated);
+    localStorage.setItem(`${STORAGE_KEY}_customColorPresets`, JSON.stringify(updated));
+    if (activePresetId === id) {
+      applyColorPreset(DEFAULT_COLOR_PRESETS[0]);
+    }
+  }, [customColorPresets, activePresetId, applyColorPreset]);
+
+  const updateColorSetting = useCallback((updates: Partial<ThemeColorSetting>) => {
+    if (updates.characterColor !== undefined) setCharacterColor(updates.characterColor);
+    if (updates.savedCustomCharacterColor !== undefined) setSavedCustomCharacterColor(updates.savedCustomCharacterColor);
+    if (updates.themeId !== undefined) setThemeId(updates.themeId);
+    if (updates.customBgColor !== undefined) setCustomBgColor(updates.customBgColor);
+    if (updates.savedCustomBgColor !== undefined) setSavedCustomBgColor(updates.savedCustomBgColor);
+
+    if (colorScope === 'theme') {
+      setThemeColors(prev => {
+        const current = prev[appTheme] || DEFAULT_THEME_COLORS[appTheme];
+        const updated = {
+          ...prev,
+          [appTheme]: {
+            ...current,
+            ...updates,
+          }
+        };
+        localStorage.setItem(`${STORAGE_KEY}_themeColors`, JSON.stringify(updated));
+        return updated;
+      });
+    } else {
+      setCommonColors(prev => {
+        const updated = {
+          ...prev,
+          ...updates,
+        };
+        localStorage.setItem(`${STORAGE_KEY}_commonColors`, JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [colorScope, appTheme]);
+
+  const handleSelectTheme = useCallback((newTheme: AppTheme) => {
+    setAppTheme(newTheme);
+    setIsThemeDropdownOpen(false);
+
+    // Map theme to default preset id
+    const defPreset = DEFAULT_COLOR_PRESETS.find(p => p.appTheme === newTheme);
+    if (defPreset) {
+      setActivePresetId(defPreset.id);
+      localStorage.setItem(`${STORAGE_KEY}_activePresetId`, defPreset.id);
+    }
+
+    if (colorScope === 'theme') {
+      const config = themeColors[newTheme] || DEFAULT_THEME_COLORS[newTheme];
+      if (config) {
+        setCharacterColor(config.characterColor);
+        setSavedCustomCharacterColor(config.savedCustomCharacterColor);
+        setThemeId(config.themeId);
+        setCustomBgColor(config.customBgColor);
+        setSavedCustomBgColor(config.savedCustomBgColor);
+      }
+    }
+  }, [colorScope, themeColors]);
+
+  const handleToggleColorScope = useCallback((scope: ColorScope) => {
+    setColorScope(scope);
+    localStorage.setItem(`${STORAGE_KEY}_colorScope`, scope);
+    if (scope === 'theme') {
+      const config = themeColors[appTheme] || DEFAULT_THEME_COLORS[appTheme];
+      if (config) {
+        setCharacterColor(config.characterColor);
+        setSavedCustomCharacterColor(config.savedCustomCharacterColor);
+        setThemeId(config.themeId);
+        setCustomBgColor(config.customBgColor);
+        setSavedCustomBgColor(config.savedCustomBgColor);
+      }
+    } else {
+      setCharacterColor(commonColors.characterColor);
+      setSavedCustomCharacterColor(commonColors.savedCustomCharacterColor);
+      setThemeId(commonColors.themeId);
+      setCustomBgColor(commonColors.customBgColor);
+      setSavedCustomBgColor(commonColors.savedCustomBgColor);
+    }
+  }, [appTheme, themeColors, commonColors]);
+
+  const copyCurrentColorsToAllThemes = useCallback(() => {
+    const currentConfig: ThemeColorSetting = {
+      characterColor,
+      savedCustomCharacterColor,
+      themeId,
+      customBgColor,
+      savedCustomBgColor,
+    };
+    setThemeColors(prev => {
+      const updated = { ...prev };
+      (Object.keys(DEFAULT_THEME_COLORS) as AppTheme[]).forEach(k => {
+        updated[k] = { ...currentConfig };
+      });
+      localStorage.setItem(`${STORAGE_KEY}_themeColors`, JSON.stringify(updated));
+      return updated;
+    });
+    setCommonColors(currentConfig);
+    localStorage.setItem(`${STORAGE_KEY}_commonColors`, JSON.stringify(currentConfig));
+    setIsCopiedToAll(true);
+    setTimeout(() => setIsCopiedToAll(false), 2000);
+  }, [characterColor, savedCustomCharacterColor, themeId, customBgColor, savedCustomBgColor]);
   
   // Sound settings
   const [soundType, setSoundType] = useState<SoundEffectType>(() => (localStorage.getItem(`${STORAGE_KEY}_soundType`) as SoundEffectType) || 'mechanical');
@@ -283,6 +708,7 @@ export default function App() {
   const [autoCameraMinDistance, setAutoCameraMinDistance] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_autoCameraMinDistance`) || '8'));
   const [autoCameraMaxDistance, setAutoCameraMaxDistance] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_autoCameraMaxDistance`) || '16'));
   const [autoCameraReverse, setAutoCameraReverse] = useState(() => localStorage.getItem(`${STORAGE_KEY}_autoCameraReverse`) === 'true');
+  const [isPoseSettingOpen, setIsPoseSettingOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isPoseSettingOpen`) !== 'false');
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isAdvancedOptionsOpen`) !== 'false');
   const [isPoseLibraryOpen, setIsPoseLibraryOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isPoseLibraryOpen`) !== 'false');
   const [isEffectSettingOpen, setIsEffectSettingOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isEffectSettingOpen`) !== 'false');
@@ -290,9 +716,6 @@ export default function App() {
 
   // UI Theme settings
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_accentColor`) || '#80858C');
-  const [characterColor, setCharacterColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_characterColor`) || '#0F172A');
-  const [savedCustomCharacterColor, setSavedCustomCharacterColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_savedCustomCharacterColor`) || '#ffffff');
-  const [savedCustomBgColor, setSavedCustomBgColor] = useState(() => localStorage.getItem(`${STORAGE_KEY}_savedCustomBgColor`) || '#000000');
   const [isColorSettingsOpen, setIsColorSettingsOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isColorSettingsOpen`) !== 'false');
   const [activeTab, setActiveTab] = useState<'visual' | 'sound'>('visual');
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isSidebarOpen`) !== 'false');
@@ -306,7 +729,7 @@ export default function App() {
     const handleMouseMove = (e: MouseEvent) => {
       e.preventDefault();
       const newWidth = sidebarPosition === 'left' ? e.clientX : window.innerWidth - e.clientX;
-      setSidebarWidth(Math.max(300, Math.min(newWidth, 600, window.innerWidth - 100)));
+      setSidebarWidth(Math.max(300, Math.min(newWidth, 600)));
     };
     
     const handleMouseUp = () => {
@@ -322,8 +745,40 @@ export default function App() {
     };
   }, [isResizingSidebar, sidebarPosition]);
   const [appLanguage, setAppLanguage] = useState<'en' | 'ja'>(() => (localStorage.getItem(`${STORAGE_KEY}_appLanguage`) as any) || 'en');
-  const [appTheme, setAppTheme] = useState<'colors' | 'black' | 'light' | 'red'>(() => (localStorage.getItem(`${STORAGE_KEY}_appTheme`) as any) || 'black');
+  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
+  const themeDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(e.target as Node)) {
+        setIsThemeDropdownOpen(false);
+      }
+    };
+    if (isThemeDropdownOpen) {
+      window.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isThemeDropdownOpen]);
+
   const [isHUDControlsVisible, setIsHUDControlsVisible] = useState(() => localStorage.getItem(`${STORAGE_KEY}_isHUDControlsVisible`) !== 'false');
+
+  const [themeDropdownMode, setThemeDropdownMode] = useState<'ui-only' | 'preset'>(() => {
+    const saved = localStorage.getItem(`${STORAGE_KEY}_themeDropdownMode`);
+    return saved === 'preset' ? 'preset' : 'ui-only';
+  });
+
+  const switchThemeDropdownMode = (mode: 'ui-only' | 'preset') => {
+    setThemeDropdownMode(mode);
+    localStorage.setItem(`${STORAGE_KEY}_themeDropdownMode`, mode);
+  };
+
+  const handleSelectUIThemeOnly = useCallback((newTheme: AppTheme) => {
+    setAppTheme(newTheme);
+    localStorage.setItem(`${STORAGE_KEY}_appTheme`, newTheme);
+    setIsThemeDropdownOpen(false);
+  }, []);
 
   const t = (enText: string) => {
     if (appLanguage === 'en') return enText;
@@ -373,6 +828,7 @@ export default function App() {
       'Visual Themes': 'ビジュアルテーマ',
       'EFFECT SETTING': 'エフェクト設定',
       'BGM SETTING': 'BGM設定',
+      'POSE SETTING': 'ポーズセッティング',
       'Custom': 'カスタム',
       'EXPORT': '出力',
       'IMPORT': '入力',
@@ -422,6 +878,33 @@ export default function App() {
       'Enter Fullscreen': 'フルスクリーン開始',
       'Auto Format Change': 'フォーマットチェンジ',
       'New Set': '新規作成',
+      'Color Scope': 'カラー適用範囲',
+      'Per Theme': 'テーマ別',
+      'Common': '共通',
+      'ALL THEMES': '全テーマ共通',
+      'Saved for': '保存先:',
+      'Copy to All Themes': '全テーマに複製',
+      'Copied!': '複製完了',
+      'THEME ACCENT': 'テーマアクセント',
+      'Apply Theme Accent': 'テーマのアクセントカラーを適用',
+      'DEFAULT PRESETS': 'レギュラー / デフォルト',
+      'CUSTOM SETS': 'カスタムセット',
+      'No custom sets registered': '登録済みカスタムセットなし',
+      'Save Current as Custom Set': '現在の配色をカスタム登録',
+      'Register New Custom Set': '新規カスタムセット登録',
+      'Overwrite Custom Set': 'カスタムセット上書き保存',
+      'Delete Preset': 'プリセット削除',
+      'Color Set': 'カラーセット',
+      'Active Set': '適用中セット',
+      'Modified': '変更あり',
+      'Preset': 'プリセット',
+      'Enter custom preset name': 'カスタムセット名を入力',
+      'Select Theme & Color Preset': 'テーマ・カラーセット選択',
+      'UI Theme Only': 'UIのみ変更（シーン維持）',
+      'Full Preset Set': '全連動セット',
+      'UI THEMES': 'UIテーマ (5色)',
+      'SCENE INTACT': 'シーン維持',
+      'Character and background colors will remain unchanged.': 'キャラクター・背景色は変更されません',
     };
     return jaDict[enText] || enText;
   };
@@ -455,6 +938,17 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', appTheme);
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    const themeColors: Record<AppTheme, string> = {
+      peper: '#EBE4D5',
+      colors: '#121214',
+      black: '#000000',
+      red: '#1A0A0A',
+      light: '#F0F2F5',
+    };
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', themeColors[appTheme] || '#121214');
+    }
   }, [appTheme]);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -496,7 +990,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_autoCameraMaxHeight`, autoCameraMaxHeight.toString());
     localStorage.setItem(`${STORAGE_KEY}_autoCameraMinDistance`, autoCameraMinDistance.toString());
     localStorage.setItem(`${STORAGE_KEY}_autoCameraMaxDistance`, autoCameraMaxDistance.toString());
-    localStorage.setItem(`${STORAGE_KEY}_autoCameraReverse`, autoCameraReverse.toString());
+    localStorage.setItem(`${STORAGE_KEY}_isPoseSettingOpen`, isPoseSettingOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isAdvancedOptionsOpen`, isAdvancedOptionsOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isPoseLibraryOpen`, isPoseLibraryOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isEffectSettingOpen`, isEffectSettingOpen.toString());
@@ -505,6 +999,9 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_characterColor`, characterColor);
     localStorage.setItem(`${STORAGE_KEY}_savedCustomCharacterColor`, savedCustomCharacterColor);
     localStorage.setItem(`${STORAGE_KEY}_savedCustomBgColor`, savedCustomBgColor);
+    localStorage.setItem(`${STORAGE_KEY}_colorScope`, colorScope);
+    localStorage.setItem(`${STORAGE_KEY}_themeColors`, JSON.stringify(themeColors));
+    localStorage.setItem(`${STORAGE_KEY}_commonColors`, JSON.stringify(commonColors));
     localStorage.setItem(`${STORAGE_KEY}_isColorSettingsOpen`, isColorSettingsOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_isSidebarOpen`, isSidebarOpen.toString());
     localStorage.setItem(`${STORAGE_KEY}_sidebarPosition`, sidebarPosition);
@@ -517,7 +1014,7 @@ export default function App() {
     localStorage.setItem(`${STORAGE_KEY}_shadowAngle`, shadowAngle.toString());
     localStorage.setItem(`${STORAGE_KEY}_shadowBlur`, shadowBlur.toString());
     localStorage.setItem(`${STORAGE_KEY}_shadowLength`, shadowLength.toString());
-  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, autoCameraMinHeight, autoCameraMaxHeight, autoCameraMinDistance, autoCameraMaxDistance, autoCameraReverse, isAdvancedOptionsOpen, isPoseLibraryOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isSidebarOpen, sidebarPosition, sidebarWidth, appLanguage, appTheme, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength]);
+  }, [poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor, soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, autoCameraMinHeight, autoCameraMaxHeight, autoCameraMinDistance, autoCameraMaxDistance, autoCameraReverse, isPoseSettingOpen, isAdvancedOptionsOpen, isPoseLibraryOpen, isEffectSettingOpen, isBgmSettingOpen, accentColor, characterColor, savedCustomCharacterColor, savedCustomBgColor, colorScope, themeColors, commonColors, isColorSettingsOpen, isSidebarOpen, sidebarPosition, sidebarWidth, appLanguage, appTheme, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength]);
 
   // Sync sound manager state
   useEffect(() => {
@@ -549,8 +1046,10 @@ export default function App() {
     const data = {
       poses, poseId, themeId, formationLevel, formationType, formationSpacing, personScale, isAutoCycle, isRandomCycle, isSlowRotate, rotateSpeed, cycleSpeed, customBgColor,
       soundType, sfxVolume, bgmVolume, isSfxMuted, isAutoCamera, isAutoFormation, isRandomFormation, autoCameraSpeed, autoCameraMinHeight, autoCameraMaxHeight, autoCameraMinDistance, autoCameraMaxDistance, autoCameraReverse, accentColor,
-      characterColor, savedCustomCharacterColor, savedCustomBgColor, isColorSettingsOpen, isPoseLibraryOpen, isSidebarOpen, sidebarPosition, sidebarWidth, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
+      characterColor, savedCustomCharacterColor, savedCustomBgColor, colorScope, themeColors, commonColors, isColorSettingsOpen, isPoseSettingOpen, isPoseLibraryOpen, isSidebarOpen, sidebarPosition, sidebarWidth, isHUDControlsVisible, hudOpacity, shadowOpacity, shadowAngle, shadowBlur, shadowLength,
       playlists, activePlaylistId, isPlaylistExpanded,
+      customColorPresets, activePresetId,
+      appTheme, themeDropdownMode,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -609,7 +1108,21 @@ export default function App() {
         if (data.characterColor) setCharacterColor(data.characterColor);
         if (data.savedCustomCharacterColor) setSavedCustomCharacterColor(data.savedCustomCharacterColor);
         if (data.savedCustomBgColor) setSavedCustomBgColor(data.savedCustomBgColor);
+        if (data.colorScope) setColorScope(data.colorScope);
+        if (data.themeColors) setThemeColors(data.themeColors);
+        if (data.commonColors) setCommonColors(data.commonColors);
+        if (data.customColorPresets) setCustomColorPresets(data.customColorPresets);
+        if (data.activePresetId) setActivePresetId(data.activePresetId);
+        if (data.appTheme) {
+          setAppTheme(data.appTheme);
+          localStorage.setItem(`${STORAGE_KEY}_appTheme`, data.appTheme);
+        }
+        if (data.themeDropdownMode) {
+          setThemeDropdownMode(data.themeDropdownMode);
+          localStorage.setItem(`${STORAGE_KEY}_themeDropdownMode`, data.themeDropdownMode);
+        }
         if (data.isColorSettingsOpen !== undefined) setIsColorSettingsOpen(data.isColorSettingsOpen);
+        if (data.isPoseSettingOpen !== undefined) setIsPoseSettingOpen(data.isPoseSettingOpen);
         if (data.isPoseLibraryOpen !== undefined) setIsPoseLibraryOpen(data.isPoseLibraryOpen);
         if (data.isSidebarOpen !== undefined) setIsSidebarOpen(data.isSidebarOpen);
         if (data.sidebarPosition) setSidebarPosition(data.sidebarPosition);
@@ -1302,17 +1815,17 @@ export default function App() {
   }, [formationLevel, formationType, formationSpacing]);
 
   const highlightClasses = {
-    text: appTheme === 'light' ? 'text-[#009FBA]' : 'text-[#05DFFC]',
-    bg: appTheme === 'light' ? 'bg-[#009FBA]' : 'bg-[#05DFFC]',
-    bgMuted: appTheme === 'light' ? 'bg-[#009FBA]/10' : 'bg-[#05DFFC]/10',
-    border: appTheme === 'light' ? 'border-[#009FBA]' : 'border-[#05DFFC]',
-    accent: appTheme === 'light' ? 'accent-[#009FBA]' : 'accent-[#05DFFC]',
+    text: appTheme === 'peper' ? 'text-[#D95430]' : (appTheme === 'light' ? 'text-[#009FBA]' : 'text-[#05DFFC]'),
+    bg: appTheme === 'peper' ? 'bg-[#D95430]' : (appTheme === 'light' ? 'bg-[#009FBA]' : 'bg-[#05DFFC]'),
+    bgMuted: appTheme === 'peper' ? 'bg-[#D95430]/15' : (appTheme === 'light' ? 'bg-[#009FBA]/10' : 'bg-[#05DFFC]/10'),
+    border: appTheme === 'peper' ? 'border-[#D95430]' : (appTheme === 'light' ? 'border-[#009FBA]' : 'border-[#05DFFC]'),
+    accent: appTheme === 'peper' ? 'accent-[#D95430]' : (appTheme === 'light' ? 'accent-[#009FBA]' : 'accent-[#05DFFC]'),
   };
 
   return (
     <div 
       className={`flex h-screen w-full overflow-hidden bg-[#121214] text-[#E1E1E6] font-sans ${sidebarPosition === 'right' ? 'flex-row-reverse' : 'flex-row'}`}
-      style={{ '--accent': appTheme === 'red' ? '#7A1F1F' : accentColor } as React.CSSProperties}
+      style={{ '--accent': appTheme === 'peper' ? '#D95430' : (appTheme === 'red' ? '#7A1F1F' : accentColor) } as React.CSSProperties}
     >
       {/* Sidebar */}
       <AnimatePresence initial={false}>
@@ -1374,302 +1887,329 @@ export default function App() {
 
           {activeTab === 'visual' ? (
             <div className="flex-1 flex flex-col animate-in fade-in duration-300 min-h-0">
-              {/* Controls Hook */}
-              <div className="flex-shrink-0 p-4 border-b border-[#323238] bg-[var(--accent)]/5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {isAutoCycle ? <Play className={`w-4 h-4 ${highlightClasses.text} opacity-80`} /> : <Pause className="w-4 h-4 text-gray-500" />}
-                    <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Cycle')}</span>
-                  </div>
-                  
+              {/* Pose Setting Section (Collapsible like Sound tab) */}
+              <div className="flex-shrink-0 p-4 border-b border-[#323238] bg-[var(--accent)]/5">
+                <div className={`p-3 flex flex-col gap-3 relative ${appTheme === 'light' ? 'bg-white border border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border border-[#4A4A52]' : 'bg-[#1a1a1e]/40 border border-[#323238]')}`}>
                   <button 
-                    onClick={() => {
-                      const nextState = !isAutoCycle;
-                      setIsAutoCycle(nextState);
-                      
-                      if (nextState) {
-                        if (isSoundOn) {
-                          if (soundMode === 'bgm') {
-                            setIsBgmPlaying(true);
-                            setSfxMutedWithSpeed(true);
-                            if (currentBgmId !== null) {
-                              SoundManager.playBGM();
-                            } else if (bgmPlaylist.length > 0) {
-                              playTrackById(bgmPlaylist[0].id, true);
-                            }
-                          } else {
-                            setIsBgmPlaying(false);
-                            SoundManager.pauseBGM();
-                            setSfxMutedWithSpeed(false);
-                          }
-                        }
-                      } else {
-                        if (isSoundOn && soundMode === 'bgm') {
-                          setIsBgmPlaying(false);
-                          SoundManager.pauseBGM();
-                        }
-                        setSfxMutedWithSpeed(true);
-                        setIsAutoCamera(false);
-                        setIsAutoFormation(false);
-                        setIsSlowRotate(false);
-                        if (orbitRef.current) {
-                          orbitRef.current.autoRotate = false;
-                        }
-                      }
-                    }}
-                    className={`w-10 h-5  transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
+                    onClick={() => setIsPoseSettingOpen(!isPoseSettingOpen)}
+                    className={`flex items-center justify-between w-full ${isPoseSettingOpen ? 'border-b pb-2 mb-1' : ''} ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} group cursor-pointer`}
                   >
-                    <div className={`absolute top-[1px] w-4 h-4  transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
+                    <div className="flex items-center gap-2">
+                      <div className={`w-1 h-3 transition-colors ${isPoseSettingOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
+                      <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isPoseSettingOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : 'text-gray-500 group-hover:text-gray-400'}`}>
+                        {t('POSE SETTING')}
+                      </span>
+                      {!isPoseSettingOpen && isAutoCycle && (
+                        <span className="text-[8px] font-mono font-bold text-[var(--accent)] bg-[var(--accent)]/10 px-1.5 py-0.5 border border-[var(--accent)]/30 leading-none">
+                          AUTO
+                        </span>
+                      )}
+                    </div>
+                    <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-[#323238]'} ${isPoseSettingOpen ? highlightClasses.border : 'group-hover:border-gray-400'}`}>
+                      {isPoseSettingOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
+                    </div>
                   </button>
-                </div>
-                
-                <div className="pt-3">
-                    <div className={`flex items-center justify-between mb-4 pb-4 border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
-                      <div className="flex gap-4">
-                        <div className="flex flex-col gap-1.5">
-                           <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('SOUND')}</span>
-                           <button 
-                             onClick={toggleSound}
-                             className={`flex items-center justify-center gap-1.5 w-[84px] py-1  border transition-colors ${
-                               isSoundOn 
-                                 ? (isAutoCycle ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : (appTheme === 'light' ? 'bg-transparent border-gray-400 text-gray-800' : 'bg-transparent border-gray-300 text-gray-200'))
-                                 : 'border-gray-500 bg-[#1a1a1e] text-gray-500'
-                             }`}
-                           >
-                             {isSoundOn ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
-                             <span className="text-[9px] uppercase font-bold">{isSoundOn ? t('ON') : t('OFF')}</span>
-                           </button>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                           <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('MODE')}</span>
-                           <div className="flex items-center h-[26px] w-[96px] bg-[#1a1a1e] border border-[#323238]  p-0.5">
-                             <button
-                               onClick={() => changeSoundMode('bgm')}
-                               className={`flex-1 flex items-center justify-center h-full  transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'bgm' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                             >
-                               BGM
-                             </button>
-                             <button
-                               onClick={() => changeSoundMode('sfx')}
-                               className={`flex-1 flex items-center justify-center h-full  transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'sfx' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                             >
-                               SFX
-                             </button>
-                           </div>
-                        </div>
-                      </div>
-                    </div>
 
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Cycle Interval')}</label>
-                      <span className={`text-[9px] font-mono font-bold ${isAutoCycle ? `${highlightClasses.text} ${highlightClasses.bgMuted}` : 'text-gray-500 bg-[#1a1a1e]'} px-1.5 py-0.5  transition-colors`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
-                    </div>
-                    <input 
-                      type="range" 
-                      min={!isSfxMuted ? "50" : "0"} 
-                      max="100" 
-                      step="1" 
-                      value={Math.round((Math.log(Math.max(100, Math.min(10000, cycleSpeed)) / 100) / Math.log(10000 / 100)) * 100)} 
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        const rawSpeed = 100 * Math.exp((val / 100) * Math.log(10000 / 100));
-                        let finalSpeed = rawSpeed;
-                        if (rawSpeed < 1000) finalSpeed = Math.round(rawSpeed / 50) * 50;
-                        else finalSpeed = Math.round(rawSpeed / 100) * 100;
-                        
-                        let minSpeed = 100;
-                        if (!isSfxMuted) minSpeed = 1000;
-                        setCycleSpeed(Math.max(minSpeed, Math.min(10000, finalSpeed)));
-                      }}
-                      className={`w-full h-1 bg-gray-700  appearance-none cursor-pointer ${isAutoCycle ? highlightClasses.accent : 'accent-gray-500'} transition-colors`}
-                    />
-
-                    <div className={`flex items-center justify-between pt-4 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
-                      <div className="flex items-center gap-2">
-                        <RefreshCw className={`w-4 h-4 ${isRandomCycle ? highlightClasses.text : 'text-gray-500'}`} />
-                        <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Random Pose')}</span>
-                      </div>
-                      <button 
-                        onClick={() => setIsRandomCycle(!isRandomCycle)}
-                        className={`w-10 h-5  transition-colors relative border ${isRandomCycle ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
-                      >
-                        <div className={`absolute top-[1px] w-4 h-4  transition-all ${isRandomCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
-                      </button>
-                    </div>
-
-                    <div className={`pt-4 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
+                  {isPoseSettingOpen && (
+                    <div className="flex flex-col gap-3">
+                      {/* Auto Cycle Row */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Camera className={`w-4 h-4 ${isSlowRotate ? highlightClasses.text : 'text-gray-500'}`} />
-                          <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Turn')}</span>
+                          {isAutoCycle ? <Play className={`w-4 h-4 ${highlightClasses.text} opacity-80`} /> : <Pause className="w-4 h-4 text-gray-500" />}
+                          <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Cycle')}</span>
                         </div>
+                        
                         <button 
-                          onClick={() => setIsSlowRotate(!isSlowRotate)}
-                          className={`w-10 h-5  transition-colors relative border ${isSlowRotate ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
+                          onClick={() => {
+                            const nextState = !isAutoCycle;
+                            setIsAutoCycle(nextState);
+                            
+                            if (nextState) {
+                              if (isSoundOn) {
+                                if (soundMode === 'bgm') {
+                                  setIsBgmPlaying(true);
+                                  setSfxMutedWithSpeed(true);
+                                  if (currentBgmId !== null) {
+                                    SoundManager.playBGM();
+                                  } else if (bgmPlaylist.length > 0) {
+                                    playTrackById(bgmPlaylist[0].id, true);
+                                  }
+                                } else {
+                                  setIsBgmPlaying(false);
+                                  SoundManager.pauseBGM();
+                                  setSfxMutedWithSpeed(false);
+                                }
+                              }
+                            } else {
+                              if (isSoundOn && soundMode === 'bgm') {
+                                setIsBgmPlaying(false);
+                                SoundManager.pauseBGM();
+                              }
+                              setSfxMutedWithSpeed(true);
+                              setIsAutoCamera(false);
+                              setIsAutoFormation(false);
+                              setIsSlowRotate(false);
+                              if (orbitRef.current) {
+                                orbitRef.current.autoRotate = false;
+                              }
+                            }
+                          }}
+                          className={`w-10 h-5 transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
                         >
-                          <div className={`absolute top-[1px] w-4 h-4  transition-all ${isSlowRotate ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
+                          <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
                         </button>
                       </div>
                       
-                      {isSlowRotate && (
-                        <div className="pt-3 pb-1">
-                          <div className="flex justify-between items-center mb-2">
-                            <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Turn Speed')}</label>
-                            <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} `}>{rotateSpeed.toFixed(1)}x</span>
-                          </div>
-                          <input 
-                            type="range" min="0.1" max="10" step="0.1" value={rotateSpeed} 
-                            onChange={(e) => setRotateSpeed(parseFloat(e.target.value))}
-                            className={`w-full h-1 bg-gray-700  appearance-none cursor-pointer ${highlightClasses.accent}`}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className={`pt-4 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
-                      <button 
-                        onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
-                        className="flex items-center justify-between w-full mb-3 group"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className={`w-1 h-3  transition-colors ${isAdvancedOptionsOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
-                          <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : (appTheme === 'light' ? 'text-gray-500 group-hover:text-gray-600' : (appTheme === 'red' ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'))}`}>{t('Advanced Cycle Options')}</span>
-                        </div>
-                        <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-gray-500'} ${isAdvancedOptionsOpen ? highlightClasses.border : (appTheme === 'light' ? 'group-hover:border-gray-400' : 'group-hover:border-gray-500')}`}>
-                          {isAdvancedOptionsOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
-                        </div>
-                      </button>
-                      
-                      {isAdvancedOptionsOpen && (
-                        <div className={`-mx-2 px-2 py-3 border space-y-4 ${appTheme === 'light' ? 'bg-gray-100/50 border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border-[#4A4A52]' : 'bg-[#1a1a1e]/60 border-[#323238]')}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Zap className={`w-4 h-4 ${isAutoFormation ? 'text-amber-400' : 'text-gray-500'}`} />
-                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Format Change')}</span>
-                            </div>
-                          <button 
-                            onClick={() => setIsAutoFormation(!isAutoFormation)}
-                            className={`w-10 h-5  transition-colors relative border ${isAutoFormation ? 'bg-transparent border-amber-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
-                          >
-                            <div className={`absolute top-[1px] w-4 h-4  transition-all ${isAutoFormation ? 'bg-amber-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
-                          </button>
-                        </div>
-                        
-                        {isAutoFormation && (
-                          <div className={`flex items-center justify-between pt-1 border-t ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} mt-2`}>
-                            <div className="flex items-center gap-2">
-                              <Zap className={`w-4 h-4 ${isRandomFormation ? 'text-amber-400' : 'text-gray-500'}`} />
-                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Random Format Change</span>
-                            </div>
-                            <button 
-                              onClick={() => setIsRandomFormation(!isRandomFormation)}
-                              className={`w-10 h-5  transition-colors relative border ${isRandomFormation ? 'bg-transparent border-amber-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
-                            >
-                              <div className={`absolute top-[1px] w-4 h-4  transition-all ${isRandomFormation ? 'bg-amber-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
-                            </button>
-                          </div>
-                        )}
-
-                        <div className={`pt-2 border-t ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} space-y-4`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Video className={`w-4 h-4 ${isAutoCamera ? 'text-red-400' : 'text-gray-500'}`} />
-                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Cinematic View')}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              {isAutoCamera && (
-                                <button 
-                                  onClick={() => {
-                                    setAutoCameraSpeed(1);
-                                    setAutoCameraMinHeight(-2);
-                                    setAutoCameraMaxHeight(10);
-                                    setAutoCameraMinDistance(6);
-                                    setAutoCameraMaxDistance(20);
-                                    setAutoCameraReverse(false);
-                                  }}
-                                  className="text-gray-500 hover:text-white transition-colors"
-                                  title={t('Reset Camera')}
-                                >
-                                  <RefreshCw className="w-3.5 h-3.5" />
-                                </button>
-                              )}
+                      <div className="pt-1">
+                        <div className={`flex items-center justify-between mb-3 pb-3 border-b ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
+                          <div className="flex gap-4">
+                            <div className="flex flex-col gap-1.5">
+                              <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('SOUND')}</span>
                               <button 
-                                onClick={() => setIsAutoCamera(!isAutoCamera)}
-                                className={`w-10 h-5  transition-colors relative border ${isAutoCamera ? 'bg-transparent border-red-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+                                onClick={toggleSound}
+                                className={`flex items-center justify-center gap-1.5 w-[84px] py-1 border transition-colors ${
+                                  isSoundOn 
+                                    ? (isAutoCycle ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : (appTheme === 'light' ? 'bg-transparent border-gray-400 text-gray-800' : 'bg-transparent border-gray-300 text-gray-200'))
+                                    : 'border-gray-500 bg-[#1a1a1e] text-gray-500'
+                                }`}
                               >
-                                <div className={`absolute top-[1px] w-4 h-4  transition-all ${isAutoCamera ? 'bg-red-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+                                {isSoundOn ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                                <span className="text-[9px] uppercase font-bold">{isSoundOn ? t('ON') : t('OFF')}</span>
                               </button>
                             </div>
-                          </div>
-
-                          {isAutoCamera && (
-                            <div className="pt-2 pb-2 space-y-4">
-                              <div>
-                                <div className="flex justify-between items-center mb-2">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Intensity')}</label>
-                                  <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">{autoCameraSpeed.toFixed(1)}x</span>
-                                </div>
-                                <input 
-                                  type="range" min="0.1" max="10" step="0.1" value={autoCameraSpeed} 
-                                  onChange={(e) => setAutoCameraSpeed(parseFloat(e.target.value))}
-                                  className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                />
-                              </div>
-                              <div>
-                                <div className="flex justify-between items-center mb-2">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Height (Min / Max)')}</label>
-                                  <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
-                                    {autoCameraMinHeight.toFixed(1)} / {autoCameraMaxHeight.toFixed(1)}
-                                  </span>
-                                </div>
-                                <div className="flex gap-2">
-                                  <input 
-                                    type="range" min="-5" max="10" step="0.5" value={autoCameraMinHeight} 
-                                    onChange={(e) => setAutoCameraMinHeight(parseFloat(e.target.value))}
-                                    className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                  />
-                                  <input 
-                                    type="range" min="0" max="20" step="0.5" value={autoCameraMaxHeight} 
-                                    onChange={(e) => setAutoCameraMaxHeight(parseFloat(e.target.value))}
-                                    className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                  />
-                                </div>
-                              </div>
-                              <div>
-                                <div className="flex justify-between items-center mb-2">
-                                  <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Zoom (Min / Max)')}</label>
-                                  <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
-                                    {autoCameraMinDistance.toFixed(1)} / {autoCameraMaxDistance.toFixed(1)}
-                                  </span>
-                                </div>
-                                <div className="flex gap-2">
-                                  <input 
-                                    type="range" min="3" max="20" step="1" value={autoCameraMinDistance} 
-                                    onChange={(e) => setAutoCameraMinDistance(parseFloat(e.target.value))}
-                                    className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                  />
-                                  <input 
-                                    type="range" min="5" max="50" step="1" value={autoCameraMaxDistance} 
-                                    onChange={(e) => setAutoCameraMaxDistance(parseFloat(e.target.value))}
-                                    className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
-                                  />
-                                </div>
-                              </div>
-                              <div className="flex items-center justify-between pt-2">
-                                <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Reverse Rotation')}</label>
-                                <button 
-                                  onClick={() => setAutoCameraReverse(!autoCameraReverse)}
-                                  className={`w-8 h-4 rounded-full transition-colors relative ${autoCameraReverse ? 'bg-red-500' : (appTheme === 'light' ? 'bg-gray-300' : 'bg-[#1a1a1e] border border-gray-600')}`}
+                            <div className="flex flex-col gap-1.5">
+                              <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{t('MODE')}</span>
+                              <div className="flex items-center h-[26px] w-[96px] bg-[#1a1a1e] border border-[#323238] p-0.5">
+                                <button
+                                  onClick={() => changeSoundMode('bgm')}
+                                  className={`flex-1 flex items-center justify-center h-full transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'bgm' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
                                 >
-                                  <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${autoCameraReverse ? 'bg-white right-0.5' : 'bg-gray-500 left-0.5'}`} />
+                                  BGM
+                                </button>
+                                <button
+                                  onClick={() => changeSoundMode('sfx')}
+                                  className={`flex-1 flex items-center justify-center h-full transition-colors text-[9px] font-bold tracking-widest ${soundMode === 'sfx' ? 'bg-[#323238] text-white' : 'text-gray-500 hover:text-gray-300'}`}
+                                >
+                                  SFX
                                 </button>
                               </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center mb-2">
+                          <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Cycle Interval')}</label>
+                          <span className={`text-[9px] font-mono font-bold ${isAutoCycle ? `${highlightClasses.text} ${highlightClasses.bgMuted}` : 'text-gray-500 bg-[#1a1a1e]'} px-1.5 py-0.5 transition-colors`}>{(cycleSpeed / 1000).toFixed(2)}s</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min={!isSfxMuted ? "50" : "0"} 
+                          max="100" 
+                          step="1" 
+                          value={Math.round((Math.log(Math.max(100, Math.min(10000, cycleSpeed)) / 100) / Math.log(10000 / 100)) * 100)} 
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            const rawSpeed = 100 * Math.exp((val / 100) * Math.log(10000 / 100));
+                            let finalSpeed = rawSpeed;
+                            if (rawSpeed < 1000) finalSpeed = Math.round(rawSpeed / 50) * 50;
+                            else finalSpeed = Math.round(rawSpeed / 100) * 100;
+                            
+                            let minSpeed = 100;
+                            if (!isSfxMuted) minSpeed = 1000;
+                            setCycleSpeed(Math.max(minSpeed, Math.min(10000, finalSpeed)));
+                          }}
+                          className={`w-full h-1 bg-gray-700 appearance-none cursor-pointer ${isAutoCycle ? highlightClasses.accent : 'accent-gray-500'} transition-colors`}
+                        />
+
+                        <div className={`flex items-center justify-between pt-3 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
+                          <div className="flex items-center gap-2">
+                            <RefreshCw className={`w-4 h-4 ${isRandomCycle ? highlightClasses.text : 'text-gray-500'}`} />
+                            <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Random Pose')}</span>
+                          </div>
+                          <button 
+                            onClick={() => setIsRandomCycle(!isRandomCycle)}
+                            className={`w-10 h-5 transition-colors relative border ${isRandomCycle ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
+                          >
+                            <div className={`absolute top-[1px] w-4 h-4 transition-all ${isRandomCycle ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
+                          </button>
+                        </div>
+
+                        <div className={`pt-3 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Camera className={`w-4 h-4 ${isSlowRotate ? highlightClasses.text : 'text-gray-500'}`} />
+                              <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Turn')}</span>
+                            </div>
+                            <button 
+                              onClick={() => setIsSlowRotate(!isSlowRotate)}
+                              className={`w-10 h-5 transition-colors relative border ${isSlowRotate ? `bg-transparent ${highlightClasses.border}` : 'border-gray-500 bg-[#1a1a1e]'}`}
+                            >
+                              <div className={`absolute top-[1px] w-4 h-4 transition-all ${isSlowRotate ? `${highlightClasses.bg} right-[1px]` : 'bg-gray-500 left-[1px]'}`} />
+                            </button>
+                          </div>
+                          
+                          {isSlowRotate && (
+                            <div className="pt-3 pb-1">
+                              <div className="flex justify-between items-center mb-2">
+                                <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Turn Speed')}</label>
+                                <span className={`text-[9px] font-mono font-bold ${highlightClasses.text} px-1.5 py-0.5 ${highlightClasses.bgMuted} `}>{rotateSpeed.toFixed(1)}x</span>
+                              </div>
+                              <input 
+                                type="range" min="0.1" max="10" step="0.1" value={rotateSpeed} 
+                                onChange={(e) => setRotateSpeed(parseFloat(e.target.value))}
+                                className={`w-full h-1 bg-gray-700 appearance-none cursor-pointer ${highlightClasses.accent}`}
+                              />
                             </div>
                           )}
                         </div>
+
+                        <div className={`pt-3 mt-2 border-t ${appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50'}`}>
+                          <button 
+                            onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
+                            className="flex items-center justify-between w-full mb-3 group"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className={`w-1 h-3 transition-colors ${isAdvancedOptionsOpen ? highlightClasses.bg : 'bg-gray-600'}`}></div>
+                              <span className={`text-[10px] font-black tracking-widest uppercase transition-colors ${isAdvancedOptionsOpen ? (appTheme === 'light' ? 'text-gray-800' : 'text-[#E1E1E6]') : (appTheme === 'light' ? 'text-gray-500 group-hover:text-gray-600' : (appTheme === 'red' ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'))}`}>{t('Advanced Cycle Options')}</span>
+                            </div>
+                            <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${appTheme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1e] border-gray-500'} ${isAdvancedOptionsOpen ? highlightClasses.border : (appTheme === 'light' ? 'group-hover:border-gray-400' : 'group-hover:border-gray-500')}`}>
+                              {isAdvancedOptionsOpen ? <Minus className={`w-3 h-3 ${highlightClasses.text}`} /> : <Plus className="w-3 h-3 text-gray-500" />}
+                            </div>
+                          </button>
+                          
+                          {isAdvancedOptionsOpen && (
+                            <div className={`-mx-2 px-2 py-3 border space-y-4 ${appTheme === 'light' ? 'bg-gray-100/50 border-gray-200' : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border-[#4A4A52]' : 'bg-[#1a1a1e]/60 border-[#323238]')}`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Zap className={`w-4 h-4 ${isAutoFormation ? 'text-amber-400' : 'text-gray-500'}`} />
+                                  <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Auto Format Change')}</span>
+                                </div>
+                              <button 
+                                onClick={() => setIsAutoFormation(!isAutoFormation)}
+                                className={`w-10 h-5 transition-colors relative border ${isAutoFormation ? 'bg-transparent border-amber-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+                              >
+                                <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoFormation ? 'bg-amber-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+                              </button>
+                            </div>
+                            
+                            {isAutoFormation && (
+                              <div className={`flex items-center justify-between pt-1 border-t ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} mt-2`}>
+                                <div className="flex items-center gap-2">
+                                  <Zap className={`w-4 h-4 ${isRandomFormation ? 'text-amber-400' : 'text-gray-500'}`} />
+                                  <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>Random Format Change</span>
+                                </div>
+                                <button 
+                                  onClick={() => setIsRandomFormation(!isRandomFormation)}
+                                  className={`w-10 h-5 transition-colors relative border ${isRandomFormation ? 'bg-transparent border-amber-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+                                >
+                                  <div className={`absolute top-[1px] w-4 h-4 transition-all ${isRandomFormation ? 'bg-amber-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+                                </button>
+                              </div>
+                            )}
+
+                            <div className={`pt-2 border-t ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')} space-y-4`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Video className={`w-4 h-4 ${isAutoCamera ? 'text-red-400' : 'text-gray-500'}`} />
+                                  <span className={`text-[10px] uppercase font-bold tracking-wider ${appTheme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>{t('Cinematic View')}</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  {isAutoCamera && (
+                                    <button 
+                                      onClick={() => {
+                                        setAutoCameraSpeed(1);
+                                        setAutoCameraMinHeight(-2);
+                                        setAutoCameraMaxHeight(10);
+                                        setAutoCameraMinDistance(6);
+                                        setAutoCameraMaxDistance(20);
+                                        setAutoCameraReverse(false);
+                                      }}
+                                      className="text-gray-500 hover:text-white transition-colors"
+                                      title={t('Reset Camera')}
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  <button 
+                                    onClick={() => setIsAutoCamera(!isAutoCamera)}
+                                    className={`w-10 h-5 transition-colors relative border ${isAutoCamera ? 'bg-transparent border-red-500' : (appTheme === 'light' ? 'border-gray-300 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')}`}
+                                  >
+                                    <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoCamera ? 'bg-red-500 right-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]')}`} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {isAutoCamera && (
+                                <div className="pt-2 pb-2 space-y-4">
+                                  <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                      <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Intensity')}</label>
+                                      <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">{autoCameraSpeed.toFixed(1)}x</span>
+                                    </div>
+                                    <input 
+                                      type="range" min="0.1" max="10" step="0.1" value={autoCameraSpeed} 
+                                      onChange={(e) => setAutoCameraSpeed(parseFloat(e.target.value))}
+                                      className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                                    />
+                                  </div>
+                                  <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                      <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Height (Min / Max)')}</label>
+                                      <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
+                                        {autoCameraMinHeight.toFixed(1)} / {autoCameraMaxHeight.toFixed(1)}
+                                      </span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <input 
+                                        type="range" min="-5" max="10" step="0.5" value={autoCameraMinHeight} 
+                                        onChange={(e) => setAutoCameraMinHeight(parseFloat(e.target.value))}
+                                        className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                                      />
+                                      <input 
+                                        type="range" min="0" max="20" step="0.5" value={autoCameraMaxHeight} 
+                                        onChange={(e) => setAutoCameraMaxHeight(parseFloat(e.target.value))}
+                                        className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                      <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Camera Zoom (Min / Max)')}</label>
+                                      <span className="text-[9px] font-mono font-bold text-red-400 px-1.5 py-0.5 bg-red-500/10 ">
+                                        {autoCameraMinDistance.toFixed(1)} / {autoCameraMaxDistance.toFixed(1)}
+                                      </span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <input 
+                                        type="range" min="3" max="20" step="1" value={autoCameraMinDistance} 
+                                        onChange={(e) => setAutoCameraMinDistance(parseFloat(e.target.value))}
+                                        className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                                      />
+                                      <input 
+                                        type="range" min="5" max="50" step="1" value={autoCameraMaxDistance} 
+                                        onChange={(e) => setAutoCameraMaxDistance(parseFloat(e.target.value))}
+                                        className={`w-full h-1 appearance-none cursor-pointer accent-red-500 ${appTheme === 'light' ? 'bg-gray-300' : 'bg-gray-700'}`}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-between pt-2">
+                                    <label className="text-[9px] font-bold text-gray-500 uppercase">{t('Reverse Rotation')}</label>
+                                    <button 
+                                      onClick={() => setAutoCameraReverse(!autoCameraReverse)}
+                                      className={`w-8 h-4 rounded-full transition-colors relative ${autoCameraReverse ? 'bg-red-500' : (appTheme === 'light' ? 'bg-gray-300' : 'bg-[#1a1a1e] border border-gray-600')}`}
+                                    >
+                                      <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${autoCameraReverse ? 'bg-white right-0.5' : 'bg-gray-500 left-0.5'}`} />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
+                  )}
                 </div>
               </div>
 
@@ -1809,18 +2349,14 @@ export default function App() {
                       { id: 'head', name: 'Head Turn', axis: 0 },
                       { id: 'arm_l_upper', name: 'L-Arm Upper', axis: 0 },
                       { id: 'arm_l_lower', name: 'L-Elbow', axis: 0 },
-                      { id: 'arm_l_lower', name: 'L-Elbow', axis: 0 },
                       { id: 'arm_l_upper', name: 'L-Arm Spread', axis: 2 },
                       { id: 'arm_r_upper', name: 'R-Arm Upper', axis: 0 },
-                      { id: 'arm_r_lower', name: 'R-Elbow', axis: 0 },
                       { id: 'arm_r_lower', name: 'R-Elbow', axis: 0 },
                       { id: 'arm_r_upper', name: 'R-Arm Spread', axis: 2 },
                       { id: 'leg_l_upper', name: 'L-Leg Upper', axis: 0 },
                       { id: 'leg_l_lower', name: 'L-Knee', axis: 0 },
-                      { id: 'leg_l_lower', name: 'L-Knee', axis: 0 },
                       { id: 'leg_l_upper', name: 'L-Leg Spread', axis: 2 },
                       { id: 'leg_r_upper', name: 'R-Leg Upper', axis: 0 },
-                      { id: 'leg_r_lower', name: 'R-Knee', axis: 0 },
                       { id: 'leg_r_lower', name: 'R-Knee', axis: 0 },
                       { id: 'leg_r_upper', name: 'R-Leg Spread', axis: 2 }
                     ].map((part: any, pIdx) => {
@@ -1876,47 +2412,297 @@ export default function App() {
                       className="overflow-hidden bg-[#121214] border-t border-[#323238]"
                     >
                       <div className="p-4 space-y-4">
-                        <div className="pt-2">
-                          <div className="flex items-center justify-between mb-3">
-                            <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{t('Character Color')}</label>
+                        {/* Preset & Custom Set Selector */}
+                        <div className="p-2.5 border border-[#323238] bg-[#1E1E22]/80 flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">
+                              {t('Color Set')}
+                            </span>
+                            {isModifiedFromPreset && (
+                              <span className="text-[8px] font-mono font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 border border-amber-400/30">
+                                {t('MODIFIED')}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Set Dropdown / Select Button */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setIsSidebarPresetDropdownOpen(prev => !prev)}
+                              className="w-full py-1.5 px-2 bg-[#121214] hover:bg-[#1a1a1e] border border-[#323238] flex items-center justify-between text-[10px] font-mono font-bold tracking-wider uppercase transition-colors"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <PresetColorBadge chrColor={characterColor} bgColor={customBgColor || '#E5E7EB'} size="sm" />
+                                <span className="truncate">{activePreset.name}</span>
+                              </div>
+                              <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isSidebarPresetDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {isSidebarPresetDropdownOpen && (
+                              <div className="absolute left-0 right-0 top-full mt-1 border border-[#323238] bg-[#1E1E22] shadow-2xl z-50 py-1 flex flex-col text-[10px] font-mono max-h-56 overflow-y-auto no-scrollbar">
+                                <div className="px-2.5 py-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#121214] border-b border-[#323238]/60">
+                                  ── {t('DEFAULT PRESETS')} ──
+                                </div>
+                                {DEFAULT_COLOR_PRESETS.map(preset => {
+                                  const isSelected = activePresetId === preset.id && !isModifiedFromPreset;
+                                  return (
+                                    <button
+                                      key={preset.id}
+                                      type="button"
+                                      onClick={() => applyColorPreset(preset)}
+                                      className={`w-full px-2.5 py-1.5 flex items-center justify-between transition-colors text-left cursor-pointer ${
+                                        isSelected ? 'bg-[var(--accent)] text-white font-bold' : 'text-gray-300 hover:text-white hover:bg-[#323238]'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <PresetColorBadge chrColor={preset.characterColor} bgColor={preset.bgColor} size="sm" />
+                                        <span>{preset.name}</span>
+                                      </div>
+                                      {isSelected && <Check className="w-3 h-3" />}
+                                    </button>
+                                  );
+                                })}
+
+                                <div className="px-2.5 py-1 mt-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#121214] border-t border-b border-[#323238]/60 flex items-center justify-between">
+                                  <span>── {t('CUSTOM SETS')} ──</span>
+                                  <span className="text-[7px] text-gray-500 font-normal">({customColorPresets.length})</span>
+                                </div>
+
+                                {customColorPresets.length === 0 ? (
+                                  <div className="px-2.5 py-2 text-[9px] text-gray-500 text-center italic">
+                                    {t('No custom sets registered')}
+                                  </div>
+                                ) : (
+                                  customColorPresets.map(preset => {
+                                    const isSelected = activePresetId === preset.id && !isModifiedFromPreset;
+                                    return (
+                                      <div
+                                        key={preset.id}
+                                        className={`w-full px-2.5 py-1.5 flex items-center justify-between transition-colors cursor-pointer group ${
+                                          isSelected ? 'bg-[var(--accent)] text-white font-bold' : 'text-gray-300 hover:text-white hover:bg-[#323238]'
+                                        }`}
+                                        onClick={() => applyColorPreset(preset)}
+                                      >
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                          <PresetColorBadge chrColor={preset.characterColor} bgColor={preset.bgColor} size="sm" />
+                                          <span className="truncate">{preset.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1 flex-shrink-0">
+                                          {isSelected && <Check className="w-3 h-3" />}
+                                          <button
+                                            type="button"
+                                            onClick={(e) => handleDeleteCustomPreset(preset.id, e)}
+                                            className="p-0.5 text-gray-400 hover:text-red-400 transition-colors"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Preview Details: Character color + Background color */}
+                          <div className="grid grid-cols-2 gap-1.5 text-[9px] font-mono">
+                            <div className="p-1.5 bg-[#121214] border border-[#323238] flex items-center gap-1.5">
+                              <span className="w-3 h-3 border border-[#444] inline-block flex-shrink-0" style={{ backgroundColor: characterColor }} />
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[7px] text-gray-500 uppercase leading-none">CHR</span>
+                                <span className="text-gray-200 uppercase truncate leading-none mt-0.5">{characterColor}</span>
+                              </div>
+                            </div>
+                            <div className="p-1.5 bg-[#121214] border border-[#323238] flex items-center gap-1.5">
+                              <span className="w-3 h-3 border border-[#444] inline-block flex-shrink-0" style={{ backgroundColor: customBgColor || '#E5E7EB' }} />
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-[7px] text-gray-500 uppercase leading-none">BG</span>
+                                <span className="text-gray-200 uppercase truncate leading-none mt-0.5">{customBgColor || '#E5E7EB'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Custom Registration & Overwrite Actions */}
+                          <div className="flex flex-col gap-1.5 pt-1 border-t border-[#323238]/60">
+                            {isRegisteringPreset ? (
+                              <div className="flex gap-1.5">
+                                <input
+                                  type="text"
+                                  value={newPresetNameInput}
+                                  onChange={(e) => setNewPresetNameInput(e.target.value)}
+                                  placeholder={`CUSTOM ${String(customColorPresets.length + 1).padStart(2, '0')}`}
+                                  className="flex-1 bg-[#121214] border border-[#323238] px-2 py-1 text-[9px] font-mono uppercase text-white outline-none focus:border-[var(--accent)]"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleRegisterCustomPreset(newPresetNameInput);
+                                    if (e.key === 'Escape') setIsRegisteringPreset(false);
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRegisterCustomPreset(newPresetNameInput)}
+                                  className="px-2 py-1 bg-[var(--accent)] text-white text-[9px] font-bold uppercase transition-colors"
+                                >
+                                  {t('Save')}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsRegisteringPreset(false)}
+                                  className="px-2 py-1 bg-[#25252B] text-gray-400 hover:text-white text-[9px] uppercase transition-colors"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setIsRegisteringPreset(true)}
+                                  className="flex-1 py-1.5 px-2 bg-[#25252B] hover:bg-[#323238] hover:text-[var(--accent)] text-gray-200 border border-[#3A3A42] flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                  title={t('Register New Custom Set')}
+                                >
+                                  <Plus className="w-3 h-3 text-[var(--accent)]" />
+                                  {t('REGISTER NEW CUSTOM')}
+                                </button>
+                                {!activePresetId.startsWith('default-') && (
+                                  <button
+                                    type="button"
+                                    onClick={handleUpdateCustomPreset}
+                                    className="px-2.5 py-1.5 bg-[#25252B] hover:bg-[#323238] text-gray-200 border border-[#3A3A42] text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                                    title={t('Overwrite Custom Set')}
+                                  >
+                                    {t('OVERWRITE')}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Scope Selector: PER THEME vs COMMON */}
+                        <div className="p-2.5 border border-[#323238] bg-[#1E1E22]/60 flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-gray-400">
+                              {t('Color Scope')}
+                            </span>
+                            <span className="text-[9px] font-mono font-bold text-[var(--accent)] flex items-center gap-1.5">
+                              {colorScope === 'theme' ? (
+                                <>
+                                  <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: currentThemeObj.dotColor }} />
+                                  {currentThemeObj.label}
+                                </>
+                              ) : (
+                                t('ALL THEMES')
+                              )}
+                            </span>
+                          </div>
+                          
+                          <div className="flex border border-[#323238] overflow-hidden text-[9px] font-bold tracking-wider">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleColorScope('theme')}
+                              className={`flex-1 py-1.5 px-2 transition-colors uppercase flex items-center justify-center gap-1.5 ${
+                                colorScope === 'theme'
+                                  ? 'bg-[var(--accent)] text-white'
+                                  : 'bg-[#121214] text-gray-500 hover:text-gray-300'
+                              }`}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeObj.dotColor }} />
+                              {t('Per Theme')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleColorScope('common')}
+                              className={`flex-1 py-1.5 px-2 transition-colors uppercase flex items-center justify-center gap-1.5 ${
+                                colorScope === 'common'
+                                  ? 'bg-[var(--accent)] text-white'
+                                  : 'bg-[#121214] text-gray-500 hover:text-gray-300'
+                              }`}
+                            >
+                              {t('Common')}
+                            </button>
+                          </div>
+
+                          {colorScope === 'theme' && (
+                            <div className="flex justify-between items-center pt-1 border-t border-[#323238]/40">
+                              <span className="text-[8px] text-gray-500">
+                                {t('Saved for')} <strong className="text-[var(--accent)]">{currentThemeObj.label}</strong>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={copyCurrentColorsToAllThemes}
+                                className="text-[8px] uppercase font-bold text-gray-400 hover:text-[var(--accent)] underline transition-colors cursor-pointer"
+                                title={t('Apply to all themes')}
+                              >
+                                {isCopiedToAll ? t('Copied!') : t('Copy to All Themes')}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Character Color */}
+                        <div className="pt-1">
+                          <div className="flex items-center justify-between mb-2.5">
+                            <div className="flex items-center gap-2">
+                              <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{t('Character Color')}</label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const accentHex = currentThemeObj.dotColor;
+                                  updateColorSetting({
+                                    characterColor: accentHex,
+                                    savedCustomCharacterColor: accentHex
+                                  });
+                                }}
+                                className="px-1.5 py-0.5 border border-[#323238] bg-[#1E1E22] hover:border-[var(--accent)] text-[8px] font-mono font-bold flex items-center gap-1 text-[var(--accent)] transition-colors shadow-sm cursor-pointer"
+                                title={t('Apply Theme Accent')}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeObj.dotColor }} />
+                                {t('THEME ACCENT')}
+                              </button>
+                            </div>
                             <button 
-                              onClick={() => setCharacterColor('#0F172A')}
-                              className="text-[8px] text-gray-500 hover:text-white underline uppercase font-bold transition-colors"
+                              onClick={() => updateColorSetting({ characterColor: DEFAULT_THEME_COLORS[appTheme].characterColor })}
+                              className="text-[8px] text-gray-500 hover:text-white underline uppercase font-bold transition-colors cursor-pointer"
                             >
                               RESET
                             </button>
                           </div>
                           <div className="flex flex-col gap-2">
                             <div className="flex flex-wrap gap-1.5">
-                              {['#0F172A', '#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#5C0909'].map((color) => (
+                              {['#D95430', '#26262B', '#050505', '#7A2020', '#52525B', '#475569', '#355E42', '#7A5026'].map((color) => (
                                 <button
                                   key={color}
-                                  onClick={() => setCharacterColor(color)}
-                                  className={`w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
+                                  onClick={() => updateColorSetting({ characterColor: color })}
+                                  className={`w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
                                     characterColor === color ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
                                   }`}
                                   style={{ backgroundColor: color }}
-                                  title={t('Character Color')}
+                                  title={color}
                                 >
-                                  {characterColor === color && <div className={`w-1.5 h-1.5  bg-white shadow-sm mix-blend-difference`} />}
+                                  {characterColor === color && <div className={`w-1.5 h-1.5 bg-white shadow-sm mix-blend-difference`} />}
                                 </button>
                               ))}
                             </div>
                             
                             <div className="flex items-center gap-3 pt-2 border-t border-[#323238]/50 mt-1">
                               <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{t('Custom')}</span>
-                              <div className={`relative w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
+                              <div className={`relative w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center overflow-hidden ${
                                 !['#0F172A', '#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#5C0909'].includes(characterColor) ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
                               }`}>
                                 <input 
                                   type="color" 
                                   value={savedCustomCharacterColor}
                                   onChange={(e) => {
-                                    setSavedCustomCharacterColor(e.target.value);
-                                    setCharacterColor(e.target.value);
+                                    updateColorSetting({
+                                      savedCustomCharacterColor: e.target.value,
+                                      characterColor: e.target.value
+                                    });
                                   }}
                                   onClick={() => {
-                                    setCharacterColor(savedCustomCharacterColor);
+                                    updateColorSetting({ characterColor: savedCustomCharacterColor });
                                   }}
                                   className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
                                   title={t('Custom Character Color')}
@@ -1924,12 +2710,13 @@ export default function App() {
                                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center mix-blend-difference">
                                   <Plus className="w-3 h-3 text-white opacity-75" />
                                 </div>
-                                {!['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#5C0909', '#0F172A'].includes(characterColor) && <div className="w-1.5 h-1.5  bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
+                                {!['#475569', '#3F5064', '#355E42', '#7A5026', '#753434', '#5C0909', '#0F172A'].includes(characterColor) && <div className="w-1.5 h-1.5 bg-white shadow-sm pointer-events-none absolute mix-blend-difference" />}
                               </div>
                             </div>
                           </div>
                         </div>
 
+                        {/* Visual Themes / Background */}
                         <div className="pt-2 border-t border-[#323238]">
                           <div className="flex items-center justify-between mb-3">
                             <label className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{t('Visual Themes')}</label>
@@ -1940,10 +2727,12 @@ export default function App() {
                                 <button
                                   key={theme.id}
                                   onClick={() => {
-                                    setThemeId(theme.id);
-                                    setCustomBgColor(null);
+                                    updateColorSetting({
+                                      themeId: theme.id,
+                                      customBgColor: null
+                                    });
                                   }}
-                                  className={`w-6 h-6  border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
+                                  className={`w-6 h-6 border border-[#323238] transition-transform hover:scale-110 flex items-center justify-center ${
                                     themeId === theme.id && !customBgColor ? 'border-white ring-2 ring-[var(--accent)]/30 z-10' : ''
                                   }`}
                                   style={{ backgroundColor: theme.bodyColor }}
@@ -1963,10 +2752,12 @@ export default function App() {
                                   type="color" 
                                   value={savedCustomBgColor}
                                   onChange={(e) => {
-                                    setSavedCustomBgColor(e.target.value);
-                                    setCustomBgColor(e.target.value);
+                                    updateColorSetting({
+                                      savedCustomBgColor: e.target.value,
+                                      customBgColor: e.target.value
+                                    });
                                   }}
-                                  onClick={() => setCustomBgColor(savedCustomBgColor)}
+                                  onClick={() => updateColorSetting({ customBgColor: savedCustomBgColor })}
                                   className="absolute inset-0 w-10 h-10 -ml-2 -mt-2 cursor-pointer bg-transparent border-none appearance-none group-hover:scale-110"
                                   title={t('Custom Background Color')}
                                 />
@@ -2533,7 +3324,7 @@ export default function App() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative bg-[#121214] min-w-0">
         {/* Header Bar */}
-        <header className="h-14 border-b border-[#323238] flex items-center justify-between px-6 bg-[#1a1a1e]/80 backdrop-blur-md z-10 flex-shrink-0">
+        <header className="h-14 border-b border-[#323238] flex items-center justify-between px-6 bg-[#1a1a1e]/80 backdrop-blur-md z-40 flex-shrink-0 relative">
           <div className="flex items-center gap-6">
             <button 
               onClick={() => {
@@ -2586,33 +3377,197 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 mr-4">
-              <span className="w-12 text-[10px] font-mono text-gray-500 uppercase tracking-widest font-bold">{t('Theme:')}</span>
-              <div className="flex  border border-[#323238] overflow-hidden bg-[#1E1E22] mr-2">
-                {(['colors', 'black', 'red', 'light'] as const).map(th => (
-                  <button
-                    key={th}
-                    onClick={() => setAppTheme(th)}
-                    className={`px-3 py-1.5 text-[10px] uppercase font-bold transition-colors ${
-                      appTheme === th ? 'bg-[var(--accent)] text-white' : 'text-gray-400 hover:text-white hover:bg-[#323238]'
-                    }`}
-                  >
-                    {th === 'colors' ? 'DARK' : th}
-                  </button>
-                ))}
-              </div>
-              <div className="flex border border-[#323238] overflow-hidden bg-[#1E1E22]">
+            <div className="flex items-center gap-2 mr-2">
+              {/* Theme & Color Preset Dropdown (unified button with duo badge, label & chevron) */}
+              <div className="relative" ref={themeDropdownRef}>
                 <button
+                  type="button"
+                  onClick={() => setIsThemeDropdownOpen(prev => !prev)}
+                  className="h-8 px-2.5 flex items-center gap-2 border border-[#323238] bg-[#1E1E22] hover:bg-[#323238] text-[10px] font-mono font-bold tracking-wider uppercase transition-colors shadow-sm cursor-pointer select-none"
+                  title={t('Select Theme & Color Preset')}
+                >
+                  <span 
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-black/20" 
+                    style={{ backgroundColor: currentThemeObj.dotColor }} 
+                  />
+                  <span className="leading-none max-w-[85px] truncate">
+                    {currentThemeObj.label}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform duration-150 ${isThemeDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isThemeDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-68 border border-[#323238] bg-[#1E1E22] shadow-2xl z-[100] py-1 flex flex-col text-[10px] font-mono">
+                    {/* Mode Selector Tabs */}
+                    <div className="grid grid-cols-2 p-1 bg-[#121214] border-b border-[#323238] gap-1">
+                      <button
+                        type="button"
+                        onClick={() => switchThemeDropdownMode('ui-only')}
+                        className={`py-1 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                          themeDropdownMode === 'ui-only' 
+                            ? 'bg-[#2A2A30] text-white border border-[#444]' 
+                            : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {t('UI Theme Only')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => switchThemeDropdownMode('preset')}
+                        className={`py-1 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                          themeDropdownMode === 'preset' 
+                            ? 'bg-[#2A2A30] text-white border border-[#444]' 
+                            : 'text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {t('Full Preset Set')}
+                      </button>
+                    </div>
+
+                    {themeDropdownMode === 'ui-only' ? (
+                      <>
+                        {/* UI Themes List: Scene unchanged */}
+                        <div className="px-3 py-1.5 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#17171A] border-b border-[#323238]/60 flex items-center justify-between">
+                          <span>── {t('UI THEMES')} ──</span>
+                          <span className="text-[7px] text-[var(--accent)] font-mono">{t('SCENE INTACT')}</span>
+                        </div>
+
+                        {APP_THEMES.map(th => {
+                          const isSelected = appTheme === th.id;
+                          return (
+                            <button
+                              key={th.id}
+                              type="button"
+                              onClick={() => handleSelectUIThemeOnly(th.id)}
+                              className={`w-full px-3 py-2 flex items-center justify-between transition-colors text-left cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-[var(--accent)] text-white font-bold' 
+                                  : 'text-gray-300 hover:text-white hover:bg-[#323238]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 border border-white/20" style={{ backgroundColor: th.dotColor }} />
+                                <span className="font-bold tracking-wider">{th.label}</span>
+                              </div>
+                              {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
+                            </button>
+                          );
+                        })}
+
+                        <div className="px-3 py-1.5 text-[8px] text-gray-400 bg-[#141416] border-t border-[#323238]">
+                          ※ {t('Character and background colors will remain unchanged.')}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Full Preset Sets List */}
+                        <div className="px-3 py-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#121214] border-b border-[#323238]/60 flex items-center justify-between">
+                          <span>── {t('DEFAULT PRESETS')} ──</span>
+                          <span className="text-[7px] text-gray-500 font-normal">5</span>
+                        </div>
+
+                        {DEFAULT_COLOR_PRESETS.map(preset => {
+                          const isSelected = activePresetId === preset.id && !isModifiedFromPreset;
+                          return (
+                            <button
+                              key={preset.id}
+                              type="button"
+                              onClick={() => applyColorPreset(preset)}
+                              className={`w-full px-3 py-1.5 flex items-center justify-between transition-colors text-left cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-[var(--accent)] text-white font-bold' 
+                                  : 'text-gray-300 hover:text-white hover:bg-[#323238]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <PresetColorBadge chrColor={preset.characterColor} bgColor={preset.bgColor} size="sm" />
+                                <span className="font-bold tracking-wider">{preset.name}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-[8px] font-mono ${isSelected ? 'text-white/80' : 'text-gray-500'}`}>
+                                  {preset.characterColor.toUpperCase()}
+                                </span>
+                                {isSelected && <Check className="w-3.5 h-3.5 flex-shrink-0" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+
+                        {/* Custom Presets Section */}
+                        <div className="px-3 py-1 mt-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest bg-[#121214] border-t border-b border-[#323238]/60 flex items-center justify-between">
+                          <span>── {t('CUSTOM SETS')} ──</span>
+                          <span className="text-[7px] text-gray-500 font-normal">({customColorPresets.length})</span>
+                        </div>
+
+                        {customColorPresets.length === 0 ? (
+                          <div className="px-3 py-2 text-[9px] text-gray-500 text-center italic">
+                            {t('No custom sets registered')}
+                          </div>
+                        ) : (
+                          customColorPresets.map(preset => {
+                            const isSelected = activePresetId === preset.id && !isModifiedFromPreset;
+                            return (
+                              <div
+                                key={preset.id}
+                                className={`w-full px-3 py-1.5 flex items-center justify-between transition-colors cursor-pointer group ${
+                                  isSelected 
+                                    ? 'bg-[var(--accent)] text-white font-bold' 
+                                    : 'text-gray-300 hover:text-white hover:bg-[#323238]'
+                                }`}
+                                onClick={() => applyColorPreset(preset)}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <PresetColorBadge chrColor={preset.characterColor} bgColor={preset.bgColor} size="sm" />
+                                  <span className="truncate tracking-wider">{preset.name}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  {isSelected && <Check className="w-3.5 h-3.5" />}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteCustomPreset(preset.id, e)}
+                                    className="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                                    title={t('Delete Preset')}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+
+                        {/* Save Current as Custom Set Action */}
+                        <div className="p-1.5 pt-2 border-t border-[#323238] bg-[#17171A]">
+                          <button
+                            type="button"
+                            onClick={() => handleRegisterCustomPreset()}
+                            className="w-full py-1.5 px-2 bg-[#25252B] hover:bg-[#323238] hover:text-[var(--accent)] text-gray-200 border border-[#3A3A42] flex items-center justify-center gap-1.5 text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3 text-[var(--accent)]" />
+                            {t('Save Current as Custom Set')}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Language Toggle (EN | JP) */}
+              <div className="flex border border-[#323238] overflow-hidden bg-[#1E1E22] h-8">
+                <button
+                  type="button"
                   onClick={() => setAppLanguage('en')}
-                  className={`px-3 py-1.5 text-[10px] uppercase font-bold transition-colors ${
+                  className={`px-2.5 h-full text-[10px] uppercase font-bold transition-colors ${
                     appLanguage === 'en' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white hover:bg-[#323238]'
                   }`}
                 >
                   EN
                 </button>
                 <button
+                  type="button"
                   onClick={() => setAppLanguage('ja')}
-                  className={`px-3 py-1.5 text-[10px] uppercase font-bold transition-colors ${
+                  className={`px-2.5 h-full text-[10px] uppercase font-bold transition-colors ${
                     appLanguage === 'ja' ? 'bg-gray-600 text-white' : 'text-gray-400 hover:text-white hover:bg-[#323238]'
                   }`}
                 >
@@ -2656,7 +3611,7 @@ export default function App() {
               {hudPanelTab === 'formation' && (
                 <>
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Scale</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Scale</span>
                     <input 
                       type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
                       onChange={(e) => setPersonScale(parseFloat(e.target.value))}
@@ -2666,7 +3621,7 @@ export default function App() {
                   </div>
                     
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Level</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Level</span>
                     <input 
                       type="range" min="1" max="8" value={formationLevel} 
                       onChange={(e) => setFormationLevel(parseInt(e.target.value))}
@@ -2676,7 +3631,7 @@ export default function App() {
                   </div>
                     
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Space</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Space</span>
                     <input 
                       type="range" min="1" max="5" step="0.5" value={formationSpacing} 
                       onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
@@ -2686,7 +3641,7 @@ export default function App() {
                   </div>
 
                   <div className="flex items-center gap-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Format</span>
+                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>Format</span>
                      <div className="flex gap-0.5">
                        {(
                          [
@@ -2703,8 +3658,8 @@ export default function App() {
                            onClick={() => setFormationType(id as any)}
                            className={`p-1.5 transition-all drop-shadow-md rounded ${ 
                              formationType === id 
-                               ? (appTheme === 'light' ? 'bg-gray-500 text-white' : 'bg-gray-500 text-white')
-                               : (appTheme === 'light' ? 'text-gray-800 bg-white/50 hover:bg-white/80' : 'text-gray-300 bg-[#121214]/50 hover:bg-[#121214]/80')
+                               ? 'bg-gray-500 text-white'
+                               : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-800 bg-white/50 hover:bg-white/80' : 'text-gray-300 bg-[#121214]/50 hover:bg-[#121214]/80')
                            }`}
                            title={id.charAt(0).toUpperCase() + id.slice(1)}
                          >
@@ -2718,7 +3673,7 @@ export default function App() {
               {hudPanelTab === 'shadow' && (
                 <>
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Shadow Op')}</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Shadow Op')}</span>
                     <input 
                       type="range" min="0" max="1" step="0.05" value={shadowOpacity} 
                       onChange={(e) => setShadowOpacity(parseFloat(e.target.value))}
@@ -2728,7 +3683,7 @@ export default function App() {
                   </div>
 
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Angle')}</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Angle')}</span>
                     <input 
                       type="range" min="0" max="6.28" step="0.1" value={shadowAngle} 
                       onChange={(e) => setShadowAngle(parseFloat(e.target.value))}
@@ -2738,7 +3693,7 @@ export default function App() {
                   </div>
 
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Length')}</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Length')}</span>
                     <input 
                       type="range" min="0.5" max="5" step="0.1" value={shadowLength} 
                       onChange={(e) => setShadowLength(parseFloat(e.target.value))}
@@ -2748,7 +3703,7 @@ export default function App() {
                   </div>
 
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Blur')}</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('Blur')}</span>
                     <input 
                       type="range" min="0" max="25" step="0.1" value={shadowBlur} 
                       onChange={(e) => setShadowBlur(parseFloat(e.target.value))}
@@ -2765,7 +3720,7 @@ export default function App() {
                         setShadowLength(0.8);
                         setShadowBlur(5.0);
                       }}
-                      className="px-3 py-1 bg-[#2A2A30] text-[10px] font-mono font-bold uppercase tracking-widest border border-[#3A3A42] hover:bg-[#323238] transition-colors flex items-center gap-2 drop-shadow-md text-gray-300 hover:text-white"
+                      className={`px-3 py-1 ${appTheme === 'light' || appTheme === 'peper' ? 'bg-white/70 text-gray-800 border-gray-300 hover:bg-white' : 'bg-[#2A2A30] text-gray-300 border-[#3A3A42] hover:bg-[#323238]'} text-[10px] font-mono font-bold uppercase tracking-widest border transition-colors flex items-center gap-2 drop-shadow-md`}
                       title={t('Reset Shadow Settings')}
                     >
                       <RefreshCw className="w-3 h-3" />
@@ -2777,7 +3732,7 @@ export default function App() {
               {hudPanelTab === 'display' && (
                 <>
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
-                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('HUD Opacity')}</span>
+                    <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black'}`}>{t('HUD Opacity')}</span>
                     <input 
                       type="range" min="0.1" max="1" step="0.05" value={hudOpacity} 
                       onChange={(e) => setHudOpacity(parseFloat(e.target.value))}

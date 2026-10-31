@@ -21,6 +21,8 @@ export interface PosePreset {
 
 export type ThemeId = 'studio' | 'dark' | 'neon' | 'monolith' | 'red' | 'brown' | 'light-gray';
 
+export type AppTheme = 'peper' | 'colors' | 'black' | 'light' | 'red';
+
 export interface ThemeConfig {
   id: ThemeId;
   name: string;
@@ -35,4 +37,24 @@ export interface Playlist {
   id: string;
   name: string;
   trackIds: string[];
+}
+
+export type ColorScope = 'theme' | 'common';
+
+export interface ThemeColorSetting {
+  characterColor: string;
+  savedCustomCharacterColor: string;
+  themeId: ThemeId;
+  customBgColor: string | null;
+  savedCustomBgColor: string;
+}
+
+export interface ColorPreset {
+  id: string;
+  name: string;
+  isDefault?: boolean;
+  appTheme: AppTheme;
+  characterColor: string;
+  bgColor: string;
+  themeId?: ThemeId;
 }

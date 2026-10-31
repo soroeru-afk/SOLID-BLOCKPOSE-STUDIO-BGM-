@@ -116,6 +116,654 @@ html[data-theme="light"] .dark-scrollbar::-webkit-scrollbar-thumb:hover {
 
 html[data-theme="black"] .bg-\[\#1E1E22\]\/70 { background-color: rgba(10, 10, 10, 0.7) !important; }
 
+/* ==========================================================================
+   PEPER (PAPER) THEME
+   Inspired by Solid Logo Typography Creator & Square Editor
+   Palette:
+   - Primary Accent: #D95430
+   - Primary Text / Inactive elements: #73634F
+   - Dark Text / Headers: #44372B / #3A2F24
+   - Muted Text: #8F7F6C
+   - Headers & Sidebar Background: #EBE4D5
+   - Workspace / Page Background: #F2EFE6
+   - Panel & Card Interior Background: #ECE6D8
+   - Borders: #D1C7B4 (secondary: #C2B6A2)
+   - Buttons & Key Action Cards: #FFFFFF (Clean White)
+   - Canvas HUD: Preserved in Dark/Black Mode
+   ========================================================================== */
+
+html[data-theme="peper"] body,
+html[data-theme="paper"] body {
+  background-color: #F2EFE6 !important;
+  color: #73634F !important;
+}
+
+/* Base surface overrides */
+html[data-theme="peper"] .bg-\[\#121214\],
+html[data-theme="paper"] .bg-\[\#121214\] { background-color: #F2EFE6 !important; }
+html[data-theme="peper"] .from-\[\#121214\],
+html[data-theme="paper"] .from-\[\#121214\] { --tw-gradient-from: #F2EFE6 var(--tw-gradient-from-position) !important; }
+html[data-theme="peper"] .bg-\[\#1E1E22\],
+html[data-theme="paper"] .bg-\[\#1E1E22\],
+html[data-theme="peper"] .bg-\[\#1e1e22\],
+html[data-theme="paper"] .bg-\[\#1e1e22\] { background-color: #EBE4D5 !important; }
+html[data-theme="peper"] .bg-\[\#1a1a1e\],
+html[data-theme="paper"] .bg-\[\#1a1a1e\] { background-color: #ECE6D8 !important; }
+html[data-theme="peper"] .bg-\[\#1a1a1e\]\/80,
+html[data-theme="paper"] .bg-\[\#1a1a1e\]\/80 { background-color: rgba(235, 228, 213, 0.95) !important; }
+html[data-theme="peper"] .bg-\[\#1a1a1e\]\/60,
+html[data-theme="paper"] .bg-\[\#1a1a1e\]\/60,
+html[data-theme="peper"] .bg-\[\#1a1a1e\]\/40,
+html[data-theme="paper"] .bg-\[\#1a1a1e\]\/40 { background-color: #ECE6D8 !important; }
+html[data-theme="peper"] .bg-\[\#1E1E22\]\/90,
+html[data-theme="paper"] .bg-\[\#1E1E22\]\/90 { background-color: rgba(235, 228, 213, 0.95) !important; }
+html[data-theme="peper"] .bg-\[\#1E1E22\]\/70,
+html[data-theme="paper"] .bg-\[\#1E1E22\]\/70 { background-color: rgba(235, 228, 213, 0.85) !important; }
+html[data-theme="peper"] .bg-\[\#2A2A30\],
+html[data-theme="paper"] .bg-\[\#2A2A30\] { background-color: #ECE6D8 !important; }
+html[data-theme="peper"] .bg-\[\#323238\],
+html[data-theme="paper"] .bg-\[\#323238\] { background-color: #DDD4C4 !important; }
+
+/* Borders */
+html[data-theme="peper"] .border-\[\#323238\],
+html[data-theme="paper"] .border-\[\#323238\] { border-color: #D1C7B4 !important; }
+html[data-theme="peper"] .border-\[\#323238\]\/50,
+html[data-theme="paper"] .border-\[\#323238\]\/50 { border-color: #8C7B68 !important; }
+html[data-theme="peper"] .border-\[\#3A3A42\],
+html[data-theme="paper"] .border-\[\#3A3A42\] { border-color: #C2B6A2 !important; }
+html[data-theme="peper"] .border-gray-500,
+html[data-theme="paper"] .border-gray-500 { border-color: #C2B6A2 !important; }
+
+/* Typography */
+html[data-theme="peper"] .text-\[\#E1E1E6\],
+html[data-theme="paper"] .text-\[\#E1E1E6\] { color: #73634F !important; }
+html[data-theme="peper"] .text-gray-300,
+html[data-theme="paper"] .text-gray-300 { color: #5F5241 !important; }
+html[data-theme="peper"] .text-gray-400,
+html[data-theme="paper"] .text-gray-400 { color: #73634F !important; }
+html[data-theme="peper"] .text-gray-500,
+html[data-theme="paper"] .text-gray-500 { color: #8F7F6C !important; }
+html[data-theme="peper"] .text-white,
+html[data-theme="paper"] .text-white { color: #44372B !important; }
+html[data-theme="peper"] .hover\:text-white:hover,
+html[data-theme="paper"] .hover\:text-white:hover { color: #2B221A !important; }
+html[data-theme="peper"] .hover\:bg-\[\#323238\]:hover,
+html[data-theme="paper"] .hover\:bg-\[\#323238\]:hover { background-color: #FAF8F5 !important; }
+
+/* --------------------------------------------------------------------------
+   1. CANVAS HUD: Light theme style (Thin translucent buttons & clear labels)
+   -------------------------------------------------------------------------- */
+html[data-theme="peper"] .canvas-hud,
+html[data-theme="paper"] .canvas-hud {
+  color: #111827 !important;
+}
+html[data-theme="peper"] .canvas-hud .bg-\[\#2A2A30\],
+html[data-theme="paper"] .canvas-hud .bg-\[\#2A2A30\] {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  border-color: #D1D5DB !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06) !important;
+}
+html[data-theme="peper"] .canvas-hud .bg-\[\#4A4A52\],
+html[data-theme="paper"] .canvas-hud .bg-\[\#4A4A52\] {
+  background-color: #9CA3AF !important;
+}
+html[data-theme="peper"] .canvas-hud input[type="range"],
+html[data-theme="paper"] .canvas-hud input[type="range"] {
+  background-color: #9CA3AF !important;
+  accent-color: #6B7280 !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. HEADER: Crisp White Buttons & Controls
+   -------------------------------------------------------------------------- */
+html[data-theme="peper"] header,
+html[data-theme="paper"] header {
+  background-color: #EBE4D5 !important;
+  border-color: #D1C7B4 !important;
+}
+
+/* Theme Dropdown Button */
+html[data-theme="peper"] header .relative > button,
+html[data-theme="paper"] header .relative > button {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+}
+html[data-theme="peper"] header .relative > button:hover,
+html[data-theme="paper"] header .relative > button:hover {
+  background-color: #FAF8F5 !important;
+}
+html[data-theme="peper"] header .relative > div,
+html[data-theme="paper"] header .relative > div {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08) !important;
+}
+html[data-theme="peper"] header .relative > div button,
+html[data-theme="paper"] header .relative > div button {
+  color: #73634F !important;
+}
+html[data-theme="peper"] header .relative > div button:hover,
+html[data-theme="paper"] header .relative > div button:hover {
+  background-color: #F2EFE6 !important;
+}
+html[data-theme="peper"] header .relative > div button.bg-\[var\(--accent\)\],
+html[data-theme="paper"] header .relative > div button.bg-\[var\(--accent\)\] {
+  background-color: #D95430 !important;
+  color: #FFFFFF !important;
+}
+
+/* Language Toggle (EN | JP) */
+html[data-theme="peper"] header .flex.border-\[\#323238\].overflow-hidden,
+html[data-theme="paper"] header .flex.border-\[\#323238\].overflow-hidden {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+}
+html[data-theme="peper"] header .flex.border-\[\#323238\].overflow-hidden button,
+html[data-theme="paper"] header .flex.border-\[\#323238\].overflow-hidden button {
+  background-color: #FFFFFF !important;
+  color: #73634F !important;
+}
+html[data-theme="peper"] header .flex.border-\[\#323238\].overflow-hidden button.bg-gray-600,
+html[data-theme="paper"] header .flex.border-\[\#323238\].overflow-hidden button.bg-gray-600 {
+  background-color: #73634F !important;
+  color: #FFFFFF !important;
+}
+
+/* Reset View Button */
+html[data-theme="peper"] header button.w-\[110px\],
+html[data-theme="paper"] header button.w-\[110px\] {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+}
+html[data-theme="peper"] header button.w-\[110px\]:hover,
+html[data-theme="paper"] header button.w-\[110px\]:hover {
+  background-color: #FAF8F5 !important;
+}
+
+/* Formation, Shadow, Display Header Toggle Buttons */
+html[data-theme="peper"] header button div.p-1.border,
+html[data-theme="paper"] header button div.p-1.border {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important;
+}
+html[data-theme="peper"] header button div.p-1.border.bg-gray-300,
+html[data-theme="paper"] header button div.p-1.border.bg-gray-300 {
+  background-color: #D95430 !important;
+  border-color: #D95430 !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="peper"] header button span.text-gray-300,
+html[data-theme="paper"] header button span.text-gray-300 {
+  color: #D95430 !important;
+}
+
+/* Fullscreen and Sidebar buttons */
+html[data-theme="peper"] header button.p-1\.5,
+html[data-theme="paper"] header button.p-1\.5 {
+  color: #73634F !important;
+}
+html[data-theme="peper"] header button.p-1\.5:hover,
+html[data-theme="paper"] header button.p-1\.5:hover {
+  background-color: #FFFFFF !important;
+  color: #44372B !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. SIDEBAR TABS & CARDS: Unified Light Typography Creator Style
+   -------------------------------------------------------------------------- */
+html[data-theme="peper"] aside,
+html[data-theme="paper"] aside {
+  background-color: #EBE4D5 !important;
+  border-color: #D1C7B4 !important;
+}
+html[data-theme="peper"] aside .border-b,
+html[data-theme="paper"] aside .border-b,
+html[data-theme="peper"] aside .border-t,
+html[data-theme="paper"] aside .border-t {
+  border-color: #D1C7B4 !important;
+}
+html[data-theme="peper"] aside .bg-\[var\(--accent\)\]\/5,
+html[data-theme="paper"] aside .bg-\[var\(--accent\)\]\/5 {
+  background-color: transparent !important;
+}
+
+/* Tabs Header (VISUAL / SOUND) - Selected tab gets darker beige (#DDD4C4), inactive is white */
+html[data-theme="peper"] aside .sticky.top-0,
+html[data-theme="paper"] aside .sticky.top-0 {
+  background-color: #EBE4D5 !important;
+  border-color: #D1C7B4 !important;
+}
+html[data-theme="peper"] aside .sticky.top-0 button,
+html[data-theme="paper"] aside .sticky.top-0 button {
+  background-color: #FFFFFF !important;
+  border-bottom: 2px solid transparent !important;
+  color: #8F7F6C !important;
+}
+html[data-theme="peper"] aside .sticky.top-0 button.border-\[var\(--accent\)\],
+html[data-theme="paper"] aside .sticky.top-0 button.border-\[var\(--accent\)\] {
+  background-color: #DDD4C4 !important;
+  color: #D95430 !important;
+  border-bottom: 2px solid #D95430 !important;
+}
+html[data-theme="peper"] aside .sticky.top-0 button:hover,
+html[data-theme="paper"] aside .sticky.top-0 button:hover {
+  color: #44372B !important;
+}
+
+/* Expandable containers & panels (Effect Setting, BGM Setting, etc.) */
+html[data-theme="peper"] aside .bg-\[\#1a1a1e\]\/60,
+html[data-theme="paper"] aside .bg-\[\#1a1a1e\]\/60,
+html[data-theme="peper"] aside .bg-\[\#1a1a1e\]\/40,
+html[data-theme="paper"] aside .bg-\[\#1a1a1e\]\/40 {
+  background-color: #DDD4C4 !important;
+  border-color: #C2B6A2 !important;
+}
+
+/* Section Header Divider Line (under EFFECT SETTING, BGM SETTING, etc.) */
+html[data-theme="peper"] aside button.border-b,
+html[data-theme="paper"] aside button.border-b {
+  border-bottom-color: #73634F !important;
+  border-bottom-width: 1px !important;
+}
+
+/* Collapsible Section (+ / -) indicator boxes */
+html[data-theme="peper"] aside .w-5.h-5.border,
+html[data-theme="paper"] aside .w-5.h-5.border {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+}
+html[data-theme="peper"] aside .w-5.h-5.border.border-\[\#D95430\],
+html[data-theme="paper"] aside .w-5.h-5.border.border-\[\#D95430\] {
+  border-color: #D95430 !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. TOGGLE SWITCHES & SLIDER CONTROLS
+   -------------------------------------------------------------------------- */
+/* Switches track (Inactive/OFF) - White base so the side opposite the knob is white */
+html[data-theme="peper"] aside button.w-10.h-5,
+html[data-theme="paper"] aside button.w-10.h-5 {
+  background-color: #FFFFFF !important;
+  border-color: #73634F !important;
+}
+/* Switches knob: ALWAYS Orange in both OFF and ON positions */
+html[data-theme="peper"] aside button.w-10.h-5 > div,
+html[data-theme="paper"] aside button.w-10.h-5 > div {
+  background-color: #D95430 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2) !important;
+}
+/* Switches track (Active/ON) - frame stays #73634F, track gets subtle orange tint */
+html[data-theme="peper"] aside button.w-10.h-5.bg-transparent,
+html[data-theme="paper"] aside button.w-10.h-5.bg-transparent,
+html[data-theme="peper"] aside button.w-10.h-5[class*="border-amber"],
+html[data-theme="paper"] aside button.w-10.h-5[class*="border-amber"],
+html[data-theme="peper"] aside button.w-10.h-5[class*="border-red"],
+html[data-theme="paper"] aside button.w-10.h-5[class*="border-red"] {
+  background-color: rgba(217, 84, 48, 0.18) !important;
+  border-color: #73634F !important;
+}
+
+/* Sliders (range inputs) in sidebar: Distinct, visible #73634F rail line */
+html[data-theme="peper"] aside input[type="range"],
+html[data-theme="paper"] aside input[type="range"] {
+  background-color: #73634F !important;
+  height: 3px !important;
+  accent-color: #D95430 !important;
+  border-radius: 1px !important;
+}
+html[data-theme="peper"] aside input[type="range"]::-webkit-slider-runnable-track,
+html[data-theme="paper"] aside input[type="range"]::-webkit-slider-runnable-track {
+  background-color: #73634F !important;
+  height: 3px !important;
+  border-radius: 1px !important;
+}
+html[data-theme="peper"] aside input[type="range"]::-moz-range-track,
+html[data-theme="paper"] aside input[type="range"]::-moz-range-track {
+  background-color: #73634F !important;
+  height: 3px !important;
+  border-radius: 1px !important;
+}
+html[data-theme="peper"] aside input[type="range"]::-webkit-slider-thumb,
+html[data-theme="paper"] aside input[type="range"]::-webkit-slider-thumb {
+  appearance: none !important;
+  background-color: #D95430 !important;
+  border: 1px solid #73634F !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  margin-top: -5.5px !important;
+}
+html[data-theme="peper"] aside input[type="range"]::-moz-range-thumb,
+html[data-theme="paper"] aside input[type="range"]::-moz-range-thumb {
+  background-color: #D95430 !important;
+  border: 1px solid #73634F !important;
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+}
+
+/* Sliders value badges (e.g., 0.35s, rotate speed) */
+html[data-theme="peper"] aside span.font-mono.font-bold.px-1\.5,
+html[data-theme="paper"] aside span.font-mono.font-bold.px-1\.5 {
+  background-color: #FFFFFF !important;
+  border: 1px solid #D1C7B4 !important;
+  color: #73634F !important;
+}
+html[data-theme="peper"] aside span.font-mono.font-bold.bg-\[\#D95430\]\/15,
+html[data-theme="paper"] aside span.font-mono.font-bold.bg-\[\#D95430\]\/15 {
+  background-color: #FFFFFF !important;
+  border-color: #D95430 !important;
+  color: #D95430 !important;
+}
+
+/* Color Scope toggle and Theme Accent button */
+html[data-theme="peper"] aside .border-\[\#323238\].overflow-hidden button.bg-\[\#121214\],
+html[data-theme="paper"] aside .border-\[\#323238\].overflow-hidden button.bg-\[\#121214\] {
+  background-color: #FFFFFF !important;
+  color: #73634F !important;
+}
+html[data-theme="peper"] aside .border-\[\#323238\].overflow-hidden button.bg-\[var\(--accent\)\],
+html[data-theme="paper"] aside .border-\[\#323238\].overflow-hidden button.bg-\[var\(--accent\)\] {
+  background-color: #D95430 !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="peper"] aside button.text-\[var\(--accent\)\].shadow-sm,
+html[data-theme="paper"] aside button.text-\[var\(--accent\)\].shadow-sm {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #D95430 !important;
+}
+html[data-theme="peper"] aside button.text-\[var\(--accent\)\].shadow-sm:hover,
+html[data-theme="paper"] aside button.text-\[var\(--accent\)\].shadow-sm:hover {
+  background-color: #FAF8F5 !important;
+  border-color: #D95430 !important;
+}
+
+/* Sound ON/OFF and MODE buttons */
+html[data-theme="peper"] aside button.w-\[84px\],
+html[data-theme="paper"] aside button.w-\[84px\] {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+}
+html[data-theme="peper"] aside button.w-\[84px\].bg-transparent,
+html[data-theme="paper"] aside button.w-\[84px\].bg-transparent {
+  background-color: #D95430 !important;
+  border-color: #D95430 !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="peper"] aside div.w-\[96px\],
+html[data-theme="paper"] aside div.w-\[96px\] {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+}
+html[data-theme="peper"] aside div.w-\[96px\] button,
+html[data-theme="paper"] aside div.w-\[96px\] button {
+  color: #73634F !important;
+}
+html[data-theme="peper"] aside div.w-\[96px\] button.bg-\[\#323238\],
+html[data-theme="paper"] aside div.w-\[96px\] button.bg-\[\#323238\] {
+  background-color: #73634F !important;
+  color: #FFFFFF !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. POSE LIBRARY: Crisp White Cards with Subtle Stone Borders
+   -------------------------------------------------------------------------- */
+/* Unselected Pose cards */
+html[data-theme="peper"] aside .grid-cols-2 > div.cursor-pointer,
+html[data-theme="paper"] aside .grid-cols-2 > div.cursor-pointer {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+}
+html[data-theme="peper"] aside .grid-cols-2 > div.cursor-pointer:hover,
+html[data-theme="paper"] aside .grid-cols-2 > div.cursor-pointer:hover {
+  background-color: #FAF8F5 !important;
+  border-color: #C2B6A2 !important;
+}
+html[data-theme="peper"] aside .grid-cols-2 > div.cursor-pointer span,
+html[data-theme="paper"] aside .grid-cols-2 > div.cursor-pointer span {
+  color: #4A3E31 !important;
+}
+html[data-theme="peper"] aside .grid-cols-2 > div.cursor-pointer span.font-mono,
+html[data-theme="paper"] aside .grid-cols-2 > div.cursor-pointer span.font-mono {
+  color: #8F7F6C !important;
+}
+
+/* Active Pose card */
+html[data-theme="peper"] aside .grid-cols-2 > div.cursor-pointer.bg-\[var\(--accent\)\],
+html[data-theme="paper"] aside .grid-cols-2 > div.cursor-pointer.bg-\[var\(--accent\)\] {
+  background-color: #D95430 !important;
+  border-color: #D95430 !important;
+  box-shadow: 0 2px 4px rgba(217, 84, 48, 0.25) !important;
+}
+html[data-theme="peper"] aside .grid-cols-2 > div.cursor-pointer.bg-\[var\(--accent\)\] span,
+html[data-theme="paper"] aside .grid-cols-2 > div.cursor-pointer.bg-\[var\(--accent\)\] span {
+  color: #FFFFFF !important;
+}
+html[data-theme="peper"] aside .grid-cols-2 > div.cursor-pointer.bg-\[var\(--accent\)\] span.font-mono,
+html[data-theme="paper"] aside .grid-cols-2 > div.cursor-pointer.bg-\[var\(--accent\)\] span.font-mono {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* New Set dashed button in Pose Library */
+html[data-theme="peper"] aside .grid-cols-2 > button.border-dashed,
+html[data-theme="paper"] aside .grid-cols-2 > button.border-dashed {
+  background-color: #FFFFFF !important;
+  border: 1px dashed #C2B6A2 !important;
+  color: #73634F !important;
+}
+html[data-theme="peper"] aside .grid-cols-2 > button.border-dashed:hover,
+html[data-theme="paper"] aside .grid-cols-2 > button.border-dashed:hover {
+  background-color: #FAF8F5 !important;
+  border-color: #D95430 !important;
+  color: #D95430 !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. SOUND TAB: Clean White Elements & Consistent Paper Container
+   -------------------------------------------------------------------------- */
+/* Effect Style buttons (MEC, RET, PIN, WOO, POP) */
+html[data-theme="peper"] aside .grid-cols-5 > button,
+html[data-theme="paper"] aside .grid-cols-5 > button {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+}
+html[data-theme="peper"] aside .grid-cols-5 > button:hover,
+html[data-theme="paper"] aside .grid-cols-5 > button:hover {
+  background-color: #FAF8F5 !important;
+}
+html[data-theme="peper"] aside .grid-cols-5 > button.bg-\[\#D95430\],
+html[data-theme="paper"] aside .grid-cols-5 > button.bg-\[\#D95430\] {
+  background-color: #D95430 !important;
+  border-color: #D95430 !important;
+  color: #FFFFFF !important;
+}
+
+/* BGM Player transport buttons */
+html[data-theme="peper"] aside .flex.items-center.justify-center.gap-1\.5 > button,
+html[data-theme="paper"] aside .flex.items-center.justify-center.gap-1\.5 > button {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+}
+html[data-theme="peper"] aside .flex.items-center.justify-center.gap-1\.5 > button:hover,
+html[data-theme="paper"] aside .flex.items-center.justify-center.gap-1\.5 > button:hover {
+  background-color: #FAF8F5 !important;
+}
+html[data-theme="peper"] aside .flex.items-center.justify-center.gap-1\.5 > button.border-\[\#D95430\],
+html[data-theme="paper"] aside .flex.items-center.justify-center.gap-1\.5 > button.border-\[\#D95430\] {
+  border-color: #D95430 !important;
+  color: #D95430 !important;
+}
+
+/* Progress bar rail in BGM Player */
+html[data-theme="peper"] aside .bg-\[\#2A2A30\],
+html[data-theme="paper"] aside .bg-\[\#2A2A30\],
+html[data-theme="peper"] aside .h-1.bg-\[\#2A2A30\],
+html[data-theme="paper"] aside .h-1.bg-\[\#2A2A30\],
+html[data-theme="peper"] aside .h-1.overflow-hidden,
+html[data-theme="paper"] aside .h-1.overflow-hidden {
+  background-color: #BDB09C !important;
+}
+
+/* Playlist header action buttons (+ NEW SET, list toggle, clear) */
+html[data-theme="peper"] aside .flex.gap-2.mb-3 > button,
+html[data-theme="paper"] aside .flex.gap-2.mb-3 > button {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+}
+/* + NEW SET: Solid orange with white text/icon */
+html[data-theme="peper"] aside .flex.gap-2.mb-3 > button:first-child,
+html[data-theme="paper"] aside .flex.gap-2.mb-3 > button:first-child {
+  background-color: #D95430 !important;
+  border-color: #D95430 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 1px 2px rgba(217, 84, 48, 0.25) !important;
+}
+html[data-theme="peper"] aside .flex.gap-2.mb-3 > button:first-child svg,
+html[data-theme="paper"] aside .flex.gap-2.mb-3 > button:first-child svg {
+  color: #FFFFFF !important;
+}
+html[data-theme="peper"] aside .flex.gap-2.mb-3 > button:first-child:hover,
+html[data-theme="paper"] aside .flex.gap-2.mb-3 > button:first-child:hover {
+  background-color: #C44522 !important;
+  border-color: #C44522 !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="peper"] aside .flex.gap-2.mb-3 > button:hover,
+html[data-theme="paper"] aside .flex.gap-2.mb-3 > button:hover {
+  background-color: #FAF8F5 !important;
+}
+
+/* Playlist dropdown & Move select: Normal gray text (not red) */
+html[data-theme="peper"] aside select,
+html[data-theme="paper"] aside select {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #4A3E31 !important;
+}
+html[data-theme="peper"] aside select option,
+html[data-theme="paper"] aside select option {
+  background-color: #FFFFFF !important;
+  color: #4A3E31 !important;
+}
+html[data-theme="peper"] aside .relative > svg.text-\[var\(--accent\)\],
+html[data-theme="paper"] aside .relative > svg.text-\[var\(--accent\)\] {
+  color: #73634F !important;
+}
+
+/* Action links: Add Samples, Add Files, Move to... (normal gray text) */
+html[data-theme="peper"] aside button.text-\[var\(--accent\)\].underline,
+html[data-theme="paper"] aside button.text-\[var\(--accent\)\].underline,
+html[data-theme="peper"] aside label.text-\[var\(--accent\)\].underline,
+html[data-theme="paper"] aside label.text-\[var\(--accent\)\].underline {
+  color: #73634F !important;
+}
+html[data-theme="peper"] aside button.text-\[var\(--accent\)\].underline:hover,
+html[data-theme="paper"] aside button.text-\[var\(--accent\)\].underline:hover,
+html[data-theme="peper"] aside label.text-\[var\(--accent\)\].underline:hover,
+html[data-theme="paper"] aside label.text-\[var\(--accent\)\].underline:hover {
+  color: #2B221A !important;
+}
+html[data-theme="peper"] aside select.w-28,
+html[data-theme="paper"] aside select.w-28 {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+}
+
+/* Track list item in Sound tab */
+html[data-theme="peper"] aside .space-y-1 > div.group,
+html[data-theme="paper"] aside .space-y-1 > div.group {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #4A3E31 !important;
+}
+html[data-theme="peper"] aside .space-y-1 > div.group:hover,
+html[data-theme="paper"] aside .space-y-1 > div.group:hover {
+  border-color: #C2B6A2 !important;
+  background-color: #FAF8F5 !important;
+}
+html[data-theme="peper"] aside .space-y-1 > div.group span,
+html[data-theme="paper"] aside .space-y-1 > div.group span {
+  color: #4A3E31 !important;
+}
+html[data-theme="peper"] aside .space-y-1 > div.group span.text-\[\#D95430\],
+html[data-theme="paper"] aside .space-y-1 > div.group span.text-\[\#D95430\] {
+  color: #D95430 !important;
+  font-weight: 700 !important;
+}
+
+/* Track list item selection checkbox */
+html[data-theme="peper"] aside .w-3.h-3.border,
+html[data-theme="paper"] aside .w-3.h-3.border {
+  border-color: #C2B6A2 !important;
+  background-color: #FFFFFF !important;
+}
+html[data-theme="peper"] aside .w-3.h-3.border.bg-\[\#323238\],
+html[data-theme="paper"] aside .w-3.h-3.border.bg-\[\#323238\] {
+  background-color: #D95430 !important;
+  border-color: #D95430 !important;
+}
+
+/* Delete selected button in track list */
+html[data-theme="peper"] aside button.border-\[\#323238\].bg-\[\#121214\],
+html[data-theme="paper"] aside button.border-\[\#323238\].bg-\[\#121214\] {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+}
+
+/* Drop Audio Files area */
+html[data-theme="peper"] aside div.border-dashed.border-\[\#323238\],
+html[data-theme="paper"] aside div.border-dashed.border-\[\#323238\] {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+  border-color: #C2B6A2 !important;
+}
+
+/* Pose Editing form inputs */
+html[data-theme="peper"] aside input[type="text"],
+html[data-theme="paper"] aside input[type="text"] {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #4A3E31 !important;
+}
+html[data-theme="peper"] aside button.bg-\[\#2A2A30\],
+html[data-theme="paper"] aside button.bg-\[\#2A2A30\] {
+  background-color: #FFFFFF !important;
+  border-color: #D1C7B4 !important;
+  color: #73634F !important;
+}
+
+/* Scrollbars in PEPER theme */
+html[data-theme="peper"] .dark-scrollbar,
+html[data-theme="paper"] .dark-scrollbar {
+  scrollbar-color: #C2B6A2 transparent;
+}
+html[data-theme="peper"] .dark-scrollbar::-webkit-scrollbar-thumb,
+html[data-theme="paper"] .dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #C2B6A2;
+  border: 1px solid #D1C7B4;
+}
+html[data-theme="peper"] .dark-scrollbar::-webkit-scrollbar-thumb:hover,
+html[data-theme="paper"] .dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #73634F;
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;

@@ -11,9 +11,9 @@ import {
   Play, Pause, Plus, Minus, Save, Trash2, Edit3, SlidersHorizontal,
   Download, Upload, Volume2, VolumeX, Music, Music2,
   Camera, Video, Square, GripVertical, ChevronsUp, ChevronsDown,
-  PanelLeftClose, PanelLeftOpen, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
   LayoutGrid, Circle, Triangle, Target, Tornado, List, FolderPlus,
-  SkipBack, SkipForward, Zap, Maximize, Minimize, Check, Monitor, Sparkles
+  SkipBack, SkipForward, Zap, Maximize, Minimize, Check, Monitor, Sparkles, ArrowLeftRight
 } from 'lucide-react';
 import { SoundManager, SoundEffectType } from './lib/sound';
 import { AudioDB, StoredTrack } from './lib/audioDb';
@@ -964,7 +964,9 @@ export default function App() {
       'Delete Selected': '選択したものを削除',
       'Move to Top': '一番上に移動',
       'Move to Bottom': '一番下に移動',
-      'Toggle Sidebar Position': 'サイドバー位置切替',
+      'Toggle Sidebar Position': 'サイドチェンジ (左右切替)',
+      'Hide Sidebar': 'サイドバーを隠す',
+      'Show Sidebar': 'サイドバーを表示',
       'Playlist Repeat': 'プレイリストリピート',
       'Track Repeat': 'トラックリピート',
       'Repeat Off': 'リピートオフ',
@@ -3673,78 +3675,76 @@ export default function App() {
       style={{ '--accent': appTheme === 'peper' ? '#D95430' : (appTheme === 'red' ? '#7A1F1F' : accentColor) } as React.CSSProperties}
     >
       {/* Sidebar */}
-      <AnimatePresence initial={false}>
-        {isSidebarOpen && (
-          <motion.aside
-            initial={{ width: 0 }}
-            animate={{ width: sidebarWidth }}
-            exit={{ width: 0 }}
-            transition={{ ease: "easeInOut", duration: isResizingSidebar ? 0 : 0.3 }}
-            className={`bg-[#1E1E22] ${sidebarPosition === 'left' ? 'border-r' : 'border-l'} border-[#323238] flex flex-col z-20 shadow-2xl flex-shrink-0 relative overflow-hidden`}
-          >
-            <div style={{ width: sidebarWidth }} className="flex flex-col h-full overflow-hidden">
-              <div className="p-5 border-b border-[#323238]">
-                <h1 className="text-sm font-bold tracking-tight flex items-start gap-2 leading-tight">
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 flex-shrink-0 text-[var(--accent)]" fill="currentColor">
-                    {/* Head */}
-                    <rect x="9" y="2" width="6" height="6" />
-                    {/* Eye */}
-                    <rect x="10" y="4" width="4" height="1.5" fill="white" />
-                    {/* Body */}
-                    <rect x="7" y="9" width="10" height="7" />
-                    {/* Left Arm */}
-                    <polygon points="6.5,9 3.5,16 5.5,16.5 8,10" />
-                    {/* Right Arm */}
-                    <polygon points="17.5,9 20.5,16 18.5,16.5 16,10" />
-                    {/* Left Leg */}
-                    <rect x="8.5" y="16.5" width="3" height="6" />
-                    {/* Right Leg */}
-                    <rect x="12.5" y="16.5" width="3" height="6" />
-                  </svg>
-                  <span className="flex flex-col">
-                    <span className="text-white text-base font-black leading-none tracking-wider">SOLID BLOCKPOSE</span>
-                    <span className="text-[var(--accent)] text-xs mt-0.5 tracking-widest">STUDIO BGM+</span>
-                  </span>
-                </h1>
-                <p className="text-[9px] text-gray-500 mt-1.5 uppercase tracking-widest font-bold">Studio Edition</p>
-              </div>
-
-              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-          {/* Tabs header */}
-          <div className="flex border-b border-[#323238] sticky top-0 bg-[#1e1e22] z-20">
-            <button 
-              onClick={() => setActiveTab('visual')}
-              className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border-b-2 ${
-                activeTab === 'visual' ? 'text-white border-[var(--accent)] bg-[var(--accent)]/5' : 'text-gray-500 border-transparent hover:text-gray-300'
-              }`}
-            >
-              <Palette className="w-3.5 h-3.5" /> {t('Visual')}
-            </button>
-            <button 
-              onClick={() => setActiveTab('sound')}
-              className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border-b-2 ${
-                activeTab === 'sound' ? 'text-white border-[var(--accent)] bg-[var(--accent)]/5' : 'text-gray-500 border-transparent hover:text-gray-300'
-              }`}
-            >
-              <Music className="w-3.5 h-3.5" /> {t('Sound')}
-            </button>
+      <aside
+        style={{
+          width: isSidebarOpen ? sidebarWidth : 0,
+          transition: isResizingSidebar ? 'none' : 'width 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+        className={`bg-[#1E1E22] ${isSidebarOpen ? (sidebarPosition === 'left' ? 'border-r' : 'border-l') : 'border-transparent'} border-[#323238] flex flex-col z-20 shadow-2xl flex-shrink-0 relative overflow-hidden select-none`}
+      >
+        <div style={{ width: sidebarWidth }} className="flex flex-col h-full overflow-hidden flex-shrink-0">
+          <div className="p-5 border-b border-[#323238]">
+            <h1 className="text-sm font-bold tracking-tight flex items-start gap-2 leading-tight">
+              <svg viewBox="0 0 24 24" className="w-6 h-6 flex-shrink-0 text-[var(--accent)]" fill="currentColor">
+                {/* Head */}
+                <rect x="9" y="2" width="6" height="6" />
+                {/* Eye */}
+                <rect x="10" y="4" width="4" height="1.5" fill="white" />
+                {/* Body */}
+                <rect x="7" y="9" width="10" height="7" />
+                {/* Left Arm */}
+                <polygon points="6.5,9 3.5,16 5.5,16.5 8,10" />
+                {/* Right Arm */}
+                <polygon points="17.5,9 20.5,16 18.5,16.5 16,10" />
+                {/* Left Leg */}
+                <rect x="8.5" y="16.5" width="3" height="6" />
+                {/* Right Leg */}
+                <rect x="12.5" y="16.5" width="3" height="6" />
+              </svg>
+              <span className="flex flex-col">
+                <span className="text-white text-base font-black leading-none tracking-wider">SOLID BLOCKPOSE</span>
+                <span className="text-[var(--accent)] text-xs mt-0.5 tracking-widest">STUDIO BGM+</span>
+              </span>
+            </h1>
+            <p className="text-[9px] text-gray-500 mt-1.5 uppercase tracking-widest font-bold">Studio Edition</p>
           </div>
 
-          {activeTab === "visual" ? renderVisualTab() : renderSoundTab()}
-          </div>
-
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            {/* Tabs header */}
+            <div className="flex border-b border-[#323238] sticky top-0 bg-[#1e1e22] z-20">
+              <button 
+                onClick={() => setActiveTab('visual')}
+                className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border-b-2 ${
+                  activeTab === 'visual' ? 'text-white border-[var(--accent)] bg-[var(--accent)]/5' : 'text-gray-500 border-transparent hover:text-gray-300'
+                }`}
+              >
+                <Palette className="w-3.5 h-3.5" /> {t('Visual')}
+              </button>
+              <button 
+                onClick={() => setActiveTab('sound')}
+                className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border-b-2 ${
+                  activeTab === 'sound' ? 'text-white border-[var(--accent)] bg-[var(--accent)]/5' : 'text-gray-500 border-transparent hover:text-gray-300'
+                }`}
+              >
+                <Music className="w-3.5 h-3.5" /> {t('Sound')}
+              </button>
             </div>
-            {/* Resizer Handle */}
-            <div
-              className={`absolute top-0 bottom-0 w-2 cursor-col-resize z-50 transition-colors ${sidebarPosition === 'left' ? 'right-0' : 'left-0'} ${isResizingSidebar ? 'bg-[var(--accent)]' : 'hover:bg-[var(--accent)]/50'}`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                setIsResizingSidebar(true);
-              }}
-            />
-          </motion.aside>
+
+            {activeTab === "visual" ? renderVisualTab() : renderSoundTab()}
+          </div>
+        </div>
+
+        {/* Resizer Handle */}
+        {isSidebarOpen && (
+          <div
+            className={`absolute top-0 bottom-0 w-2 cursor-col-resize z-50 transition-colors ${sidebarPosition === 'left' ? 'right-0' : 'left-0'} ${isResizingSidebar ? 'bg-[var(--accent)]' : 'hover:bg-[var(--accent)]/50'}`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setIsResizingSidebar(true);
+            }}
+          />
         )}
-      </AnimatePresence>
+      </aside>
 
       {/* Sidebar Toggle Vertical Container */}
       <div className="w-0 relative z-20 flex flex-col justify-center">
@@ -4133,11 +4133,26 @@ export default function App() {
               {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </button>
             <button
+              onClick={() => setIsSidebarOpen(prev => !prev)}
+              className={`p-1.5 transition-colors ${
+                !isSidebarOpen 
+                  ? 'bg-[#2A2A30] border border-[#3A3A42] text-[var(--accent)] hover:text-white' 
+                  : 'hover:bg-[#323238] text-gray-400 hover:text-white'
+              }`}
+              title={isSidebarOpen ? t('Hide Sidebar') : t('Show Sidebar')}
+            >
+              {sidebarPosition === 'left' ? (
+                isSidebarOpen ? <PanelLeftClose className="w-5 h-5" /> : <PanelLeftOpen className="w-5 h-5" />
+              ) : (
+                isSidebarOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />
+              )}
+            </button>
+            <button
               onClick={() => setSidebarPosition(prev => prev === 'left' ? 'right' : 'left')}
-              className="p-1.5  hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
+              className="p-1.5 hover:bg-[#323238] text-gray-400 hover:text-white transition-colors"
               title={t('Toggle Sidebar Position')}
             >
-              {sidebarPosition === 'right' ? <PanelLeftOpen className="w-5 h-5 scale-x-[-1]" /> : <PanelLeftOpen className="w-5 h-5" />}
+              <ArrowLeftRight className="w-5 h-5" />
             </button>
           </div>
         </header>

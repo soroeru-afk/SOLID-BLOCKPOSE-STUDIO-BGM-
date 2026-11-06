@@ -4447,21 +4447,21 @@ export default function App() {
           {isHUDControlsVisible && (
             <div 
               className="canvas-hud absolute top-4 left-4 z-20 flex items-center h-12 gap-6 px-5 transition-opacity"
-              style={{ opacity: hudOpacity }}
+              style={{ opacity: appTheme === 'mocha' ? 1 : hudOpacity }}
             >
               {hudPanelTab === 'formation' && (
                 <>
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#2C1F16] font-black' 
+                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>Scale</span>
                     <input 
                       type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
                       onChange={(e) => setPersonScale(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4472,14 +4472,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#2C1F16] font-black' 
+                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>Level</span>
                     <input 
                       type="range" min="1" max="8" value={formationLevel} 
                       onChange={(e) => setFormationLevel(parseInt(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4490,14 +4490,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#2C1F16] font-black' 
+                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>Space</span>
                     <input 
                       type="range" min="1" max="5" step="0.5" value={formationSpacing} 
                       onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4508,7 +4508,7 @@ export default function App() {
                   <div className="flex items-center gap-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                      <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                        appTheme === 'mocha' 
-                         ? 'text-[#2C1F16] font-black' 
+                         ? 'text-[#1F1813] font-black drop-shadow-sm' 
                          : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                      }`}>Format</span>
                      <div className="flex gap-0.5">
@@ -4527,9 +4527,9 @@ export default function App() {
                            onClick={() => setFormationType(id as any)}
                            className={`p-1.5 transition-all drop-shadow-md rounded cursor-pointer ${ 
                              formationType === id 
-                               ? (appTheme === 'mocha' ? 'bg-[#C48A58] text-white font-bold border border-[#C48A58] shadow-sm' : 'bg-gray-500 text-white')
+                               ? (appTheme === 'mocha' ? 'bg-[#C48A58] text-[#1F1813] font-black border border-[#A87242] shadow-md ring-1 ring-[#C48A58]' : 'bg-gray-500 text-white')
                                : (appTheme === 'mocha' 
-                                   ? 'bg-[#2A2019] text-[#A59281] hover:text-[#EDE4D3] hover:bg-[#382B22] border border-[#524032]' 
+                                   ? 'bg-[#1F1813] text-[#EDE4D3] hover:text-white hover:bg-[#362A21] border border-[#524032]' 
                                    : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-800 bg-white/50 hover:bg-white/80' : 'text-gray-300 bg-[#121214]/50 hover:bg-[#121214]/80'))
                            }`}
                            title={id.charAt(0).toUpperCase() + id.slice(1)}
@@ -4546,14 +4546,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#2C1F16] font-black' 
+                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('Shadow Op')}</span>
                     <input 
                       type="range" min="0" max="1" step="0.05" value={shadowOpacity} 
                       onChange={(e) => setShadowOpacity(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4564,14 +4564,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#2C1F16] font-black' 
+                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('Angle')}</span>
                     <input 
                       type="range" min="0" max="6.28" step="0.1" value={shadowAngle} 
                       onChange={(e) => setShadowAngle(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4582,14 +4582,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#2C1F16] font-black' 
+                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('Length')}</span>
                     <input 
                       type="range" min="0.5" max="5" step="0.1" value={shadowLength} 
                       onChange={(e) => setShadowLength(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4600,14 +4600,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#2C1F16] font-black' 
+                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('Blur')}</span>
                     <input 
                       type="range" min="0" max="25" step="0.1" value={shadowBlur} 
                       onChange={(e) => setShadowBlur(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4625,7 +4625,7 @@ export default function App() {
                       }}
                       className={`px-3 py-1 ${
                         appTheme === 'mocha'
-                          ? 'bg-[#2A2019] text-[#EDE4D3] border border-[#524032] hover:bg-[#382B22] hover:text-white'
+                          ? 'bg-[#1F1813] text-[#EDE4D3] border border-[#524032] hover:bg-[#362A21] hover:text-white'
                           : (appTheme === 'light' || appTheme === 'peper' ? 'bg-white/70 text-gray-800 border-gray-300 hover:bg-white' : 'bg-[#2A2A30] text-gray-300 border-[#3A3A42] hover:bg-[#323238]')
                       } text-[10px] font-mono font-bold uppercase tracking-widest border transition-colors flex items-center gap-2 drop-shadow-md cursor-pointer`}
                       title={t('Reset Shadow Settings')}
@@ -4641,14 +4641,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#2C1F16] font-black' 
+                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('HUD Opacity')}</span>
                     <input 
                       type="range" min="0.1" max="1" step="0.05" value={hudOpacity} 
                       onChange={(e) => setHudOpacity(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${

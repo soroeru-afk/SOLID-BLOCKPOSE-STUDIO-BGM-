@@ -25,7 +25,7 @@ export const THEME_ACCENTS: Record<AppTheme, { name: string; color: string }> = 
   mocha: { name: 'MOCHA', color: '#C48A58' },
   colors: { name: 'DARK GRAY', color: '#26262B' },
   black: { name: 'PITCH BLACK', color: '#050505' },
-  red: { name: 'DARK RED', color: '#7A2020' },
+  red: { name: 'DARK RED', color: '#942222' },
   light: { name: 'STUDIO GRAY', color: '#52525B' },
 };
 
@@ -71,7 +71,7 @@ export const DEFAULT_COLOR_PRESETS: ColorPreset[] = [
     name: 'RED',
     isDefault: true,
     appTheme: 'red',
-    characterColor: '#7A2020',
+    characterColor: '#942222',
     bgColor: '#2B2B30',
     themeId: 'red',
   },
@@ -116,8 +116,8 @@ export const DEFAULT_THEME_COLORS: Record<AppTheme, ThemeColorSetting> = {
     savedCustomBgColor: '#2E2E33',
   },
   red: {
-    characterColor: '#7A2020',
-    savedCustomCharacterColor: '#7A2020',
+    characterColor: '#942222',
+    savedCustomCharacterColor: '#942222',
     themeId: 'red',
     customBgColor: '#2B2B30',
     savedCustomBgColor: '#2B2B30',
@@ -313,7 +313,7 @@ export default function App() {
     { id: 'mocha', label: 'MOCHA', dotColor: '#C48A58' },
     { id: 'colors', label: 'DARK', dotColor: '#26262B' },
     { id: 'black', label: 'BLACK', dotColor: '#050505' },
-    { id: 'red', label: 'RED', dotColor: '#7A2020' },
+    { id: 'red', label: 'RED', dotColor: '#942222' },
     { id: 'light', label: 'LIGHT', dotColor: '#52525B' },
   ], []);
 
@@ -1035,7 +1035,7 @@ export default function App() {
     return jaDict[enText] || enText;
   };
   const [hudPanelTab, setHudPanelTab] = useState<'formation' | 'shadow' | 'display'>('formation');
-  const [hudOpacity, setHudOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_hudOpacity`) || '0.8'));
+  const [hudOpacity, setHudOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_hudOpacity`) || '0.9'));
   const [shadowOpacity, setShadowOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowOpacity`) || '0.15'));
   const [shadowAngle, setShadowAngle] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowAngle`) || '0.6981317007977318'));
   const [shadowBlur, setShadowBlur] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowBlur`) || '5.0'));
@@ -1070,7 +1070,7 @@ export default function App() {
       mocha: '#45372C',
       colors: '#121214',
       black: '#000000',
-      red: '#1A0A0A',
+      red: '#100606',
       light: '#F0F2F5',
     };
     if (metaThemeColor) {
@@ -2198,11 +2198,11 @@ export default function App() {
   }, [formationLevel, formationType, formationSpacing]);
 
   const highlightClasses = {
-    text: appTheme === 'peper' ? 'text-[#D95430]' : (appTheme === 'mocha' ? 'text-[#C48A58]' : (appTheme === 'light' ? 'text-[#009FBA]' : 'text-[#05DFFC]')),
-    bg: appTheme === 'peper' ? 'bg-[#D95430]' : (appTheme === 'mocha' ? 'bg-[#C48A58]' : (appTheme === 'light' ? 'bg-[#009FBA]' : 'bg-[#05DFFC]')),
-    bgMuted: appTheme === 'peper' ? 'bg-[#D95430]/15' : (appTheme === 'mocha' ? 'bg-[#C48A58]/20' : (appTheme === 'light' ? 'bg-[#009FBA]/10' : 'bg-[#05DFFC]/10')),
-    border: appTheme === 'peper' ? 'border-[#D95430]' : (appTheme === 'mocha' ? 'border-[#C48A58]' : (appTheme === 'light' ? 'border-[#009FBA]' : 'border-[#05DFFC]')),
-    accent: appTheme === 'peper' ? 'accent-[#D95430]' : (appTheme === 'mocha' ? 'accent-[#C48A58]' : (appTheme === 'light' ? 'accent-[#009FBA]' : 'accent-[#05DFFC]')),
+    text: appTheme === 'peper' ? 'text-[#D95430]' : (appTheme === 'mocha' ? 'text-[#C48A58]' : (appTheme === 'red' ? 'text-[#E04545]' : (appTheme === 'light' ? 'text-[#555555]' : 'text-[#05DFFC]'))),
+    bg: appTheme === 'peper' ? 'bg-[#D95430]' : (appTheme === 'mocha' ? 'bg-[#C48A58]' : (appTheme === 'red' ? 'bg-[#942222]' : (appTheme === 'light' ? 'bg-[#555555]' : 'bg-[#05DFFC]'))),
+    bgMuted: appTheme === 'peper' ? 'bg-[#D95430]/15' : (appTheme === 'mocha' ? 'bg-[#C48A58]/20' : (appTheme === 'red' ? 'bg-[#942222]/25' : (appTheme === 'light' ? 'bg-[#555555]/15' : 'bg-[#05DFFC]/10'))),
+    border: appTheme === 'peper' ? 'border-[#D95430]' : (appTheme === 'mocha' ? 'border-[#C48A58]' : (appTheme === 'red' ? 'border-[#9E3737]' : (appTheme === 'light' ? 'border-[#555555]' : 'border-[#05DFFC]'))),
+    accent: appTheme === 'peper' ? 'accent-[#D95430]' : (appTheme === 'mocha' ? 'accent-[#C48A58]' : (appTheme === 'red' ? 'accent-[#9E2525]' : (appTheme === 'light' ? 'accent-[#555555]' : 'accent-[#05DFFC]'))),
   };
 
   const renderSectionCard = (
@@ -2227,11 +2227,11 @@ export default function App() {
           isOver ? 'ring-2 ring-[var(--accent)] border-[var(--accent)] shadow-lg' : ''
         } ${isDraggingThis ? 'opacity-40' : ''} ${
           appTheme === 'light' 
-            ? 'bg-white border border-gray-200 shadow-sm' 
+            ? 'bg-white border border-gray-300 shadow-sm' 
             : (appTheme === 'black' ? 'bg-[#1a1a1e]/40 border border-[#4A4A52]' : 'bg-[#1a1a1e]/40 border border-[#323238]')
         }`}
       >
-        <div className={`flex items-center justify-between w-full ${isOpen ? 'border-b pb-2 mb-1' : ''} ${appTheme === 'light' ? 'border-gray-200' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')}`}>
+        <div className={`flex items-center justify-between w-full ${isOpen ? 'border-b pb-2 mb-1' : ''} ${appTheme === 'light' ? 'border-gray-300' : (appTheme === 'black' ? 'border-[#222225]' : 'border-[#323238]/50')}`}>
           <div className="section-title-wrapper flex items-center gap-1.5 min-w-0">
             <div
               draggable
@@ -2338,7 +2338,15 @@ export default function App() {
                   }
                 }
               }}
-              className={`w-10 h-5 transition-colors relative border ${isAutoCycle ? `bg-transparent ${highlightClasses.border}` : (appTheme === 'mocha' ? 'border-[#C8BCAB] bg-[#DDD4C5]' : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]'))}`}
+              className={`w-10 h-5 transition-colors relative border ${
+                isAutoCycle 
+                  ? (appTheme === 'red' ? 'bg-transparent border-[#9E3737]' : `bg-transparent ${highlightClasses.border}`) 
+                  : (appTheme === 'mocha' 
+                      ? 'border-[#C8BCAB] bg-[#DDD4C5]' 
+                      : (appTheme === 'red' 
+                          ? 'border-[#9E3737] bg-[#140707]' 
+                          : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')))
+              }`}
             >
               <div className={`absolute top-[1px] w-4 h-4 transition-all ${isAutoCycle ? `${highlightClasses.bg} right-[1px]` : (appTheme === 'mocha' ? 'bg-[#7C6C5C] left-[1px]' : (appTheme === 'light' ? 'bg-white left-[1px] shadow-sm' : 'bg-gray-500 left-[1px]'))}`} />
             </button>
@@ -2353,8 +2361,8 @@ export default function App() {
                     onClick={toggleSound}
                     className={`flex items-center justify-center gap-1.5 w-[84px] py-1 border transition-colors cursor-pointer ${
                       isSoundOn 
-                        ? (isAutoCycle ? `bg-transparent ${highlightClasses.border} ${highlightClasses.text}` : (appTheme === 'mocha' ? 'bg-[#1F1813] border-[#524032] text-[#EDE4D3]' : (appTheme === 'light' ? 'bg-transparent border-gray-400 text-gray-800' : 'bg-transparent border-gray-300 text-gray-200')))
-                        : (appTheme === 'mocha' ? 'border-[#C8BCAB] bg-[#DDD4C5] text-[#7C6C5C]' : 'border-gray-500 bg-[#1a1a1e] text-gray-500')
+                        ? (isAutoCycle ? (appTheme === 'light' ? 'bg-transparent border-[#555555] text-[#555555]' : `bg-transparent ${highlightClasses.border} ${highlightClasses.text}`) : (appTheme === 'mocha' ? 'bg-[#1F1813] border-[#524032] text-[#EDE4D3]' : (appTheme === 'red' ? 'bg-[#942222] border-[#9E3737] text-white' : (appTheme === 'light' ? 'bg-transparent border-[#555555] text-[#555555]' : 'bg-transparent border-gray-300 text-gray-200'))))
+                        : (appTheme === 'mocha' ? 'border-[#C8BCAB] bg-[#DDD4C5] text-[#7C6C5C]' : (appTheme === 'red' ? 'border-[#9E3737] bg-[#140707] text-[#8F6E6E]' : (appTheme === 'light' ? 'border-gray-300 bg-gray-100 text-gray-500' : 'border-gray-500 bg-[#1a1a1e] text-gray-500')))
                     }`}
                   >
                     {isSoundOn ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
@@ -2363,13 +2371,13 @@ export default function App() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <span className={`text-[8px] font-bold uppercase tracking-widest leading-none ${appTheme === 'mocha' ? 'text-[#483A2E]' : (appTheme === 'red' ? 'text-white' : 'text-gray-500')}`}>{t('MODE')}</span>
-                  <div className={`flex items-center h-[26px] w-[96px] border p-0.5 ${appTheme === 'mocha' ? 'bg-[#1F1813] border-[#524032]' : 'bg-[#1a1a1e] border-[#323238]'}`}>
+                  <div className={`flex items-center h-[26px] w-[96px] border p-0.5 ${appTheme === 'mocha' ? 'bg-[#1F1813] border-[#524032]' : (appTheme === 'red' ? 'bg-[#140707] border-[#9E3737]' : (appTheme === 'light' ? 'bg-gray-100 border-gray-300' : 'bg-[#1a1a1e] border-[#323238]'))}`}>
                     <button
                       onClick={() => changeSoundMode('bgm')}
                       className={`flex-1 flex items-center justify-center h-full transition-colors text-[9px] font-bold tracking-widest cursor-pointer ${
                         soundMode === 'bgm' 
-                          ? (appTheme === 'mocha' ? 'bg-[#EDE4D3] text-[#1F1813]' : 'bg-[#323238] text-white')
-                          : (appTheme === 'mocha' ? 'text-[#A59281] hover:text-[#EDE4D3]' : 'text-gray-500 hover:text-gray-300')
+                          ? (appTheme === 'mocha' ? 'bg-[#EDE4D3] text-[#1F1813]' : (appTheme === 'red' ? 'bg-[#942222] text-white' : (appTheme === 'light' ? 'bg-[#555555] !text-white force-white-text' : 'bg-[#323238] text-white')))
+                          : (appTheme === 'mocha' ? 'text-[#A59281] hover:text-[#EDE4D3]' : (appTheme === 'red' ? 'text-[#8F6E6E] hover:text-[#F5EBEB]' : (appTheme === 'light' ? 'text-gray-500 hover:text-gray-800' : 'text-gray-500 hover:text-gray-300')))
                       }`}
                     >
                       BGM
@@ -2378,8 +2386,8 @@ export default function App() {
                       onClick={() => changeSoundMode('sfx')}
                       className={`flex-1 flex items-center justify-center h-full transition-colors text-[9px] font-bold tracking-widest cursor-pointer ${
                         soundMode === 'sfx' 
-                          ? (appTheme === 'mocha' ? 'bg-[#EDE4D3] text-[#1F1813]' : 'bg-[#323238] text-white')
-                          : (appTheme === 'mocha' ? 'text-[#A59281] hover:text-[#EDE4D3]' : 'text-gray-500 hover:text-gray-300')
+                          ? (appTheme === 'mocha' ? 'bg-[#EDE4D3] text-[#1F1813]' : (appTheme === 'red' ? 'bg-[#942222] text-white' : (appTheme === 'light' ? 'bg-[#555555] !text-white force-white-text' : 'bg-[#323238] text-white')))
+                          : (appTheme === 'mocha' ? 'text-[#A59281] hover:text-[#EDE4D3]' : (appTheme === 'red' ? 'text-[#8F6E6E] hover:text-[#F5EBEB]' : (appTheme === 'light' ? 'text-gray-500 hover:text-gray-800' : 'text-gray-500 hover:text-gray-300')))
                       }`}
                     >
                       SFX
@@ -2413,7 +2421,7 @@ export default function App() {
               className={`w-full h-1 appearance-none cursor-pointer mb-4 ${
                 appTheme === 'mocha' 
                   ? 'bg-[#A3917F] accent-[#C48A58]' 
-                  : (appTheme === 'light' ? 'bg-gray-300 accent-[#009FBA]' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`)
+                  : (appTheme === 'light' ? 'bg-gray-300 accent-[#555555]' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`)
               }`}
             />
 
@@ -2426,10 +2434,12 @@ export default function App() {
                 onClick={() => setIsRandomCycle(!isRandomCycle)}
                 className={`w-10 h-5 transition-colors relative border ${
                   isRandomCycle 
-                    ? `bg-transparent ${highlightClasses.border}` 
+                    ? (appTheme === 'red' ? 'bg-transparent border-[#9E3737]' : `bg-transparent ${highlightClasses.border}`) 
                     : (appTheme === 'mocha' 
                         ? 'border-[#7C6856] bg-[#C8BEAE]' 
-                        : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]'))
+                        : (appTheme === 'red' 
+                            ? 'border-[#9E3737] bg-[#140707]' 
+                            : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')))
                 }`}
               >
                 <div className={`absolute top-[1px] w-4 h-4 transition-all ${
@@ -2458,10 +2468,12 @@ export default function App() {
                 }}
                 className={`w-10 h-5 transition-colors relative border ${
                   isSlowRotate 
-                    ? `bg-transparent ${highlightClasses.border}` 
+                    ? (appTheme === 'red' ? 'bg-transparent border-[#9E3737]' : `bg-transparent ${highlightClasses.border}`) 
                     : (appTheme === 'mocha' 
                         ? 'border-[#7C6856] bg-[#C8BEAE]' 
-                        : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]'))
+                        : (appTheme === 'red' 
+                            ? 'border-[#9E3737] bg-[#140707]' 
+                            : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')))
                 }`}
               >
                 <div className={`absolute top-[1px] w-4 h-4 transition-all ${
@@ -2498,14 +2510,14 @@ export default function App() {
                   className={`w-full h-1 appearance-none cursor-pointer ${
                     appTheme === 'mocha' 
                       ? 'bg-[#A3917F] accent-[#C48A58]' 
-                      : (appTheme === 'light' ? 'bg-gray-300 accent-[#009FBA]' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`)
+                      : (appTheme === 'light' ? 'bg-gray-300 accent-[#555555]' : `${appTheme === 'black' ? 'bg-[#4A4A52]' : 'bg-[#2A2A30]'} ${highlightClasses.accent}`)
                   }`}
                 />
               </div>
             )}
 
             {/* Collapsible Advanced Options Sub-section */}
-            <div className={`mt-3 pt-3 border-t ${appTheme === 'mocha' ? 'border-[#7C6856]' : (appTheme === 'light' ? 'border-gray-200' : (appTheme === 'peper' ? 'border-[#D1C7B4]' : 'border-[#323238]/50'))}`}>
+            <div className={`mt-3 pt-3 border-t ${appTheme === 'mocha' ? 'border-[#7C6856]' : (appTheme === 'light' ? 'border-gray-300' : (appTheme === 'peper' ? 'border-[#D1C7B4]' : 'border-[#323238]/50'))}`}>
               <button 
                 onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
                 className="flex items-center justify-between w-full group py-1 cursor-pointer"
@@ -2544,10 +2556,12 @@ export default function App() {
                       onClick={() => setIsAutoFormation(!isAutoFormation)}
                       className={`w-10 h-5 transition-colors relative border ${
                         isAutoFormation 
-                          ? `bg-transparent ${highlightClasses.border}` 
+                          ? (appTheme === 'red' ? 'bg-transparent border-[#9E3737]' : `bg-transparent ${highlightClasses.border}`) 
                           : (appTheme === 'mocha' 
                               ? 'border-[#7C6856] bg-[#C8BEAE]' 
-                              : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]'))
+                              : (appTheme === 'red' 
+                                  ? 'border-[#9E3737] bg-[#140707]' 
+                                  : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')))
                       }`}
                     >
                       <div className={`absolute top-[1px] w-4 h-4 transition-all ${
@@ -2586,10 +2600,12 @@ export default function App() {
                         onClick={() => setIsAutoCamera(!isAutoCamera)}
                         className={`w-10 h-5 transition-colors relative border ${
                           isAutoCamera 
-                            ? `bg-transparent ${highlightClasses.border}` 
+                            ? (appTheme === 'red' ? 'bg-transparent border-[#9E3737]' : `bg-transparent ${highlightClasses.border}`) 
                             : (appTheme === 'mocha' 
                                 ? 'border-[#7C6856] bg-[#C8BEAE]' 
-                                : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]'))
+                                : (appTheme === 'red' 
+                                    ? 'border-[#9E3737] bg-[#140707]' 
+                                    : (appTheme === 'light' ? 'border-gray-400 bg-gray-200' : 'border-gray-500 bg-[#1a1a1e]')))
                         }`}
                       >
                         <div className={`absolute top-[1px] w-4 h-4 transition-all ${
@@ -2611,7 +2627,9 @@ export default function App() {
                           <span className={`cinematic-badge text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm border ${
                             appTheme === 'mocha'
                               ? 'text-[#2C1F16] bg-[#C8BEAE] border-[#7C6856]'
-                              : `${highlightClasses.text} ${highlightClasses.bgMuted} ${highlightClasses.border}/30`
+                              : (appTheme === 'red'
+                                  ? 'text-white border-white bg-transparent'
+                                  : (appTheme === 'light' ? 'text-[#555555] border-[#555555] bg-[#555555]/10' : `${highlightClasses.text} ${highlightClasses.bgMuted} ${highlightClasses.border}/30`))
                           }`}>
                             {autoCameraSpeed.toFixed(1)}x
                           </span>
@@ -2632,7 +2650,9 @@ export default function App() {
                           <span className={`cinematic-badge text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm border ${
                             appTheme === 'mocha'
                               ? 'text-[#2C1F16] bg-[#C8BEAE] border-[#7C6856]'
-                              : `${highlightClasses.text} ${highlightClasses.bgMuted} ${highlightClasses.border}/30`
+                              : (appTheme === 'red'
+                                  ? 'text-white border-white bg-transparent'
+                                  : (appTheme === 'light' ? 'text-[#555555] border-[#555555] bg-[#555555]/10' : `${highlightClasses.text} ${highlightClasses.bgMuted} ${highlightClasses.border}/30`))
                           }`}>
                             {autoCameraMinHeight.toFixed(1)} / {autoCameraMaxHeight.toFixed(1)}
                           </span>
@@ -2664,7 +2684,9 @@ export default function App() {
                           <span className={`cinematic-badge text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm border ${
                             appTheme === 'mocha'
                               ? 'text-[#2C1F16] bg-[#C8BEAE] border-[#7C6856]'
-                              : `${highlightClasses.text} ${highlightClasses.bgMuted} ${highlightClasses.border}/30`
+                              : (appTheme === 'red'
+                                  ? 'text-white border-white bg-transparent'
+                                  : (appTheme === 'light' ? 'text-[#555555] border-[#555555] bg-[#555555]/10' : `${highlightClasses.text} ${highlightClasses.bgMuted} ${highlightClasses.border}/30`))
                           }`}>
                             {autoCameraMinDistance.toFixed(1)} / {autoCameraMaxDistance.toFixed(1)}
                           </span>
@@ -2696,8 +2718,8 @@ export default function App() {
                           onClick={() => setAutoCameraReverse(!autoCameraReverse)}
                           className={`w-8 h-4 rounded-full transition-colors relative cursor-pointer ${
                             autoCameraReverse 
-                              ? (appTheme === 'mocha' ? 'bg-[#2C1F16]' : highlightClasses.bg)
-                              : (appTheme === 'mocha' ? 'bg-[#C8BEAE] border border-[#7C6856]' : (appTheme === 'light' ? 'bg-gray-300' : 'bg-[#1a1a1e] border border-gray-600'))
+                              ? (appTheme === 'mocha' ? 'bg-[#2C1F16]' : (appTheme === 'red' ? 'bg-[#942222] border border-[#9E3737]' : (appTheme === 'light' ? 'bg-[#555555]' : highlightClasses.bg)))
+                              : (appTheme === 'mocha' ? 'bg-[#C8BEAE] border border-[#7C6856]' : (appTheme === 'red' ? 'bg-[#140707] border border-[#9E3737]' : (appTheme === 'light' ? 'bg-gray-200 border border-gray-400' : 'bg-[#1a1a1e] border border-gray-600')))
                           }`}
                         >
                           <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${
@@ -2746,12 +2768,20 @@ export default function App() {
                     onClick={() => handlePoseChange(pose.id)}
                     className={`text-left p-2 border transition-all flex flex-col justify-between h-[45px] relative overflow-hidden group cursor-pointer ${
                       isActive 
-                       ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-lg z-10' 
-                       : 'bg-[#2A2A30] border-[#323238] hover:border-gray-500 text-gray-400'
+                       ? (appTheme === 'light'
+                           ? 'bg-[#555555] border-[#555555] !text-white force-white-text shadow-md z-10'
+                           : 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-lg z-10') 
+                       : (appTheme === 'light'
+                           ? 'bg-[#E5E7EB] border-gray-300 hover:border-gray-400 text-gray-700'
+                           : 'bg-[#2A2A30] border-[#323238] hover:border-gray-500 text-gray-400')
                     }`}
                   >
                     <div className="flex justify-between items-start w-full relative z-10">
-                      <span className={`font-bold text-[9px] truncate uppercase tracking-tighter leading-tight max-w-[70%] ${isActive || appTheme === 'red' ? 'text-white' : 'text-gray-500'}`}>{pose.name}</span>
+                      <span className={`font-bold text-[9px] truncate uppercase tracking-tighter leading-tight max-w-[70%] ${
+                        isActive 
+                          ? '!text-white force-white-text' 
+                          : (appTheme === 'red' ? 'text-white' : (appTheme === 'light' ? 'text-gray-800' : 'text-gray-500'))
+                      }`}>{pose.name}</span>
                       {isCustom && (
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
@@ -2769,7 +2799,11 @@ export default function App() {
                         </div>
                       )}
                     </div>
-                    <span className={`text-[10px] font-mono mt-1 ${isActive ? 'text-white/40' : (appTheme === 'light' ? 'text-gray-500' : 'text-[#878e9b]')}`}>
+                    <span className={`text-[10px] font-mono mt-1 ${
+                      isActive 
+                        ? '!text-white/85 force-white-text' 
+                        : (appTheme === 'light' ? 'text-gray-600' : 'text-[#878e9b]')
+                    }`}>
                       {String(idx + 1).padStart(2, '0')}
                     </span>
                     {isActive && (
@@ -2796,7 +2830,7 @@ export default function App() {
                 </label>
                 <div className="flex gap-2">
                   <button onClick={() => setIsEditing(false)} className="text-[10px] text-gray-400 hover:text-white">Cancel</button>
-                  <button onClick={saveCustomPose} className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                  <button onClick={saveCustomPose} className={`text-[10px] ${appTheme === 'red' ? 'text-[#E04545]' : 'text-emerald-400'} font-bold flex items-center gap-1`}>
                     <Save className="w-3 h-3" /> SAVE
                   </button>
                 </div>
@@ -2821,7 +2855,7 @@ export default function App() {
                   </div>
                   <button 
                     onClick={() => setIsSymmetric(!isSymmetric)}
-                    className={`w-8 h-4 transition-colors relative ${isSymmetric ? 'bg-[var(--accent)]' : 'bg-gray-600'}`}
+                    className={`w-8 h-4 transition-colors relative ${appTheme === 'red' ? 'border border-[#9E3737]' : ''} ${isSymmetric ? 'bg-[var(--accent)]' : 'bg-gray-600'}`}
                   >
                     <div className={`absolute top-0.5 w-3 h-3 bg-white transition-all ${isSymmetric ? 'right-0.5' : 'left-0.5'}`} />
                   </button>
@@ -2888,7 +2922,7 @@ export default function App() {
                         type="range" min="-3.14" max="3.14" step="0.1" 
                         value={rawVal}
                         onChange={(e) => updateEditPart(part.id as any, part.axis, parseFloat(e.target.value))}
-                        className={`w-full h-1 bg-[#2A2A30] appearance-none cursor-pointer ${appTheme === 'red' ? 'accent-gray-400' : 'accent-[var(--accent)]'}`}
+                        className="w-full h-1 bg-[#2A2A30] appearance-none cursor-pointer accent-[var(--accent)]"
                       />
                     </div>
                   );
@@ -3269,7 +3303,11 @@ export default function App() {
                 onClick={() => handleToggleColorScope('theme')}
                 className={`flex-1 py-1.5 px-2 transition-colors uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
                   colorScope === 'theme'
-                    ? (appTheme === 'mocha' ? 'bg-[#C48A58] text-white font-bold' : 'bg-[var(--accent)] text-white')
+                    ? (appTheme === 'mocha'
+                        ? 'bg-[#C48A58] text-white font-bold'
+                        : (appTheme === 'light'
+                            ? 'bg-[var(--accent)] !text-white force-white-text'
+                            : 'bg-[var(--accent)] text-white'))
                     : (appTheme === 'mocha'
                       ? 'bg-[#EDE4D3] text-[#5C4C3E] hover:text-[#2B2017] hover:bg-[#F5EFE6]'
                       : (appTheme === 'light'
@@ -3279,7 +3317,7 @@ export default function App() {
                           : 'bg-[#121214] text-gray-500 hover:text-gray-300')))
                 }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: currentThemeObj.dotColor }} />
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colorScope === 'theme' && appTheme === 'light' ? '#FFFFFF' : currentThemeObj.dotColor }} />
                 {t('Per Theme')}
               </button>
               <button
@@ -3287,7 +3325,11 @@ export default function App() {
                 onClick={() => handleToggleColorScope('common')}
                 className={`flex-1 py-1.5 px-2 transition-colors uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
                   colorScope === 'common'
-                    ? (appTheme === 'mocha' ? 'bg-[#C48A58] text-white font-bold' : 'bg-[var(--accent)] text-white')
+                    ? (appTheme === 'mocha'
+                        ? 'bg-[#C48A58] text-white font-bold'
+                        : (appTheme === 'light'
+                            ? 'bg-[var(--accent)] !text-white force-white-text'
+                            : 'bg-[var(--accent)] text-white'))
                     : (appTheme === 'mocha'
                       ? 'bg-[#EDE4D3] text-[#5C4C3E] hover:text-[#2B2017] hover:bg-[#F5EFE6]'
                       : (appTheme === 'light'
@@ -3366,7 +3408,7 @@ export default function App() {
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap gap-1.5">
-                {['#D95430', '#26262B', '#050505', '#7A2020', '#52525B', '#475569', '#355E42', '#7A5026'].map((color) => (
+                {['#D95430', '#26262B', '#050505', '#942222', '#52525B', '#475569', '#355E42', '#7A5026'].map((color) => (
                   <button
                     key={color}
                     onClick={() => updateColorSetting({ characterColor: color })}
@@ -3492,7 +3534,7 @@ export default function App() {
                 }}
                 className={`h-6 border transition-all text-[8px] font-bold uppercase ${
                   soundType === type 
-                  ? `${highlightClasses.bg} ${highlightClasses.border} ${appTheme === 'light' ? 'text-white' : 'text-[#121214]'}` 
+                  ? `${highlightClasses.bg} ${highlightClasses.border} ${appTheme === 'light' ? '!text-white force-white-text' : (appTheme === 'red' ? 'text-white' : 'text-[#121214]')}` 
                   : (appTheme === 'light' ? 'bg-gray-200 border-gray-200 text-gray-600 hover:bg-gray-300 hover:border-gray-300' : 'bg-[#2A2A30] border-[#323238] text-gray-500 hover:border-[#424248] hover:text-gray-300')
                 }`}
               >
@@ -3527,7 +3569,7 @@ export default function App() {
       isBgmSettingOpen,
       setIsBgmSettingOpen,
       !isBgmSettingOpen && isBgmPlaying ? (
-        <span className="text-[8px] font-mono font-bold text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 border border-emerald-400/30 leading-none">
+        <span className={`text-[8px] font-mono font-bold ${appTheme === 'red' ? 'text-[#E04545] bg-[#942222]/20 border-[#9E3737]/60' : 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30'} px-1.5 py-0.5 border leading-none`}>
           PLAYING
         </span>
       ) : null,
@@ -3580,7 +3622,7 @@ export default function App() {
                             ? 'bg-gray-800 border-gray-800 text-white force-white-text' 
                             : 'bg-white border-gray-400 hover:border-gray-600 text-gray-800 hover:bg-gray-50')
                         : (isBgmPlaying 
-                            ? `${highlightClasses.bg} ${highlightClasses.border} text-[#121214]` 
+                            ? `${highlightClasses.bg} ${highlightClasses.border} ${appTheme === 'red' ? 'text-white' : 'text-[#121214]'}` 
                             : 'bg-[#1a1a1e] border-[#4A4A52] hover:border-gray-300 hover:bg-[#323238] text-white')))
                 }`}
                 title={isBgmPlaying ? t('Pause') : t('Play')}
@@ -3652,7 +3694,7 @@ export default function App() {
                         ? 'bg-[#D95430] text-white force-white-text border border-white/40' 
                         : (appTheme === 'light' 
                           ? 'bg-gray-800 text-white force-white-text border border-white/40' 
-                          : `${highlightClasses.bg} text-[#121214]`))
+                          : `${highlightClasses.bg} ${appTheme === 'red' ? 'text-white' : 'text-[#121214]'}`))
                   }`}>1</span>
                 )}
               </button>
@@ -4191,7 +4233,7 @@ export default function App() {
   return (
     <div 
       className={`flex h-screen w-full overflow-hidden bg-[#121214] text-[#E1E1E6] font-sans ${sidebarPosition === 'right' ? 'flex-row-reverse' : 'flex-row'}`}
-      style={{ '--accent': appTheme === 'peper' ? '#D95430' : (appTheme === 'mocha' ? '#C48A58' : (appTheme === 'red' ? '#7A1F1F' : accentColor)) } as React.CSSProperties}
+      style={{ '--accent': appTheme === 'peper' ? '#D95430' : (appTheme === 'mocha' ? '#C48A58' : (appTheme === 'red' ? '#942222' : (appTheme === 'light' ? '#555555' : accentColor))) } as React.CSSProperties}
     >
       {/* Sidebar */}
       <aside
@@ -4774,14 +4816,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
+                        ? 'text-[#2C1F16] font-black' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>Scale</span>
                     <input 
                       type="range" min="0.5" max="2.5" step="0.1" value={personScale} 
                       onChange={(e) => setPersonScale(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4792,14 +4834,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
+                        ? 'text-[#2C1F16] font-black' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>Level</span>
                     <input 
                       type="range" min="1" max="8" value={formationLevel} 
                       onChange={(e) => setFormationLevel(parseInt(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4810,14 +4852,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
+                        ? 'text-[#2C1F16] font-black' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>Space</span>
                     <input 
                       type="range" min="1" max="5" step="0.5" value={formationSpacing} 
                       onChange={(e) => setFormationSpacing(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4828,7 +4870,7 @@ export default function App() {
                   <div className="flex items-center gap-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                      <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                        appTheme === 'mocha' 
-                         ? 'text-[#1F1813] font-black drop-shadow-sm' 
+                         ? 'text-[#2C1F16] font-black' 
                          : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                      }`}>Format</span>
                      <div className="flex gap-0.5">
@@ -4847,9 +4889,9 @@ export default function App() {
                            onClick={() => setFormationType(id as any)}
                            className={`p-1.5 transition-all drop-shadow-md rounded cursor-pointer ${ 
                              formationType === id 
-                               ? (appTheme === 'mocha' ? 'bg-[#C48A58] text-[#1F1813] font-black border border-[#A87242] shadow-md ring-1 ring-[#C48A58]' : 'bg-gray-500 text-white')
+                               ? (appTheme === 'mocha' ? 'bg-[#C48A58] text-white font-bold border border-[#C48A58] shadow-sm' : 'bg-gray-500 text-white')
                                : (appTheme === 'mocha' 
-                                   ? 'bg-[#1F1813] text-[#EDE4D3] hover:text-white hover:bg-[#362A21] border border-[#524032]' 
+                                   ? 'bg-[#2A2019] text-[#A59281] hover:text-[#EDE4D3] hover:bg-[#382B22] border border-[#524032]' 
                                    : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-800 bg-white/50 hover:bg-white/80' : 'text-gray-300 bg-[#121214]/50 hover:bg-[#121214]/80'))
                            }`}
                            title={id.charAt(0).toUpperCase() + id.slice(1)}
@@ -4866,14 +4908,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
+                        ? 'text-[#2C1F16] font-black' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('Shadow Op')}</span>
                     <input 
                       type="range" min="0" max="1" step="0.05" value={shadowOpacity} 
                       onChange={(e) => setShadowOpacity(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4884,14 +4926,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
+                        ? 'text-[#2C1F16] font-black' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('Angle')}</span>
                     <input 
                       type="range" min="0" max="6.28" step="0.1" value={shadowAngle} 
                       onChange={(e) => setShadowAngle(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4902,14 +4944,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
+                        ? 'text-[#2C1F16] font-black' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('Length')}</span>
                     <input 
                       type="range" min="0.5" max="5" step="0.1" value={shadowLength} 
                       onChange={(e) => setShadowLength(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4920,14 +4962,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
+                        ? 'text-[#2C1F16] font-black' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('Blur')}</span>
                     <input 
                       type="range" min="0" max="25" step="0.1" value={shadowBlur} 
                       onChange={(e) => setShadowBlur(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${
@@ -4945,7 +4987,7 @@ export default function App() {
                       }}
                       className={`px-3 py-1 ${
                         appTheme === 'mocha'
-                          ? 'bg-[#1F1813] text-[#EDE4D3] border border-[#524032] hover:bg-[#362A21] hover:text-white'
+                          ? 'bg-[#2A2019] text-[#EDE4D3] border border-[#524032] hover:bg-[#382B22] hover:text-white'
                           : (appTheme === 'light' || appTheme === 'peper' ? 'bg-white/70 text-gray-800 border-gray-300 hover:bg-white' : 'bg-[#2A2A30] text-gray-300 border-[#3A3A42] hover:bg-[#323238]')
                       } text-[10px] font-mono font-bold uppercase tracking-widest border transition-colors flex items-center gap-2 drop-shadow-md cursor-pointer`}
                       title={t('Reset Shadow Settings')}
@@ -4961,14 +5003,14 @@ export default function App() {
                   <div className="flex items-center gap-3 drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]">
                     <span className={`text-[10px] font-mono uppercase font-bold tracking-widest ${
                       appTheme === 'mocha' 
-                        ? 'text-[#1F1813] font-black drop-shadow-sm' 
+                        ? 'text-[#2C1F16] font-black' 
                         : (appTheme === 'light' || appTheme === 'peper' ? 'text-gray-900 text-outline-white' : 'text-gray-100 text-outline-black')
                     }`}>{t('HUD Opacity')}</span>
                     <input 
                       type="range" min="0.1" max="1" step="0.05" value={hudOpacity} 
                       onChange={(e) => setHudOpacity(parseFloat(e.target.value))}
                       className={`w-20 h-1 appearance-none cursor-pointer rounded-full drop-shadow-md ${
-                        appTheme === 'mocha' ? 'bg-[#7C6856] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
+                        appTheme === 'mocha' ? 'bg-[#A3917F] accent-[#C48A58]' : 'bg-[#4A4A52] accent-gray-300'
                       }`}
                     />
                     <span className={`text-[8px] font-mono font-bold min-w-[20px] text-center py-[1.5px] px-[2px] leading-none flex items-center justify-center drop-shadow-md ${

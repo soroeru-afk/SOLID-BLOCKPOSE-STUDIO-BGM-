@@ -21,7 +21,7 @@ export interface PosePreset {
 
 export type ThemeId = 'studio' | 'dark' | 'neon' | 'monolith' | 'red' | 'brown' | 'light-gray';
 
-export type AppTheme = 'peper' | 'colors' | 'black' | 'light' | 'red';
+export type AppTheme = 'peper' | 'colors' | 'black' | 'light' | 'red' | 'mocha';
 
 export interface ThemeConfig {
   id: ThemeId;

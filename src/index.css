@@ -779,6 +779,321 @@ html[data-theme="paper"] .dark-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #73634F;
 }
 
+/* ==========================================================================
+   MOCHA THEME
+   Directly derived from the SOLID AUDIO MUSIC PLAYER Industrial Mocha Design
+   Palette:
+   - Primary Accent: #C48A58 (Caramel Mocha Gold)
+   - Deep Dark Mocha (Header & Controls): #45372C (Header bar), #1F1813 (Dark Controls & Badges)
+   - Control & Badge Borders: #524032 (Secondary: #7C6552)
+   - Cream Sand / Warm Latte Surfaces: #E6DFD3 (Workspace & Sidebar), #EDE7DC (Card Inner)
+   - Subsurfaces & Headers: #DDD4C5
+   - Borders: #C8BCAB
+   - Primary Text on Light: #483A2E
+   - Muted Text on Light: #7C6C5C / #8A7B6D
+   - Light Text on Dark: #EDE4D3 / #FFFFFF
+   ========================================================================== */
+
+html[data-theme="mocha"] body {
+  background-color: #D7CEBF !important;
+  color: #483A2E !important;
+}
+
+/* Base surface overrides: Deeper warm latte/wood tone */
+html[data-theme="mocha"] .bg-\[\#121214\] { background-color: #D7CEBF !important; }
+html[data-theme="mocha"] .from-\[\#121214\] { --tw-gradient-from: #D7CEBF var(--tw-gradient-from-position) !important; }
+html[data-theme="mocha"] .bg-\[\#1E1E22\],
+html[data-theme="mocha"] .bg-\[\#1e1e22\] { background-color: #D7CEBF !important; }
+html[data-theme="mocha"] .bg-\[\#1a1a1e\] { background-color: #DDD3C3 !important; }
+html[data-theme="mocha"] .bg-\[\#1a1a1e\]\/80,
+html[data-theme="mocha"] .bg-\[\#1a1a1e\]\/60,
+html[data-theme="mocha"] .bg-\[\#1a1a1e\]\/40 { background-color: #DDD3C3 !important; }
+html[data-theme="mocha"] .bg-\[\#1E1E22\]\/90,
+html[data-theme="mocha"] .bg-\[\#1E1E22\]\/70 { background-color: #D7CEBF !important; }
+html[data-theme="mocha"] .bg-\[\#2A2A30\] { background-color: #DDD3C3 !important; }
+html[data-theme="mocha"] .bg-\[\#323238\] { background-color: #C8BEAE !important; }
+
+/* Borders: Distinct 1px industrial line definition (#7C6856) */
+html[data-theme="mocha"] .border-\[\#323238\] { border-color: #7C6856 !important; }
+html[data-theme="mocha"] .border-\[\#323238\]\/50 { border-color: #7C6856 !important; }
+html[data-theme="mocha"] .border-\[\#323238\]\/60 { border-color: #7C6856 !important; }
+html[data-theme="mocha"] .border-\[\#323238\]\/40 { border-color: #7C6856 !important; }
+html[data-theme="mocha"] .border-\[\#3A3A42\] { border-color: #7C6856 !important; }
+html[data-theme="mocha"] .border-gray-500 { border-color: #7C6856 !important; }
+
+/* Typography */
+html[data-theme="mocha"] .text-\[\#E1E1E6\] { color: #382B20 !important; }
+html[data-theme="mocha"] .text-gray-200 { color: #382B20 !important; }
+html[data-theme="mocha"] .text-gray-300 { color: #382B20 !important; }
+html[data-theme="mocha"] .text-gray-400 { color: #5C4C3E !important; }
+html[data-theme="mocha"] .text-gray-500 { color: #786756 !important; }
+html[data-theme="mocha"] .text-white { color: #2C2119 !important; }
+html[data-theme="mocha"] .hover\:text-white:hover { color: #1F1813 !important; }
+html[data-theme="mocha"] .hover\:bg-\[\#323238\]:hover { background-color: #C8BEAE !important; }
+
+/* Force White Text on Solid Buttons */
+html[data-theme="mocha"] .force-white-text,
+html[data-theme="mocha"] .force-white-text * {
+  color: #FFFFFF !important;
+}
+html[data-theme="mocha"] .force-white-text svg,
+html[data-theme="mocha"] .force-white-text svg line,
+html[data-theme="mocha"] .force-white-text svg path,
+html[data-theme="mocha"] .force-white-text svg rect {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
+/* --------------------------------------------------------------------------
+   1. HEADER: Deep Dark Mocha Bar (#45372C) matching the Music Player
+   -------------------------------------------------------------------------- */
+html[data-theme="mocha"] header,
+html[data-theme="mocha"] .header-dark-mocha {
+  background-color: #45372C !important;
+  border-bottom: 1px solid #33261D !important;
+}
+
+html[data-theme="mocha"] header .text-white {
+  color: #FFFFFF !important;
+}
+
+/* Theme Dropdown Button in Header */
+html[data-theme="mocha"] header .relative > button {
+  background-color: #1F1813 !important;
+  border: 1px solid #524032 !important;
+  color: #EDE4D3 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+}
+html[data-theme="mocha"] header .relative > button:hover {
+  background-color: #362A21 !important;
+  border-color: #7C6552 !important;
+  color: #FFFFFF !important;
+}
+
+/* Language Toggle container in Header */
+html[data-theme="mocha"] header div.overflow-hidden.bg-\[\#1E1E22\] {
+  background-color: #1F1813 !important;
+  border: 1px solid #524032 !important;
+}
+
+/* Reset View button in Header */
+html[data-theme="mocha"] header button.bg-\[\#2A2A30\] {
+  background-color: #1F1813 !important;
+  border: 1px solid #524032 !important;
+  color: #EDE4D3 !important;
+}
+html[data-theme="mocha"] header button.bg-\[\#2A2A30\]:hover {
+  background-color: #362A21 !important;
+  border-color: #7C6552 !important;
+  color: #FFFFFF !important;
+}
+
+/* Fullscreen and utility buttons in Header */
+html[data-theme="mocha"] header button.hover\:bg-\[\#323238\] {
+  background-color: #1F1813 !important;
+  border: 1px solid #524032 !important;
+  color: #EDE4D3 !important;
+}
+html[data-theme="mocha"] header button.hover\:bg-\[\#323238\]:hover {
+  background-color: #362A21 !important;
+  border-color: #7C6552 !important;
+  color: #FFFFFF !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. SIDEBAR: Warm Darker Latte Background with Crisp 1px Industrial Lines
+   -------------------------------------------------------------------------- */
+html[data-theme="mocha"] aside {
+  background-color: #D7CEBF !important;
+  border-color: #7C6856 !important;
+}
+
+/* Sidebar Title Bar (matching Header's dark tone) */
+html[data-theme="mocha"] aside .p-5.border-b {
+  background-color: #45372C !important;
+  border-bottom: 1px solid #33261D !important;
+}
+html[data-theme="mocha"] aside .p-5.border-b h1 .text-white {
+  color: #FFFFFF !important;
+}
+html[data-theme="mocha"] aside .p-5.border-b h1 span.text-\[var\(--accent\)\] {
+  color: #D9A066 !important;
+}
+
+/* Visual / Sound Tab Header - Zero shift layout */
+html[data-theme="mocha"] aside .sticky.top-0.bg-\[\#1e1e22\],
+html[data-theme="mocha"] aside .sticky.top-0 {
+  background-color: #C8BEAE !important;
+  border-bottom: 1px solid #7C6856 !important;
+}
+html[data-theme="mocha"] aside .sticky.top-0 button {
+  font-weight: 700 !important;
+  border-bottom: 2px solid transparent !important;
+  box-sizing: border-box !important;
+}
+html[data-theme="mocha"] aside .sticky.top-0 button.border-\[var\(--accent\)\] {
+  background-color: #D7CEBF !important;
+  color: #1F1813 !important;
+  border-color: #C48A58 !important;
+  border-bottom: 2px solid #C48A58 !important;
+  font-weight: 700 !important;
+}
+
+/* Section Cards: 1px industrial borders & soft warm latte inner */
+html[data-theme="mocha"] aside div[data-theme-card],
+html[data-theme="mocha"] aside .bg-\[\#1a1a1e\]\/40 {
+  background-color: #DDD3C3 !important;
+  border: 1px solid #7C6856 !important;
+}
+
+/* Inner containers in Colors and Sound (Softer, lighter background instead of harsh dark gray) */
+html[data-theme="mocha"] aside .bg-\[\#1E1E22\]\/80,
+html[data-theme="mocha"] aside .bg-\[\#1E1E22\]\/60 {
+  background-color: #E3D9C9 !important;
+  border-color: #9E8C7A !important;
+}
+
+/* Slider Track Rails: Distinct, clearly visible rails */
+html[data-theme="mocha"] aside input[type="range"],
+html[data-theme="mocha"] input[type="range"].bg-\[\#2A2A30\] {
+  background-color: #A3917F !important;
+}
+
+/* Effect Style buttons in Sound tab */
+html[data-theme="mocha"] aside .grid-cols-5 > button {
+  background-color: #EDE4D3 !important;
+  border-color: #857260 !important;
+  color: #5C4C3E !important;
+}
+html[data-theme="mocha"] aside .grid-cols-5 > button:hover {
+  background-color: #F5EFE6 !important;
+  color: #1F1813 !important;
+}
+html[data-theme="mocha"] aside .grid-cols-5 > button.bg-\[\#C48A58\],
+html[data-theme="mocha"] aside .grid-cols-5 > button[class*="C48A58"] {
+  background-color: #C48A58 !important;
+  border-color: #C48A58 !important;
+  color: #FFFFFF !important;
+}
+
+/* Section Header Buttons */
+html[data-theme="mocha"] aside div.border-b.pb-2 {
+  border-bottom: 1px solid #7C6856 !important;
+}
+
+/* Dropdown / Select Inputs in Sidebar */
+html[data-theme="mocha"] aside select {
+  background-color: #1F1813 !important;
+  border: 1px solid #524032 !important;
+  color: #EDE4D3 !important;
+}
+
+html[data-theme="mocha"] aside select.playlist-accent-select {
+  background-color: #C48A58 !important;
+  border: 1px solid #A87242 !important;
+  color: #FFFFFF !important;
+  font-weight: 800 !important;
+}
+html[data-theme="mocha"] aside select.playlist-accent-select:hover {
+  background-color: #B37B49 !important;
+}
+html[data-theme="mocha"] aside select.playlist-accent-select option {
+  background-color: #2C1F16 !important;
+  color: #EDE4D3 !important;
+}
+
+/* Cinematic View Sliders & Badges (Industrial deep dark mocha) */
+html[data-theme="mocha"] aside input[type="range"].cinematic-slider {
+  background-color: #A3917F !important;
+  accent-color: #2C1F16 !important;
+}
+html[data-theme="mocha"] aside .cinematic-badge {
+  background-color: #C8BEAE !important;
+  color: #2C1F16 !important;
+  border: 1px solid #7C6856 !important;
+}
+
+/* Preset badge buttons in Pose / Themes */
+html[data-theme="mocha"] aside button.bg-\[\#121214\] {
+  background-color: #1F1813 !important;
+  border: 1px solid #524032 !important;
+  color: #EDE4D3 !important;
+}
+html[data-theme="mocha"] aside button.bg-\[\#121214\]:hover {
+  background-color: #362A21 !important;
+  border-color: #7C6552 !important;
+  color: #FFFFFF !important;
+}
+
+/* Track list item in Sound tab */
+html[data-theme="mocha"] aside .space-y-1 > div.group {
+  background-color: #DDD3C3 !important;
+  border: 1px solid #7C6856 !important;
+  color: #382B20 !important;
+}
+html[data-theme="mocha"] aside .space-y-1 > div.group:hover {
+  border-color: #524032 !important;
+  background-color: #D0C5B3 !important;
+}
+html[data-theme="mocha"] aside .space-y-1 > div.group span {
+  color: #382B20 !important;
+}
+
+/* Text Inputs in Sidebar */
+html[data-theme="mocha"] aside input[type="text"] {
+  background-color: #FFFFFF !important;
+  border-color: #C8BCAB !important;
+  color: #382B20 !important;
+}
+
+/* Export / Import buttons in Settings */
+html[data-theme="mocha"] aside button.bg-\[\#2A2A30\] {
+  background-color: #1F1813 !important;
+  border-color: #524032 !important;
+  color: #EDE4D3 !important;
+}
+html[data-theme="mocha"] aside button.bg-\[\#2A2A30\]:hover {
+  background-color: #362A21 !important;
+  border-color: #7C6552 !important;
+  color: #FFFFFF !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. CANVAS HUD: Seamless overlay (no heavy box background)
+   -------------------------------------------------------------------------- */
+html[data-theme="mocha"] .canvas-hud {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #2C1F16 !important;
+}
+html[data-theme="mocha"] .canvas-hud .bg-\[\#2A2A30\] {
+  background-color: #1F1813 !important;
+  color: #EDE4D3 !important;
+  border-color: #524032 !important;
+}
+html[data-theme="mocha"] .canvas-hud .bg-\[\#4A4A52\] {
+  background-color: #A3917F !important;
+}
+html[data-theme="mocha"] .canvas-hud input[type="range"] {
+  background-color: #A3917F !important;
+  accent-color: #C48A58 !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. SCROLLBARS in MOCHA theme
+   -------------------------------------------------------------------------- */
+html[data-theme="mocha"] .dark-scrollbar {
+  scrollbar-color: #C8BCAB transparent;
+}
+html[data-theme="mocha"] .dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #C8BCAB;
+  border: 1px solid #B8AB98;
+}
+html[data-theme="mocha"] .dark-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #8A7B6D;
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;

@@ -694,10 +694,22 @@ html[data-theme="peper"] aside label.text-\[var\(--accent\)\].underline:hover,
 html[data-theme="paper"] aside label.text-\[var\(--accent\)\].underline:hover {
   color: #2B221A !important;
 }
+html[data-theme="peper"] aside select.move-to-select,
+html[data-theme="paper"] aside select.move-to-select,
 html[data-theme="peper"] aside select.w-28,
 html[data-theme="paper"] aside select.w-28 {
   background-color: #FFFFFF !important;
-  border-color: #D1C7B4 !important;
+  border: 1px solid #D1C7B4 !important;
+  color: #4A3E31 !important;
+  font-weight: 700 !important;
+}
+html[data-theme="peper"] aside select.move-to-select option,
+html[data-theme="paper"] aside select.move-to-select option {
+  background-color: #FFFFFF !important;
+  color: #4A3E31 !important;
+}
+html[data-theme="peper"] aside .move-to-chevron,
+html[data-theme="paper"] aside .move-to-chevron {
   color: #73634F !important;
 }
 
@@ -737,10 +749,24 @@ html[data-theme="paper"] aside .w-3.h-3.border.bg-\[\#323238\] {
 
 /* Delete selected button in track list */
 html[data-theme="peper"] aside button.border-\[\#323238\].bg-\[\#121214\],
-html[data-theme="paper"] aside button.border-\[\#323238\].bg-\[\#121214\] {
+html[data-theme="paper"] aside button.border-\[\#323238\].bg-\[\#121214\],
+html[data-theme="peper"] aside button.track-delete-btn,
+html[data-theme="paper"] aside button.track-delete-btn {
   background-color: #FFFFFF !important;
   border-color: #D1C7B4 !important;
   color: #73634F !important;
+}
+html[data-theme="peper"] aside button.track-delete-btn:hover,
+html[data-theme="paper"] aside button.track-delete-btn:hover {
+  background-color: #FAF8F5 !important;
+  color: #C24422 !important;
+  border-color: #C24422 !important;
+}
+html[data-theme="peper"] aside button.track-delete-btn.confirming,
+html[data-theme="paper"] aside button.track-delete-btn.confirming {
+  background-color: #FDF2F0 !important;
+  border-color: #D95430 !important;
+  color: #D95430 !important;
 }
 
 /* Drop Audio Files area */
@@ -989,17 +1015,56 @@ html[data-theme="mocha"] aside select {
 }
 
 html[data-theme="mocha"] aside select.playlist-accent-select {
-  background-color: #C48A58 !important;
-  border: 1px solid #A87242 !important;
-  color: #FFFFFF !important;
+  background-color: #C7BDAD !important;
+  border: 1px solid #9C8F7E !important;
+  color: #1F1813 !important;
   font-weight: 800 !important;
 }
 html[data-theme="mocha"] aside select.playlist-accent-select:hover {
-  background-color: #B37B49 !important;
+  background-color: #BCB09E !important;
 }
 html[data-theme="mocha"] aside select.playlist-accent-select option {
-  background-color: #2C1F16 !important;
-  color: #EDE4D3 !important;
+  background-color: #FFFFFF !important;
+  color: #2C2119 !important;
+}
+html[data-theme="mocha"] aside .playlist-accent-chevron {
+  color: #1F1813 !important;
+}
+
+/* Move to... in Sound tab (Fixes white knockout text on light beige background) */
+html[data-theme="mocha"] aside select.move-to-select,
+html[data-theme="mocha"] aside select.w-28 {
+  background-color: #FFFFFF !important;
+  border: 1px solid #7C6856 !important;
+  color: #2C2119 !important;
+  font-weight: 700 !important;
+}
+html[data-theme="mocha"] aside select.move-to-select:hover,
+html[data-theme="mocha"] aside select.w-28:hover {
+  border-color: #4A3A2C !important;
+}
+html[data-theme="mocha"] aside select.move-to-select option,
+html[data-theme="mocha"] aside select.w-28 option {
+  background-color: #FFFFFF !important;
+  color: #2C2119 !important;
+}
+html[data-theme="mocha"] aside .move-to-chevron {
+  color: #5C4C3E !important;
+}
+html[data-theme="mocha"] aside button.track-delete-btn {
+  background-color: #FFFFFF !important;
+  border: 1px solid #7C6856 !important;
+  color: #5C4C3E !important;
+}
+html[data-theme="mocha"] aside button.track-delete-btn:hover {
+  background-color: #FAF8F5 !important;
+  color: #A33A3A !important;
+  border-color: #A33A3A !important;
+}
+html[data-theme="mocha"] aside button.track-delete-btn.confirming {
+  background-color: #FFF5F5 !important;
+  border: 1px solid #C53030 !important;
+  color: #C53030 !important;
 }
 
 /* Cinematic View Sliders & Badges (Industrial deep dark mocha) */
@@ -1059,7 +1124,7 @@ html[data-theme="mocha"] aside button.bg-\[\#2A2A30\]:hover {
 }
 
 /* --------------------------------------------------------------------------
-   3. CANVAS HUD: Seamless overlay & High Contrast
+   3. CANVAS HUD: Seamless overlay (no heavy box background)
    -------------------------------------------------------------------------- */
 html[data-theme="mocha"] .canvas-hud {
   background: transparent !important;
@@ -1090,6 +1155,67 @@ html[data-theme="mocha"] .dark-scrollbar::-webkit-scrollbar-thumb {
 }
 html[data-theme="mocha"] .dark-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #8A7B6D;
+}
+
+/* Move to... dropdown base & light theme */
+aside select.move-to-select {
+  background-color: #121214;
+  border: 1px solid #323238;
+  color: #E1E1E6;
+}
+aside select.move-to-select:hover {
+  border-color: #6B7280;
+}
+aside select.move-to-select option {
+  background-color: #1E1E22;
+  color: #E1E1E6;
+}
+aside .move-to-chevron {
+  color: #9CA3AF;
+}
+aside button.track-delete-btn {
+  background-color: #121214;
+  border: 1px solid #323238;
+  color: #9CA3AF;
+}
+aside button.track-delete-btn:hover {
+  color: #F87171;
+  border-color: #F87171;
+}
+aside button.track-delete-btn.confirming {
+  background-color: rgba(220, 38, 38, 0.2) !important;
+  border-color: #EF4444 !important;
+  color: #EF4444 !important;
+}
+
+html[data-theme="light"] aside select.move-to-select,
+html[data-theme="light"] aside select.w-28 {
+  background-color: #FFFFFF !important;
+  border: 1px solid #D1D5DB !important;
+  color: #111827 !important;
+  font-weight: 700 !important;
+}
+html[data-theme="light"] aside select.move-to-select option {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+}
+html[data-theme="light"] aside .move-to-chevron {
+  color: #4B5563 !important;
+}
+html[data-theme="light"] aside button.track-delete-btn {
+  background-color: #FFFFFF !important;
+  border: 1px solid #D1D5DB !important;
+  color: #4B5563 !important;
+}
+html[data-theme="light"] aside button.track-delete-btn:hover {
+  background-color: #F3F4F6 !important;
+  color: #DC2626 !important;
+  border-color: #DC2626 !important;
+}
+html[data-theme="light"] aside button.track-delete-btn.confirming {
+  background-color: #FEF2F2 !important;
+  border: 1px solid #DC2626 !important;
+  color: #DC2626 !important;
 }
 
 @layer utilities {

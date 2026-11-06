@@ -950,6 +950,14 @@ export default function App() {
       'IMPORT': '入力',
       'Mirror Symmetry': '左右対称',
       'Drop Audio Files Here': 'ここにオーディオファイルをドロップ',
+      'Drop Audio Files or Folders Here': 'ここに音声ファイルまたはフォルダをドロップ',
+      'Add Folder': 'フォルダ追加',
+      'Move to...': 'MOVE TO...',
+      'Move selected tracks to another playlist': '選択したトラックを別のプレイリストへ移動',
+      'Importing...': '読み込み中...',
+      'Click again to delete selected tracks': 'もう一度クリックして削除',
+      'Confirm?': '削除?',
+      'No tracks selected': 'トラック未選択',
       'DARK': 'ダーク',
       'Visual': 'ビジュアル',
       'Cycle Interval': 'サイクル間隔',
@@ -1450,6 +1458,231 @@ export default function App() {
   };
 
   const bgmInputRef = React.useRef<HTMLInputElement>(null);
+  const bgmFolderInputRef = React.useRef<HTMLInputElement>(null);
+  const [isAudioImporting, setIsAudioImporting] = useState(false);
+  const [importStatusText, setImportStatusText] = useState<string | null>(null);
+  const [isDraggingOverDropzone, setIsDraggingOverDropzone] = useState(false);
+
+  interface AudioGroup {
+    folderName: string | null;
+    files: File[];
+  }
+
+  const isAudioFile = (file: File): boolean => {
+    if (file.type && file.type.startsWith('audio/')) return true;
+    return /\.(mp3|wav|ogg|m4a|aac|flac|weba|opus|aiff|aif|wma)$/i.test(file.name);
+  };
+
+  const extractAudioGroupsFromDataTransfer = async (dataTransfer: DataTransfer): Promise<AudioGroup[]> => {
+    const groups: AudioGroup[] = [];
+
+    const traverseDirectory = async (dirEntry: any, targetFiles: File[]): Promise<void> => {
+      const dirReader = dirEntry.createReader();
+      const readAllEntries = async (): Promise<any[]> => {
+        const allEntries: any[] = [];
+        const readBatch = (): Promise<any[]> =>
+          new Promise((resolve) => {
+            dirReader.readEntries(
+              (batch: any[]) => resolve(batch || []),
+              () => resolve([])
+            );
+          });
+
+        let batch: any[];
+        do {
+          batch = await readBatch();
+          if (batch && batch.length > 0) allEntries.push(...batch);
+        } while (batch && batch.length > 0);
+        return allEntries;
+      };
+
+      const children = await readAllEntries();
+      for (const child of children) {
+        if (child.isFile) {
+          await new Promise<void>((resolve) => {
+            child.file(
+              (file: File) => {
+                if (isAudioFile(file)) {
+                  targetFiles.push(file);
+                }
+                resolve();
+              },
+              () => resolve()
+            );
+          });
+        } else if (child.isDirectory) {
+          await traverseDirectory(child, targetFiles);
+        }
+      }
+    };
+
+    if (dataTransfer.items && dataTransfer.items.length > 0) {
+      const looseFiles: File[] = [];
+
+      for (let i = 0; i < dataTransfer.items.length; i++) {
+        const item = dataTransfer.items[i];
+        if (typeof item.webkitGetAsEntry === 'function') {
+          const entry = item.webkitGetAsEntry();
+          if (entry) {
+            if (entry.isDirectory) {
+              const folderFiles: File[] = [];
+              await traverseDirectory(entry, folderFiles);
+              if (folderFiles.length > 0) {
+                folderFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                groups.push({ folderName: entry.name, files: folderFiles });
+              }
+              continue;
+            } else if (entry.isFile) {
+              await new Promise<void>((resolve) => {
+                (entry as any).file(
+                  (file: File) => {
+                    if (isAudioFile(file)) {
+                      looseFiles.push(file);
+                    }
+                    resolve();
+                  },
+                  () => resolve()
+                );
+              });
+              continue;
+            }
+          }
+        }
+
+        const file = item.getAsFile();
+        if (file && isAudioFile(file)) {
+          looseFiles.push(file);
+        }
+      }
+
+      if (looseFiles.length > 0) {
+        looseFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+        groups.push({ folderName: null, files: looseFiles });
+      }
+    }
+
+    if (groups.length === 0 && dataTransfer.files && dataTransfer.files.length > 0) {
+      const folderMap = new Map<string | null, File[]>();
+      for (let i = 0; i < dataTransfer.files.length; i++) {
+        const file = dataTransfer.files[i];
+        if (isAudioFile(file)) {
+          let folderName: string | null = null;
+          if (file.webkitRelativePath && file.webkitRelativePath.includes('/')) {
+            folderName = file.webkitRelativePath.split('/')[0];
+          }
+          if (!folderMap.has(folderName)) {
+            folderMap.set(folderName, []);
+          }
+          folderMap.get(folderName)!.push(file);
+        }
+      }
+
+      for (const [folderName, files] of folderMap.entries()) {
+        files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+        groups.push({ folderName, files });
+      }
+    }
+
+    return groups;
+  };
+
+  const processAudioGroups = async (groups: AudioGroup[]) => {
+    const totalFilesCount = groups.reduce((acc, g) => acc + g.files.length, 0);
+    if (totalFilesCount === 0) return;
+
+    setIsAudioImporting(true);
+    setImportStatusText(`${totalFilesCount} TRACKS IMPORTING...`);
+
+    try {
+      const allNewLoadedTracks: { id: string; name: string; file: File | Blob }[] = [];
+      let targetActivePlaylistId = activePlaylistId;
+
+      setPlaylists(prevPlaylists => {
+        let updatedPlaylists = [...prevPlaylists];
+
+        for (const group of groups) {
+          const groupNewTracks: { id: string; name: string; file: File | Blob }[] = [];
+          const groupTrackIds: string[] = [];
+
+          for (const file of group.files) {
+            const id = Math.random().toString(36).substring(2, 9);
+            const name = file.name.replace(/\.[^/.]+$/, "");
+            const track = { id, name, file };
+            groupNewTracks.push(track);
+            groupTrackIds.push(id);
+            allNewLoadedTracks.push(track);
+
+            AudioDB.saveTrack({ id, name, data: file }).catch(err => {
+              console.error('Failed to persist track:', err);
+            });
+          }
+
+          if (group.folderName) {
+            // Adopt folder name as list name:
+            // If current active playlist has 0 tracks, rename it directly
+            const currentActive = updatedPlaylists.find(p => p.id === targetActivePlaylistId);
+            const isCurrentActiveEmpty = currentActive && currentActive.trackIds.length === 0;
+
+            if (isCurrentActiveEmpty) {
+              updatedPlaylists = updatedPlaylists.map(p =>
+                p.id === currentActive.id
+                  ? { ...p, name: group.folderName!, trackIds: [...p.trackIds, ...groupTrackIds] }
+                  : p
+              );
+              targetActivePlaylistId = currentActive.id;
+            } else {
+              // Check if a playlist with this folder name already exists
+              const existingWithSameName = updatedPlaylists.find(p => p.name === group.folderName);
+              if (existingWithSameName) {
+                updatedPlaylists = updatedPlaylists.map(p =>
+                  p.id === existingWithSameName.id
+                    ? { ...p, trackIds: [...p.trackIds, ...groupTrackIds] }
+                    : p
+                );
+                targetActivePlaylistId = existingWithSameName.id;
+              } else {
+                // Create a new playlist named after the folder!
+                const newPlaylistId = Math.random().toString(36).substring(2, 9);
+                updatedPlaylists.push({
+                  id: newPlaylistId,
+                  name: group.folderName,
+                  trackIds: groupTrackIds
+                });
+                targetActivePlaylistId = newPlaylistId;
+              }
+            }
+          } else {
+            // Loose files: append to active playlist
+            updatedPlaylists = updatedPlaylists.map(p =>
+              p.id === targetActivePlaylistId
+                ? { ...p, trackIds: [...p.trackIds, ...groupTrackIds] }
+                : p
+            );
+          }
+        }
+
+        return updatedPlaylists;
+      });
+
+      setAllTracks(prev => [...prev, ...allNewLoadedTracks]);
+      setActivePlaylistId(targetActivePlaylistId);
+
+      if (currentBgmId === null && allNewLoadedTracks.length > 0) {
+        try {
+          setIsBgmLoading(true);
+          await SoundManager.loadBGM(allNewLoadedTracks[0].file as File);
+          setCurrentBgmId(allNewLoadedTracks[0].id);
+        } catch (e) {
+          console.error('Failed to load audio file:', e);
+        } finally {
+          setIsBgmLoading(false);
+        }
+      }
+    } finally {
+      setIsAudioImporting(false);
+      setImportStatusText(null);
+    }
+  };
 
   const loadSamples = async () => {
     setIsSamplesLoading(true);
@@ -1495,42 +1728,41 @@ export default function App() {
   const handleBgmUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || !files.length) return;
+    const fileList = Array.from(files);
+    await processAudioGroups([{ folderName: null, files: fileList }]);
+    e.target.value = '';
+  };
 
-    const newTracks: { id: string, name: string, file: File | Blob }[] = [];
-    const newTrackIds: string[] = [];
+  const handleFolderUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || !files.length) return;
+    const fileList = Array.from(files);
     
-    for (const file of Array.from(files) as File[]) {
-      const id = Math.random().toString(36).substring(2, 9);
-      const name = file.name.replace(/\.[^/.]+$/, "");
-      const track = { id, name, file };
-      newTracks.push(track);
-      newTrackIds.push(id);
-      
-      try {
-        await AudioDB.saveTrack({ id, name, data: file });
-      } catch (err) {
-        console.error('Failed to persist track:', err);
+    // Group files by top-level folder name from webkitRelativePath
+    const folderMap = new Map<string | null, File[]>();
+    for (const file of fileList) {
+      if (isAudioFile(file)) {
+        let folderName: string | null = null;
+        if (file.webkitRelativePath && file.webkitRelativePath.includes('/')) {
+          folderName = file.webkitRelativePath.split('/')[0];
+        }
+        if (!folderMap.has(folderName)) {
+          folderMap.set(folderName, []);
+        }
+        folderMap.get(folderName)!.push(file);
       }
     }
 
-    setAllTracks(prev => [...prev, ...newTracks]);
-    setPlaylists(prev => prev.map(p => 
-      p.id === activePlaylistId 
-        ? { ...p, trackIds: [...p.trackIds, ...newTrackIds] } 
-        : p
-    ));
-
-    if (currentBgmId === null && newTracks.length > 0) {
-      try {
-        setIsBgmLoading(true);
-        await SoundManager.loadBGM(newTracks[0].file as File);
-        setCurrentBgmId(newTracks[0].id);
-      } catch (e) {
-        alert("Failed to load audio file.");
-      } finally {
-        setIsBgmLoading(false);
-      }
+    const groups: AudioGroup[] = [];
+    for (const [folderName, grpFiles] of folderMap.entries()) {
+      grpFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      groups.push({ folderName, files: grpFiles });
     }
+
+    if (groups.length > 0) {
+      await processAudioGroups(groups);
+    }
+    e.target.value = '';
   };
 
   const moveToTop = (index: number, e: React.MouseEvent) => {
@@ -1611,6 +1843,30 @@ export default function App() {
   };
 
   playTrackByIdRef.current = playTrackById;
+
+  const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
+  const confirmDeleteSelectedTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    setConfirmDeleteSelected(false);
+  }, [selectedTrackIds, activePlaylistId]);
+
+  const handleRemoveSelectedTracksClick = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (selectedTrackIds.size === 0) return;
+
+    if (!confirmDeleteSelected) {
+      setConfirmDeleteSelected(true);
+      if (confirmDeleteSelectedTimeoutRef.current) clearTimeout(confirmDeleteSelectedTimeoutRef.current);
+      confirmDeleteSelectedTimeoutRef.current = setTimeout(() => {
+        setConfirmDeleteSelected(false);
+      }, 3500);
+    } else {
+      if (confirmDeleteSelectedTimeoutRef.current) clearTimeout(confirmDeleteSelectedTimeoutRef.current);
+      setConfirmDeleteSelected(false);
+      removeSelectedTracks();
+    }
+  };
 
   const removeSelectedTracks = () => {
     if (selectedTrackIds.size === 0) return;
@@ -3611,18 +3867,20 @@ export default function App() {
                   onChange={e => setActivePlaylistId(e.target.value)}
                   className={`playlist-accent-select w-full text-[10px] font-bold uppercase p-2 border outline-none cursor-pointer appearance-none transition-colors ${
                     appTheme === 'mocha'
-                      ? 'bg-[#C48A58] hover:bg-[#B37B49] text-white border-[#A87242] shadow-sm tracking-wider font-extrabold force-white-text'
+                      ? 'bg-[#C7BDAD] hover:bg-[#BCB09E] text-[#1F1813] border-[#9C8F7E] shadow-sm tracking-wider font-extrabold'
                       : (appTheme === 'peper'
                         ? 'bg-[#D95430] hover:bg-[#C24422] text-white border-[#D95430] shadow-sm force-white-text'
                         : 'bg-[#121214] hover:border-gray-500 text-[var(--accent)] border-[#323238]')
                   }`}
                 >
                   {playlists.map(p => (
-                    <option key={p.id} value={p.id} className="bg-[#2C1F16] text-[#EDE4D3] py-1">{p.name} ({p.trackIds.length})</option>
+                    <option key={p.id} value={p.id} className="bg-[#FFFFFF] text-[#2C1F16] py-1">{p.name} ({p.trackIds.length})</option>
                   ))}
                 </select>
-                <ChevronDown className={`absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none ${
-                  appTheme === 'mocha' || appTheme === 'peper' ? 'text-white force-white-text' : 'text-[var(--accent)]'
+                <ChevronDown className={`playlist-accent-chevron absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none ${
+                  appTheme === 'mocha'
+                    ? 'text-[#1F1813]'
+                    : (appTheme === 'peper' ? 'text-white force-white-text' : 'text-[var(--accent)]')
                 }`} />
               </div>
             )}
@@ -3662,6 +3920,25 @@ export default function App() {
                     multiple
                   />
                 </label>
+                <label className={`track-action-link text-[8px] font-bold uppercase underline cursor-pointer flex items-center gap-1 bg-transparent border-none p-0 ${
+                  appTheme === 'peper'
+                    ? 'text-[#73634F] hover:text-[#2B221A]'
+                    : (appTheme === 'light'
+                      ? 'text-gray-700 hover:text-black'
+                      : 'text-gray-300 hover:text-white')
+                }`} title={t('Add Folder')}>
+                  <FolderPlus className="w-2.5 h-2.5" /> {t('Add Folder')}
+                  <input 
+                    type="file" 
+                    ref={bgmFolderInputRef}
+                    // @ts-expect-error webkitdirectory is standard in browser engines
+                    webkitdirectory=""
+                    directory=""
+                    onChange={handleFolderUpload} 
+                    className="hidden" 
+                    multiple
+                  />
+                </label>
               </div>
             </div>
             
@@ -3692,28 +3969,62 @@ export default function App() {
               </div>
               <div className="flex items-center gap-2">
                 {playlists.length > 1 && (
-                  <select 
-                    onChange={(e) => moveSelectedTracksToPlaylist(e.target.value)}
-                    value=""
-                    className="bg-[#121214] w-28 text-[9px] font-bold uppercase text-[var(--accent)] border border-[#323238] px-1.5 py-0.5 outline-none cursor-pointer hover:border-gray-500 transition-colors appearance-none"
-                  >
-                    <option value="" disabled>Move to...</option>
-                    {playlists.filter(p => p.id !== activePlaylistId).map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                  <div className="relative inline-flex items-center">
+                    <select 
+                      onChange={(e) => moveSelectedTracksToPlaylist(e.target.value)}
+                      value=""
+                      className="move-to-select w-28 text-[9px] font-bold uppercase border px-2 py-0.5 pr-5 outline-none cursor-pointer transition-colors appearance-none"
+                      title={t('Move selected tracks to another playlist')}
+                    >
+                      <option value="" disabled className="move-to-placeholder">{t('Move to...')}</option>
+                      {playlists.filter(p => p.id !== activePlaylistId).map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="move-to-chevron w-2.5 h-2.5 absolute right-1.5 pointer-events-none" />
+                  </div>
                 )}
                 <button
-                  onClick={removeSelectedTracks}
-                  className="p-1 hover:text-red-400 text-gray-500 transition-colors border border-[#323238] bg-[#121214]"
-                  title={t('Delete Selected')}
+                  onClick={handleRemoveSelectedTracksClick}
+                  disabled={selectedTrackIds.size === 0}
+                  className={`track-delete-btn p-1 transition-all border flex items-center gap-1 ${
+                    confirmDeleteSelected ? 'confirming' : ''
+                  } ${selectedTrackIds.size === 0 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'}`}
+                  title={
+                    selectedTrackIds.size === 0 
+                      ? t('No tracks selected') 
+                      : confirmDeleteSelected 
+                        ? t('Click again to delete selected tracks') 
+                        : t('Delete Selected')
+                  }
                 >
                   <Trash2 className="w-3 h-3" />
+                  {confirmDeleteSelected && (
+                    <span className="text-[8px] font-bold uppercase tracking-wider pr-0.5 animate-pulse">
+                      {t('Confirm?')}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
             
-            <div className="mt-2 max-h-56 overflow-y-auto dark-scrollbar pr-1">
+            <div 
+              className="mt-2 max-h-56 overflow-y-auto dark-scrollbar pr-1"
+              onDragOver={(e) => {
+                if (e.dataTransfer.types.includes('Files')) {
+                  e.preventDefault();
+                }
+              }}
+              onDrop={async (e) => {
+                if (e.dataTransfer.types.includes('Files')) {
+                  e.preventDefault();
+                  const groups = await extractAudioGroupsFromDataTransfer(e.dataTransfer);
+                  if (groups.length > 0) {
+                    await processAudioGroups(groups);
+                  }
+                }
+              }}
+            >
               <div className="space-y-1">
                 {bgmPlaylist.length > 0 ? bgmPlaylist.map((track, idx) => (
                   <div 
@@ -3780,24 +4091,29 @@ export default function App() {
             </div>
 
             <div 
-              className="mt-3 border-2 border-dashed border-[#323238] transition-colors relative flex flex-col items-center justify-center p-4 text-center group hover:border-[var(--accent)] cursor-pointer"
+              className={`mt-3 border-2 border-dashed transition-all relative flex flex-col items-center justify-center p-4 text-center group cursor-pointer ${
+                isDraggingOverDropzone 
+                  ? 'border-[var(--accent)] bg-[var(--accent)]/10 scale-[1.01]' 
+                  : (appTheme === 'peper' 
+                      ? 'border-[#C2B6A2] bg-white/40 hover:border-[#73634F]' 
+                      : (appTheme === 'mocha'
+                          ? 'border-[#7C6856] bg-[#DDD3C3]/40 hover:border-[#C48A58]'
+                          : 'border-[#323238] hover:border-[var(--accent)]'))
+              }`}
               onDragOver={(e) => {
                 e.preventDefault();
-                e.currentTarget.classList.add('border-[var(--accent)]', 'bg-[var(--accent)]/5');
-                e.currentTarget.classList.remove('border-[#323238]');
+                setIsDraggingOverDropzone(true);
               }}
               onDragLeave={(e) => {
-                e.currentTarget.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/5');
-                e.currentTarget.classList.add('border-[#323238]');
-              }}
-              onDrop={(e) => {
                 e.preventDefault();
-                e.currentTarget.classList.remove('border-[var(--accent)]', 'bg-[var(--accent)]/5');
-                e.currentTarget.classList.add('border-[#323238]');
-                
-                const files = Array.from(e.dataTransfer.files).filter((f: any) => f.type.startsWith('audio/'));
-                if (files.length > 0) {
-                  handleBgmUpload({ target: { files } } as any);
+                setIsDraggingOverDropzone(false);
+              }}
+              onDrop={async (e) => {
+                e.preventDefault();
+                setIsDraggingOverDropzone(false);
+                const groups = await extractAudioGroupsFromDataTransfer(e.dataTransfer);
+                if (groups.length > 0) {
+                  await processAudioGroups(groups);
                 }
               }}
               onClick={() => {
@@ -3805,7 +4121,11 @@ export default function App() {
               }}
             >
               <Upload className="w-4 h-4 mb-2 text-gray-500 group-hover:text-[var(--accent)] transition-colors" />
-              <p className="text-[9px] uppercase tracking-widest font-bold text-gray-500 group-hover:text-gray-300 transition-colors">{t('Drop Audio Files Here')}</p>
+              <p className="text-[9px] uppercase tracking-widest font-bold text-gray-500 group-hover:text-gray-300 transition-colors">
+                {isAudioImporting 
+                  ? (importStatusText || t('Importing...')) 
+                  : t('Drop Audio Files or Folders Here')}
+              </p>
             </div>
           </div>
         </div>

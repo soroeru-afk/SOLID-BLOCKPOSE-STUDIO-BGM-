@@ -1027,7 +1027,7 @@ export default function App() {
     return jaDict[enText] || enText;
   };
   const [hudPanelTab, setHudPanelTab] = useState<'formation' | 'shadow' | 'display'>('formation');
-  const [hudOpacity, setHudOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_hudOpacity`) || '0.9'));
+  const [hudOpacity, setHudOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_hudOpacity`) || '0.8'));
   const [shadowOpacity, setShadowOpacity] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowOpacity`) || '0.15'));
   const [shadowAngle, setShadowAngle] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowAngle`) || '0.6981317007977318'));
   const [shadowBlur, setShadowBlur] = useState(() => parseFloat(localStorage.getItem(`${STORAGE_KEY}_shadowBlur`) || '5.0'));
@@ -4447,7 +4447,7 @@ export default function App() {
           {isHUDControlsVisible && (
             <div 
               className="canvas-hud absolute top-4 left-4 z-20 flex items-center h-12 gap-6 px-5 transition-opacity"
-              style={{ opacity: appTheme === 'mocha' ? 1 : hudOpacity }}
+              style={{ opacity: hudOpacity }}
             >
               {hudPanelTab === 'formation' && (
                 <>

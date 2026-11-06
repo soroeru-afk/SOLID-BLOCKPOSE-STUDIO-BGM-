@@ -1059,17 +1059,13 @@ html[data-theme="mocha"] aside button.bg-\[\#2A2A30\]:hover {
 }
 
 /* --------------------------------------------------------------------------
-   3. CANVAS HUD: Seamless overlay & High Contrast (no fog/opacity reduction)
+   3. CANVAS HUD: Seamless overlay & High Contrast
    -------------------------------------------------------------------------- */
 html[data-theme="mocha"] .canvas-hud {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   color: #1F1813 !important;
-  opacity: 1 !important;
-}
-html[data-theme="mocha"] .canvas-hud button {
-  opacity: 1 !important;
 }
 html[data-theme="mocha"] .canvas-hud .bg-\[\#2A2A30\] {
   background-color: #1F1813 !important;
@@ -1080,7 +1076,6 @@ html[data-theme="mocha"] .canvas-hud .bg-\[\#4A4A52\],
 html[data-theme="mocha"] .canvas-hud input[type="range"] {
   background-color: #7C6856 !important;
   accent-color: #C48A58 !important;
-  opacity: 1 !important;
 }
 
 /* --------------------------------------------------------------------------
